@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 
@@ -21,13 +21,27 @@ export interface HackAgentConfig {
   updatedAt: string;
 }
 
-const CONFIG_FILENAME = 'config.json';
 const CONFIG_DIR = '.hackagent';
-const CONFIG_FILE = path.join(CONFIG_DIR, CONFIG_FILENAME);
+const CONFIG_FILENAME = 'config.json';
 
 function getConfigPath(): string {
   const homeDir = os.homedir();
   return path.join(homeDir, CONFIG_DIR, CONFIG_FILENAME);
+}
+
+function getEnvFilePath(): string {
+  return path.join(process.cwd(), '.env');
+}
+
+const PROVIDER_ALIASES: Record<string, LLMConfig['provider']> = {
+  'nvidia-nims': 'nvidia',
+  'nvidia-nim': 'nvidia',
+  'open-ai': 'openai',
+  'anthropic-claude': 'anthropic',
+};
+
+function resolveProvider(raw: string): LLMConfig['provider'] {
+  return PROVIDER_ALIASES[raw] ?? (raw as LLMConfig['provider']);
 }
 
 function ensureConfigDir(): void {
@@ -38,17 +52,78 @@ function ensureConfigDir(): void {
   }
 }
 
+const ENV_KEY_MAP: Record<string, { configKey: keyof LLMConfig; envVars: string[] }> = {
+  provider: { configKey: 'provider', envVars: ['HACKAGENT_PROVIDER', 'LLM_PROVIDER'] },
+  apiKey: { configKey: 'apiKey', envVars: ['HACKAGENT_API_KEY', 'LLM_API_KEY'] },
+  baseUrl: { configKey: 'baseUrl', envVars: ['HACKAGENT_BASE_URL', 'LLM_BASE_URL', 'HACKAGENT_ENDPOINT'] },
+  model: { configKey: 'model', envVars: ['HACKAGENT_MODEL', 'LLM_MODEL'] },
+};
+
+function loadEnvFile(): Record<string, string> {
+  const envPath = getEnvFilePath();
+  if (!existsSync(envPath)) return {};
+  try {
+    const content = readFileSync(envPath, 'utf-8');
+    const vars: Record<string, string> = {};
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx < 0) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      let value = trimmed.slice(eqIdx + 1).trim();
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      if (key) vars[key] = value;
+    }
+    return vars;
+  } catch {
+    return {};
+  }
+}
+
+function mergeEnvIntoConfig(config: HackAgentConfig | null): HackAgentConfig | null {
+  const envVars = loadEnvFile();
+  if (Object.keys(envVars).length === 0) return config;
+
+  const llm: LLMConfig = config?.llm ?? { provider: 'openai' };
+
+  for (const [, mapping] of Object.entries(ENV_KEY_MAP)) {
+    for (const envVar of mapping.envVars) {
+      const value = envVars[envVar] ?? process.env[envVar];
+      if (value) {
+        if (mapping.configKey === 'provider') {
+          (llm as unknown as Record<string, unknown>)[mapping.configKey] = resolveProvider(value);
+        } else {
+          (llm as unknown as Record<string, unknown>)[mapping.configKey] ??= value;
+        }
+        break;
+      }
+    }
+  }
+
+  const deployTokens = ['GITHUB_TOKEN', 'VERCEL_TOKEN', 'NETLIFY_AUTH_TOKEN'];
+  const deploy: DeployConfig = config?.deploy ?? {};
+  if (!deploy.githubToken) deploy.githubToken = envVars.GITHUB_TOKEN ?? process.env.GITHUB_TOKEN;
+  if (!deploy.vercelToken) deploy.vercelToken = envVars.VERCEL_TOKEN ?? process.env.VERCEL_TOKEN;
+  if (!deploy.netlifyToken) deploy.netlifyToken = envVars.NETLIFY_AUTH_TOKEN ?? process.env.NETLIFY_AUTH_TOKEN;
+
+  return { ...(config ?? { llm, updatedAt: new Date().toISOString() }), llm, deploy };
+}
+
 export function getConfig(): HackAgentConfig | null {
   const configPath = getConfigPath();
-  if (!existsSync(configPath)) {
-    return null;
+  let config: HackAgentConfig | null = null;
+  if (existsSync(configPath)) {
+    try {
+      const content = readFileSync(configPath, 'utf-8');
+      config = JSON.parse(content) as HackAgentConfig;
+    } catch {
+      config = null;
+    }
   }
-  try {
-    const content = readFileSync(configPath, 'utf-8');
-    return JSON.parse(content) as HackAgentConfig;
-  } catch {
-    return null;
-  }
+  return mergeEnvIntoConfig(config);
 }
 
 export function saveConfig(config: HackAgentConfig): void {
@@ -61,7 +136,7 @@ export function saveConfig(config: HackAgentConfig): void {
 export function getLLMConfig(): LLMConfig {
   const config = getConfig();
   if (config?.llm) {
-    return config.llm;
+    return { ...config.llm, provider: resolveProvider(config.llm.provider) };
   }
   return { provider: 'openai' };
 }
@@ -86,8 +161,7 @@ export function setDeployConfig(deployConfig: DeployConfig): void {
 export function clearConfig(): void {
   const configPath = getConfigPath();
   if (existsSync(configPath)) {
-    const fs = require('node:fs');
-    fs.unlinkSync(configPath);
+    unlinkSync(configPath);
   }
 }
 
@@ -95,25 +169,47 @@ export function showConfig(): HackAgentConfig | null {
   return getConfig();
 }
 
+export function createEnvFile(config: LLMConfig): string {
+  const lines: string[] = [
+    '# Hack-A-Gent Configuration',
+    `HACKAGENT_PROVIDER=${config.provider}`,
+  ];
+  if (config.apiKey) lines.push(`HACKAGENT_API_KEY=${config.apiKey}`);
+  if (config.baseUrl) lines.push(`HACKAGENT_BASE_URL=${config.baseUrl}`);
+  if (config.model) lines.push(`HACKAGENT_MODEL=${config.model}`);
+  lines.push('');
+  return lines.join('\n');
+}
+
 export const CONFIG_HELP = `
 Configuration Settings:
 
   LLM Provider Settings:
     --provider <name>     Provider: anthropic, openai, gemini, openrouter, nvidia, custom
+                          Aliases: nvidia-nims → nvidia
     --api-key <key>       API key for the provider
-    --base-url <url>      Custom endpoint URL (for NVIDIA NIMs, local models, etc.)
+    --endpoint <url>      Same as --base-url (custom endpoint for NVIDIA NIMs, local models, etc.)
+    --base-url <url>      Custom endpoint URL
     --model <name>        Model name (optional, uses provider default)
+    --verify              Test the provider connection with current settings
 
   Deployment Settings:
     --github-token <token>   GitHub personal access token
     --vercel-token <token>   Vercel deployment token
     --netlify-token <token>  Netlify deployment token
 
+  .env File Support:
+    Alternative to CLI config. Create a .env file in your project root:
+      HACKAGENT_PROVIDER=nvidia
+      HACKAGENT_API_KEY=nvapi-xxx
+      HACKAGENT_BASE_URL=https://integrate.api.nvidia.com/v1
+
 Examples:
-  hackagent config --provider nvidia --api-key nv-xxx --base-url https://integrate.api.nvidia.com/v1
+  hackagent config --provider nvidia --api-key nvapi-xxx
+  hackagent config --provider nvidia-nims --api-key nvapi-xxx --endpoint https://integrate.api.nvidia.com/v1
   hackagent config --provider openai --api-key sk-xxx
-  hackagent config --provider custom --api-key http://localhost:11434/v1 --base-url http://localhost:11434
-  hackagent config --github-token ghp_xxx --vercel-token xxx
+  hackagent config --provider custom --api-key sk-xxx --endpoint http://localhost:11434/v1
+  hackagent config --provider nvidia --verify
   hackagent config --show
   hackagent config --clear
 `;

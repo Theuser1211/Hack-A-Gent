@@ -86,6 +86,10 @@ export class GeminiProvider implements LLMProvider {
     return { ...this.health };
   }
 
+  async checkHealth(): Promise<ProviderHealth> {
+    return { ...this.health };
+  }
+
   async execute(request: LLMRequest): Promise<LLMResponse> {
     const apiKey = this.apiKeyManager.getKey('gemini');
     const startTime = Date.now();

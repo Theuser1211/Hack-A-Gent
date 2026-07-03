@@ -5,47 +5,74 @@ Give it a Devpost link, and it builds the project. An autonomous hackathon agent
 ## Quick Start
 
 ```bash
-# Configure your LLM provider (supports NVIDIA NIMs, OpenAI, Anthropic, or custom endpoints)
-hackagent config --provider nvidia --api-key YOUR_KEY --base-url https://integrate.api.nvidia.com/v1
+# Interactive setup (recommended for first-time users)
+hackagent setup
+
+# Or configure manually
+hag config --provider nvidia --api-key YOUR_KEY
 
 # Run the full pipeline with a Devpost URL
-hackagent run https://devpost.com/software/my-project
-
-# Or pass a description directly
-hackagent run "Build a habit tracker with social sharing"
+hag run https://devpost.com/software/my-project
 ```
 
 Done. It'll parse the competition, pick a winning strategy, generate the code, and deploy it.
 
-## What it does
+## Shorthands
 
-- **Parses Devpost URLs** — pulls title, tech stack, judging criteria, and constraints automatically
-- **Runs strategy competition** — multiple agents battle it out to pick the best approach
-- **Generates real code** — not toy templates, actual working projects with React, Node.js, databases
-- **Builds and deploys** — compiles the project and publishes it live
+All commands have short aliases:
+
+| Full | Short |
+|------|-------|
+| `hackagent` | `hag` |
+| `hackagent config` | `hag c` |
+| `hackagent setup` | `hag s` |
 
 ## Configuration
 
-Hack-A-Gent supports multiple LLM providers. Set it up once:
+### Interactive wizard (recommended)
+
+```bash
+hackagent setup
+```
+
+Walks you through provider selection, API key entry, endpoint URL, and optionally verifies the connection.
+
+### CLI config
 
 ```bash
 # NVIDIA NIMs (recommended for speed)
-hackagent config --provider nvidia --api-key nvapi-xxx --base-url https://integrate.api.nvidia.com/v1
+hag config --provider nvidia --api-key nvapi-xxx --endpoint https://integrate.api.nvidia.com/v1
+
+# Provider aliases also work
+hag config --provider nvidia-nims --api-key nvapi-xxx
 
 # OpenAI
-hackagent config --provider openai --api-key sk-xxx
+hag config --provider openai --api-key sk-xxx
 
 # Custom endpoint (Ollama, LM Studio, anything OpenAI-compatible)
-hackagent config --provider custom --api-key your-key --base-url http://localhost:11434/v1
+hag config --provider custom --api-key your-key --endpoint http://localhost:11434/v1
+
+# Verify the connection works
+hag config --verify
 
 # Show current config
-hackagent config --show
+hag config --show
+```
+
+### .env file
+
+Create a `.env` in your project root:
+
+```env
+HACKAGENT_PROVIDER=nvidia
+HACKAGENT_API_KEY=nvapi-xxx
+HACKAGENT_BASE_URL=https://integrate.api.nvidia.com/v1
 ```
 
 For deployment features, you can also set:
-- `--github-token` — GitHub repo creation
-- `--vercel-token` — Vercel deployment
-- `--netlify-token` — Netlify deployment
+- `--github-token` or `GITHUB_TOKEN` — GitHub repo creation
+- `--vercel-token` or `VERCEL_TOKEN` — Vercel deployment
+- `--netlify-token` or `NETLIFY_AUTH_TOKEN` — Netlify deployment
 
 ## Running locally
 
@@ -58,6 +85,20 @@ npm run build
 # Try it out
 npx tsx cli/index.ts run "Build a URL shortener with analytics"
 ```
+
+Or use `tsx` directly without building:
+
+```bash
+npm run hag -- config --provider nvidia --api-key nvapi-xxx
+npm run hag -- run https://devpost.com/software/my-project
+```
+
+## What it does
+
+- **Parses Devpost URLs** — pulls title, tech stack, judging criteria, and constraints automatically
+- **Runs strategy competition** — multiple agents battle it out to pick the best approach
+- **Generates real code** — not toy templates, actual working projects with React, Node.js, databases
+- **Builds and deploys** — compiles the project and publishes it live
 
 ## How it works
 

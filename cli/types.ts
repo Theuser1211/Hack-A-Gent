@@ -24,7 +24,9 @@ export type CommandName =
   | 'chat'
   | 'help'
   | 'simulate'
-  | 'hack-agent';
+  | 'hack-agent'
+  | 'config'
+  | 'setup';
 
 export interface CLIArgs {
   command: CommandName;

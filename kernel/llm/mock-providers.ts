@@ -30,6 +30,10 @@ class BaseMockProvider implements LLMProvider {
     return { ...this.health };
   }
 
+  async checkHealth(): Promise<ProviderHealth> {
+    return { ...this.health };
+  }
+
   async execute(request: LLMRequest): Promise<LLMResponse> {
     this.health.total_requests++;
 

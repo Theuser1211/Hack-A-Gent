@@ -9,11 +9,24 @@ import {
   type LLMConfig,
   type DeployConfig,
 } from '../config-manager.js';
+import { initializeProviders, getProviderInfo } from '../provider-init.js';
+
+const PROVIDER_ALIASES: Record<string, LLMConfig['provider']> = {
+  'nvidia-nims': 'nvidia',
+  'nvidia-nim': 'nvidia',
+  'open-ai': 'openai',
+  'anthropic-claude': 'anthropic',
+};
+
+function resolveProvider(raw: string): LLMConfig['provider'] {
+  return PROVIDER_ALIASES[raw] ?? (raw as LLMConfig['provider']);
+}
 
 export async function configCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const show = args.flags.show === true;
   const clear = args.flags.clear === true;
   const help = args.flags.help === true;
+  const verify = args.flags.verify === true;
 
   if (show) {
     const config = showConfig();
@@ -47,15 +60,16 @@ export async function configCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
     return { success: true, message: CONFIG_HELP };
   }
 
-  const provider = args.flags.provider as LLMConfig['provider'] | undefined;
-  const apiKey = args.flags['api-key'] as string | undefined;
-  const baseUrl = args.flags['base-url'] as string | undefined;
+  const rawProvider = args.flags.provider as string | undefined;
+  const provider = rawProvider ? resolveProvider(rawProvider) : undefined;
+  const apiKey = (args.flags['api-key'] ?? args.flags.apikey ?? args.flags.key) as string | undefined;
+  const baseUrl = (args.flags['base-url'] ?? args.flags.endpoint) as string | undefined;
   const model = args.flags.model as string | undefined;
   const githubToken = args.flags['github-token'] as string | undefined;
   const vercelToken = args.flags['vercel-token'] as string | undefined;
   const netlifyToken = args.flags['netlify-token'] as string | undefined;
 
-  if (!provider && !apiKey && !baseUrl && !model && !githubToken && !vercelToken && !netlifyToken) {
+  if (!provider && !apiKey && !baseUrl && !model && !githubToken && !vercelToken && !netlifyToken && !verify) {
     return { success: true, message: CONFIG_HELP };
   }
 
@@ -78,6 +92,34 @@ export async function configCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
       netlifyToken: netlifyToken ?? current.netlifyToken,
     };
     setDeployConfig(deployConfig);
+  }
+
+  if (verify) {
+    try {
+      const result = initializeProviders();
+      const provider = result.providers[0];
+      if (!provider) {
+        return { success: false, message: 'No providers initialized.' };
+      }
+      const health = await provider.checkHealth();
+      if (health.status === 'healthy') {
+        return {
+          success: true,
+          message: `Verification successful: ${getProviderInfo(result.config)} — status: ${health.status}`,
+          data: { provider: result.config.provider, status: health.status },
+        };
+      }
+      return {
+        success: true,
+        message: `Provider configured but health check returned: ${health.status}. ${getProviderInfo(result.config)}`,
+        data: { provider: result.config.provider, status: health.status },
+      };
+    } catch (err) {
+      return {
+        success: false,
+        message: `Verification failed: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
   }
 
   const config = getConfig();

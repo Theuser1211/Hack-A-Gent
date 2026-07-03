@@ -12,6 +12,8 @@ import {
 import { HumanControlLayer, type ConstraintInjection, type OverrideDecision } from './human-control-layer.js';
 import { InteractionManager, type ClarificationQuestion } from './interaction-manager.js';
 import { InternetToolGateway, type DeployConfig } from './internet-tool-gateway.js';
+import type { RouterEngine } from '../kernel/llm/router-engine.js';
+import type { LLMRequest, LLMResponse } from '../kernel/llm/llm-types.js';
 import {
   LiveBrowserTestAgent,
   type LiveBrowserTestSpec,
@@ -95,6 +97,7 @@ export class InternetHackathonOrchestrator {
   private readonly humanControl: HumanControlLayer;
   private readonly browserAgent: LiveBrowserTestAgent;
   private readonly deployRepair: DeploymentRepairController;
+  private readonly routerEngine: RouterEngine | null;
 
   private phase: OrchestratorPhase = 'parsing';
   private plan: InternetExecutionPlan | null = null;
@@ -104,7 +107,7 @@ export class InternetHackathonOrchestrator {
   private decisionLog: AutoDecision[] = [];
   private onPhaseChange: ((phase: OrchestratorPhase, data?: Record<string, unknown>) => void) | null = null;
 
-  constructor(workspaceRoot: string, stateDir?: string, seed = 42) {
+  constructor(workspaceRoot: string, stateDir?: string, seed = 42, routerEngine?: RouterEngine) {
     this.seed = seed;
     this.orchestratorId = 'inet-orch-' + createDeterministicUuid(seed, 0).slice(0, 8);
     this.workspaceRoot = workspaceRoot;
@@ -117,6 +120,7 @@ export class InternetHackathonOrchestrator {
     this.humanControl = new HumanControlLayer(seed);
     this.browserAgent = new LiveBrowserTestAgent(this.toolGateway, seed);
     this.deployRepair = new DeploymentRepairController(this.toolGateway, this.humanControl, this.taskGraph, {}, seed);
+    this.routerEngine = routerEngine ?? null;
 
     this.humanControl.onAction((action, data) => {
       if (action === 'pause') {
@@ -510,17 +514,37 @@ export class InternetHackathonOrchestrator {
     }
 
     if (node.description.toLowerCase().includes('scaffold')) {
-      await this.toolGateway.writeProjectFiles(plan.projectName, await this.generateScaffoldFiles(plan));
+      await this.toolGateway.writeProjectFiles(plan.projectName, await this.generateFilesWithLLM('scaffold', {
+        projectName: plan.projectName,
+        description: plan.projectName,
+        techStack: this.devpostData?.recommendedStack ?? [],
+        judgingCriteria: this.devpostData?.judgingCriteria ?? [],
+        constraints: this.devpostData?.constraints ?? [],
+      }));
       return;
     }
 
     if (node.category === 'frontend') {
-      await this.toolGateway.writeProjectFiles(plan.projectName, this.generateFrontendFiles(node, plan));
+      await this.toolGateway.writeProjectFiles(plan.projectName, await this.generateFilesWithLLM('frontend', {
+        projectName: plan.projectName,
+        description: plan.projectName,
+        techStack: this.devpostData?.recommendedStack ?? [],
+        judgingCriteria: this.devpostData?.judgingCriteria ?? [],
+        constraints: this.devpostData?.constraints ?? [],
+        specificTask: node.description,
+      }));
       return;
     }
 
     if (node.category === 'backend') {
-      await this.toolGateway.writeProjectFiles(plan.projectName, this.generateBackendFiles(node, plan));
+      await this.toolGateway.writeProjectFiles(plan.projectName, await this.generateFilesWithLLM('backend', {
+        projectName: plan.projectName,
+        description: plan.projectName,
+        techStack: this.devpostData?.recommendedStack ?? [],
+        judgingCriteria: this.devpostData?.judgingCriteria ?? [],
+        constraints: this.devpostData?.constraints ?? [],
+        specificTask: node.description,
+      }));
       return;
     }
 
@@ -696,6 +720,87 @@ export class InternetHackathonOrchestrator {
           'import { NextResponse } from "next/server"; const items: Array<{ id: number; title: string }> = []; export async function GET() { return NextResponse.json(items); }\nexport async function POST(req: Request) { const body = await req.json(); const item = { id: items.length + 1, title: body.title }; items.push(item); return NextResponse.json(item, { status: 201 }); }\n',
       },
     ];
+  }
+
+  private async generateFilesWithLLM(
+    fileType: 'scaffold' | 'frontend' | 'backend' | 'database' | 'config',
+    context: { projectName: string; description: string; techStack: string[]; judgingCriteria: string[]; constraints: string[]; specificTask?: string },
+  ): Promise<Array<{ path: string; content: string }>> {
+    if (!this.routerEngine || !this.plan || !this.devpostData) {
+      if (fileType === 'scaffold') return this.generateScaffoldFiles(this.plan!);
+      if (fileType === 'frontend') return this.generateFrontendFiles({ description: context.specificTask ?? '' } as TaskNode, this.plan!);
+      if (fileType === 'backend') return this.generateBackendFiles({ description: context.specificTask ?? '' } as TaskNode, this.plan!);
+      return [];
+    }
+
+    const taskDescriptions: Record<string, string> = {
+      scaffold: 'Generate the complete project scaffold including package.json, tsconfig.json, next.config.js, src/app/layout.tsx, src/app/page.tsx, .gitignore, and any other essential config files.',
+      frontend: `Generate frontend React/Next.js component code for: ${context.specificTask}. Include actual implementation, not stubs.`,
+      backend: `Generate backend API code for: ${context.specificTask}. Include Next.js API routes with real handlers.`,
+      database: `Generate database schema and configuration for: ${context.specificTask}. Include SQL schemas and ORM models.`,
+      config: `Generate configuration files for the project.`,
+    };
+
+    const techStack = context.techStack.length > 0 ? context.techStack.join(', ') : 'Next.js 14, React 18, TypeScript, Tailwind CSS';
+
+    const prompt = `You are an expert full-stack developer building a hackathon project.
+
+Project: ${this.devpostData.title}
+Problem: ${this.devpostData.problemStatement}
+Judging Criteria: ${this.devpostData.judgingCriteria.join(', ')}
+Tech Stack: ${techStack}
+Constraints: ${this.devpostData.constraints.join(', ')}
+
+Task: ${taskDescriptions[fileType]}
+
+IMPORTANT: Return ONLY valid JSON in this exact format, no markdown or explanation:
+{
+  "files": [
+    {
+      "path": "relative/path/filename.tsx",
+      "content": "full file content with proper code",
+      "language": "typescript"
+    }
+  ]
+}
+
+Generate real, working code that would score highly on: ${this.devpostData.judgingCriteria.join(', ')}.
+
+${fileType === 'scaffold' ? 'Start with package.json, tsconfig.json, next.config.js, src/app/layout.tsx, src/app/page.tsx, .gitignore, tailwind.config.js, postcss.config.js, src/app/globals.css' : ''}
+${fileType === 'frontend' && context.specificTask ? `Focus on: ${context.specificTask}` : ''}
+${fileType === 'backend' && context.specificTask ? `Focus on: ${context.specificTask}` : ''}`;
+
+    try {
+      const request: LLMRequest = {
+        messages: [{ role: 'user', content: prompt }],
+        model_id: '',
+        provider: 'nvidia',
+        temperature: 0.3,
+        max_tokens: 8000,
+        response_format: 'json_object',
+      };
+
+      const { response } = await this.routerEngine.execute('coding', request);
+      const parsed = JSON.parse(response.content);
+
+      if (parsed.files && Array.isArray(parsed.files)) {
+        return parsed.files.map((f: { path: string; content: string; language?: string }) => ({
+          path: f.path,
+          content: f.content,
+        }));
+      }
+
+      if (parsed.path && parsed.content) {
+        return [{ path: parsed.path, content: parsed.content }];
+      }
+    } catch (err) {
+      console.error(`LLM generation failed for ${fileType}, falling back to templates:`, err instanceof Error ? err.message : String(err));
+    }
+
+    if (fileType === 'scaffold') return this.generateScaffoldFiles(this.plan);
+    if (fileType === 'frontend') return this.generateFrontendFiles({ description: context.specificTask ?? '' } as TaskNode, this.plan);
+    if (fileType === 'backend') return this.generateBackendFiles({ description: context.specificTask ?? '' } as TaskNode, this.plan);
+    return [];
   }
 
   private async runGitHubSync(): Promise<void> {

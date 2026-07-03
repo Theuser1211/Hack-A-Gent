@@ -4,5 +4,6 @@ export interface LLMProvider {
   readonly providerId: string;
   getModels(): ModelSpec[];
   getHealth(): ProviderHealth;
+  checkHealth(): Promise<ProviderHealth>;
   execute(request: LLMRequest): Promise<LLMResponse>;
 }

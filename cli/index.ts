@@ -22,17 +22,26 @@ const VALID_COMMANDS: CommandName[] = [
   'simulate',
   'hack-agent',
   'config',
+  'setup',
 ];
+
+const COMMAND_ALIASES: Record<string, CommandName> = {
+  c: 'config',
+  s: 'setup',
+};
 
 function parseArgs(argv: string[]): CLIArgs {
   const args = argv.slice(2);
-  const command = (args[0] ?? 'help') as CommandName;
+  const rawCommand = args[0] ?? 'help';
+  const command = (COMMAND_ALIASES[rawCommand] ?? rawCommand) as CommandName;
   const flags: Record<string, string | number | boolean | undefined> = {};
   const positional: string[] = [];
   let subcommand: string | undefined;
 
-  if (!VALID_COMMANDS.includes(command)) {
-    return { command: 'help', subcommand: undefined, positional: [], flags: {} };
+  const aliasKeys = Object.keys(COMMAND_ALIASES) as CommandName[];
+  const allValid = [...VALID_COMMANDS, ...aliasKeys];
+  if (!allValid.includes(command)) {
+    return { command: 'help' as CommandName, subcommand: undefined, positional: [], flags: {} };
   }
 
   let i = 1;
@@ -86,6 +95,7 @@ function showHelp(): void {
   
   Usage:
     hackagent <command> [options] [args]
+    hag <command> [options] [args]        (shorthand)
 
   Commands:
     run <input>          Run full hackathon pipeline (Devpost URL, file, or text)
@@ -102,6 +112,17 @@ function showHelp(): void {
     benchmark list       List available benchmarks
     benchmark run [id]   Run benchmark suite [--adversarial] [--seed N]
     replay <runId>       Deterministic replay of a past run
+    config               Configure LLM providers, API keys, and deploy tokens
+                          --provider <name>   Provider: nvidia, openai, anthropic, gemini, openrouter, custom
+                          --api-key <key>      API key for the provider
+                          --base-url <url>     Custom endpoint URL (for NVIDIA NIMs, local models, etc.)
+                          --model <name>       Model name (optional)
+                          --show               Show current configuration
+                          --clear              Clear saved configuration
+                          --github-token <tok> GitHub personal access token
+                          --vercel-token <tok> Vercel deployment token
+                          --netlify-token <tok>Netlify deployment token
+    setup                Interactive first-time setup wizard
     deploy <projectId>   Deploy a built project
     test <projectId>     Run browser tests [--url <url>]
     explain [projectId]  Show decision traces and debug analysis
@@ -216,6 +237,11 @@ async function main(): Promise<void> {
       case 'config': {
         const { configCommand } = await import('./commands/config.js');
         result = await configCommand(ctx, args);
+        break;
+      }
+      case 'setup': {
+        const { setupCommand } = await import('./commands/setup.js');
+        result = await setupCommand(ctx, args);
         break;
       }
       default:

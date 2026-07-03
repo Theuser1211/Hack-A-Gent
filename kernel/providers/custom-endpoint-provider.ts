@@ -69,8 +69,36 @@ export class CustomEndpointProvider implements LLMProvider {
     return { ...this.health };
   }
 
+  async checkHealth(): Promise<ProviderHealth> {
+    const apiKey = this.apiKeyManager.getKey(this.providerId);
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(`${this.baseUrl}/models`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      this.health = {
+        ...this.health,
+        status: res.ok ? 'healthy' : 'degraded',
+        last_check: new Date().toISOString(),
+        total_requests: this.health.total_requests + 1,
+      };
+    } catch {
+      this.health = {
+        ...this.health,
+        status: 'unhealthy',
+        last_check: new Date().toISOString(),
+        consecutive_failures: this.health.consecutive_failures + 1,
+      };
+    }
+    return { ...this.health };
+  }
+
   async execute(request: LLMRequest): Promise<LLMResponse> {
-    const apiKey = this.apiKeyManager.getKey(this.apiKeyEnvVar.toLowerCase().replace('api_key', ''));
+    const apiKey = this.apiKeyManager.getKey(this.providerId);
     const startTime = Date.now();
 
     if (this.rateLimitTracker.isRateLimited(this.providerId)) {
@@ -162,7 +190,7 @@ export class CustomEndpointProvider implements LLMProvider {
   }
 
   async executeStream(request: LLMRequest, onChunk: StreamCallback): Promise<LLMResponse> {
-    const apiKey = this.apiKeyManager.getKey(this.apiKeyEnvVar.toLowerCase().replace('api_key', ''));
+    const apiKey = this.apiKeyManager.getKey(this.providerId);
     const startTime = Date.now();
 
     const body: Record<string, unknown> = {

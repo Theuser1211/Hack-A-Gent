@@ -12,6 +12,8 @@ import { Phase12Orchestrator } from '../../benchmarks/phase-12-orchestrator.js';
 import { formatDuration } from '../context.js';
 import { parseDevpostUrl } from '../devpost-parser.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
+import { initializeProviders, getProviderInfo } from '../provider-init.js';
+import { RouterEngine } from '../../kernel/llm/router-engine.js';
 
 export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const input = args.positional[0];
@@ -157,6 +159,16 @@ async function runFullPipeline(
   const phase12 = new Phase12Orchestrator(seed);
   ctx.phase12orchestrator = phase12;
 
+  console.log('  • Initializing LLM providers...');
+  let routerEngine: RouterEngine | null = null;
+  try {
+    const providerResult = initializeProviders();
+    routerEngine = providerResult.router;
+    console.log(`    ${getProviderInfo(providerResult.config)}`);
+  } catch (err) {
+    console.log(`    LLM providers unavailable — using templates: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   console.log('  • Running strategy competition...');
   const strategyReport = await phase12.runProject({
     title: parsed.title,
@@ -183,12 +195,15 @@ async function runFullPipeline(
   }
 
   const projectName = parsed.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-  const internetOrch = new InternetHackathonOrchestrator(ctx.workspaceRoot, ctx.stateDir, seed);
+  const internetOrch = new InternetHackathonOrchestrator(ctx.workspaceRoot, ctx.stateDir, seed, routerEngine ?? undefined);
   ctx.orchestrator = internetOrch;
 
   internetOrch.setDevpostData(parsed);
+  console.log('  • Extracting requirements...');
+  const reqs = await internetOrch.extractRequirements(parsed);
+  console.log(`    requirements: ${reqs.length}`);
   console.log('  • Building TaskGraph...');
-  const executionPlan = internetOrch.buildExecutionPlan();
+  const executionPlan = await internetOrch.createExecutionPlan(parsed, reqs);
   console.log(`    tasks: ${executionPlan.taskGraph.getAllNodes().length}`);
 
   console.log('  • Executing pipeline...');

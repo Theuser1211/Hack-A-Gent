@@ -112,6 +112,10 @@ export class OpenRouterProvider implements LLMProvider {
     return { ...this.health };
   }
 
+  async checkHealth(): Promise<ProviderHealth> {
+    return { ...this.health };
+  }
+
   async execute(request: LLMRequest): Promise<LLMResponse> {
     const apiKey = this.apiKeyManager.getKey('openrouter');
     const startTime = Date.now();
