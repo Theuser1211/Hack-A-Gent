@@ -1,0 +1,12 @@
+node_modules/
+dist/
+projects/
+data/events/*.jsonl
+data/memory/projects/
+*.env
+.env.local
+coverage/
+.hackagent/
+benchmark-results/
+hackathon-project/
+tmp/
