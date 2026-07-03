@@ -81,7 +81,14 @@ export async function configCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
       baseUrl: baseUrl ?? current.baseUrl,
       model: model ?? current.model,
     };
-    setLLMConfig(llmConfig);
+    try {
+      setLLMConfig(llmConfig);
+    } catch (err) {
+      return {
+        success: false,
+        message: `Invalid configuration: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
   }
 
   if (githubToken || vercelToken || netlifyToken) {

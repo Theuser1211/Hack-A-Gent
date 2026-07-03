@@ -154,11 +154,18 @@ async function main(): Promise<void> {
 
   if (args.command === 'help' || args.command === undefined) {
     showHelp();
-    process.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
   const seed = typeof args.flags.seed === 'number' ? args.flags.seed : 42;
   const ctx = createContext(seed);
+
+  process.on('SIGINT', () => {
+    console.log('\n  Interrupted.');
+    process.exitCode = 130;
+    process.exit(); // forced exit on SIGINT is fine (user wants to quit)
+  });
   ctx.outputFormat = args.flags.json === true ? 'json' : args.flags.quiet === true ? 'quiet' : 'pretty';
   ctx.verbose = args.flags.verbose === true;
   ctx.dryRun = args.flags['dry-run'] === true;
@@ -274,10 +281,10 @@ async function main(): Promise<void> {
     console.log();
   }
 
-  process.exit(result.success ? 0 : 1);
+  process.exitCode = result.success ? 0 : 1;
 }
 
 main().catch((err) => {
   console.error('Fatal error:', err);
-  process.exit(1);
+  process.exitCode = 1;
 });

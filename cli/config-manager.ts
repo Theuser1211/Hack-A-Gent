@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import { z } from 'zod';
 
 export interface LLMConfig {
   provider: 'anthropic' | 'openai' | 'gemini' | 'openrouter' | 'nvidia' | 'custom';
@@ -39,6 +40,27 @@ const PROVIDER_ALIASES: Record<string, LLMConfig['provider']> = {
   'open-ai': 'openai',
   'anthropic-claude': 'anthropic',
 };
+
+const VALID_PROVIDERS = ['anthropic', 'openai', 'gemini', 'openrouter', 'nvidia', 'custom'] as const;
+
+const LLMConfigSchema = z.object({
+  provider: z.enum(VALID_PROVIDERS),
+  apiKey: z.string().optional(),
+  baseUrl: z.string().url().optional().or(z.string().optional()),
+  model: z.string().optional(),
+});
+
+const DeployConfigSchema = z.object({
+  githubToken: z.string().optional(),
+  vercelToken: z.string().optional(),
+  netlifyToken: z.string().optional(),
+});
+
+const HackAgentConfigSchema = z.object({
+  llm: LLMConfigSchema,
+  deploy: DeployConfigSchema.optional(),
+  updatedAt: z.string(),
+});
 
 function resolveProvider(raw: string): LLMConfig['provider'] {
   return PROVIDER_ALIASES[raw] ?? (raw as LLMConfig['provider']);
@@ -118,7 +140,15 @@ export function getConfig(): HackAgentConfig | null {
   if (existsSync(configPath)) {
     try {
       const content = readFileSync(configPath, 'utf-8');
-      config = JSON.parse(content) as HackAgentConfig;
+      const parsed = JSON.parse(content) as HackAgentConfig;
+      const result = HackAgentConfigSchema.safeParse(parsed);
+      if (result.success) {
+        config = result.data as HackAgentConfig;
+      } else {
+        console.error(`  ⚠ Invalid config file: ${result.error.issues.map(i => i.message).join(', ')}`);
+        console.error('  Use: hackagent config --clear to reset');
+        config = null;
+      }
     } catch {
       config = null;
     }
@@ -142,8 +172,13 @@ export function getLLMConfig(): LLMConfig {
 }
 
 export function setLLMConfig(llmConfig: LLMConfig): void {
-  const existing = getConfig() ?? { llm: llmConfig, updatedAt: new Date().toISOString() };
-  existing.llm = llmConfig;
+  const resolved = { ...llmConfig, provider: resolveProvider(llmConfig.provider) };
+  const result = LLMConfigSchema.safeParse(resolved);
+  if (!result.success) {
+    throw new Error(`Invalid LLM config: ${result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ')}`);
+  }
+  const existing = getConfig() ?? { llm: resolved, updatedAt: new Date().toISOString() };
+  existing.llm = resolved;
   saveConfig(existing);
 }
 
