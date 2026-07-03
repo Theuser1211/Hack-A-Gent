@@ -16,7 +16,7 @@ const COLORS: Record<string, string> = {
   gray: '\x1b[90m',
 };
 
-function color(text: string, c: string): string {
+export function color(text: string, c: string): string {
   if (!isTTY) return text;
   return `${COLORS[c] ?? ''}${text}${RESET}`;
 }

@@ -6,7 +6,8 @@ import * as path from 'node:path';
 import { createContext, formatDuration } from './context.js';
 import type { CLIArgs, CLIResult, CommandName } from './types.js';
 import { getConfig } from './config-manager.js';
-import { banner } from './output.js';
+import { banner, success as logSuccess, error as logError, info, dim } from './output.js';
+import { formatError, printError } from './errors.js';
 
 const VALID_COMMANDS: CommandName[] = [
   'run',
@@ -211,6 +212,11 @@ async function main(): Promise<void> {
     process.exitCode = 130;
     process.exit(); // forced exit on SIGINT is fine (user wants to quit)
   });
+  process.on('SIGTERM', () => {
+    console.log('\n  Terminated.');
+    process.exitCode = 143;
+    process.exit();
+  });
   ctx.outputFormat = args.flags.json === true ? 'json' : args.flags.quiet === true ? 'quiet' : 'pretty';
   ctx.verbose = args.flags.verbose === true;
   ctx.dryRun = args.flags['dry-run'] === true;
@@ -326,8 +332,14 @@ async function main(): Promise<void> {
     }
   } catch (err) {
     const debug = args.flags.debug === true;
-    const msg = err instanceof Error ? err.message : String(err);
-    result = { success: false, message: debug ? `Fatal error: ${msg}` : msg };
+    if (debug) {
+      result = { success: false, message: err instanceof Error ? `Fatal error: ${err.message}` : `Fatal error: ${String(err)}` };
+      console.error('  Stack:', err instanceof Error ? err.stack : '');
+    } else {
+      const suggestion = formatError(err, args.command);
+      printError(suggestion);
+      result = { success: false, message: suggestion.what };
+    }
   }
 
   result.durationMs = Date.now() - executionTime;
@@ -336,18 +348,18 @@ async function main(): Promise<void> {
     console.log(JSON.stringify(result, null, 2));
   } else if (ctx.outputFormat === 'pretty') {
     if (result.success) {
-      console.log(`  ✓ ${result.message}`);
-    } else {
-      console.log(`  ✗ ${result.message}`);
+      logSuccess(result.message);
+    } else if (args.flags.debug === true) {
+      logError(result.message);
     }
     if (result.metrics) {
       const entries = Object.entries(result.metrics);
       if (entries.length > 0) {
-        console.log(`  Metrics: ${entries.map(([k, v]) => `${k}=${v}`).join(', ')}`);
+        info(`Metrics: ${entries.map(([k, v]) => `${k}=${v}`).join(', ')}`);
       }
     }
     if (result.traceId) {
-      console.log(`  Trace: ${result.traceId}`);
+      dim(`Trace: ${result.traceId}`);
     }
     console.log();
   }
@@ -359,9 +371,12 @@ main().catch((err) => {
   const debug = process.argv.includes('--debug');
   if (debug) {
     console.error('Fatal error:', err);
+    if (err instanceof Error && err.stack) {
+      console.error(err.stack);
+    }
   } else {
-    console.error(`  ✗ ${err instanceof Error ? err.message : String(err)}`);
-    console.error('  Pass --debug for details.');
+    const suggestion = formatError(err, 'fatal');
+    printError(suggestion);
   }
   process.exitCode = 1;
 });

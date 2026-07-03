@@ -18,10 +18,12 @@ import {
   header, log, success, error, warn, info, dim, labeled, step, divider, Spinner,
   pipelineHeader, pipelineFooter, stageStart, stageDone, stageFail,
 } from '../output.js';
+import { formatError, printError } from '../errors.js';
 
 export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const input = args.positional[0];
   if (!input) {
+    printError(formatError(new Error('Usage: hackagent run <input> (devpost URL, file path, or text spec)')));
     return { success: false, message: 'Usage: hackagent run <input> (devpost URL, file path, or text spec)' };
   }
 
@@ -34,9 +36,18 @@ export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIRes
   const t0 = Date.now();
 
   stageStart('Parsing input');
-  const parsed = await parseInput(input);
+  let parsed: ParsedInput | null;
+  try {
+    parsed = await parseInput(input);
+  } catch (err) {
+    stageFail('Parsing input');
+    const suggestion = formatError(err, 'Input parsing');
+    printError(suggestion);
+    return { success: false, message: suggestion.what };
+  }
   if (!parsed) {
     stageFail('Parsing input', 'Cannot parse input');
+    printError(formatError(new Error('Cannot parse input'), `Input: ${input}`));
     return { success: false, message: `Cannot parse input: ${input}` };
   }
   stageDone('Parsing input', Date.now() - t0);
@@ -163,7 +174,8 @@ async function runFullPipeline(
     stageDone('Initializing LLM providers', Date.now() - t0);
   } catch (err) {
     stageDone('Initializing LLM providers', Date.now() - t0);
-    warn(`LLM providers unavailable — using templates: ${err instanceof Error ? err.message : String(err)}`);
+    printError(formatError(err, 'LLM provider'));
+    warn('Falling back to template-based generation (no LLM).\n');
   }
 
   stageStart('Running strategy competition');
@@ -298,8 +310,11 @@ export async function parseInput(input: string): Promise<ParsedInput | null> {
     if (input.includes('devpost.com')) {
       try {
         return await parseDevpostUrl(input);
-      } catch {}
+      } catch (err) {
+        throw new Error(`Failed to fetch Devpost URL: ${err instanceof Error ? err.message : String(err)}. Ensure the URL is a valid Devpost software page.`);
+      }
     }
+    // Non-Devpost URL — use as context
     return {
       title: `Project from ${input}`,
       problemStatement: `Build a solution based on ${input}`,
@@ -324,7 +339,7 @@ export async function parseInput(input: string): Promise<ParsedInput | null> {
         submissionRequirements: [],
       };
     } catch {
-      return null;
+      throw new Error(`Cannot read file: ${input}. Check that the file exists and is readable.`);
     }
   }
 
