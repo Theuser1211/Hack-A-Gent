@@ -1,7 +1,8 @@
 import { getSeededRandom, createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
 import { HackathonBenchmarkRunner, type BenchmarkRunnerConfig } from '../../benchmarks/hackathon-benchmark-runner.js';
 import { ALL_BENCHMARKS } from '../../benchmarks/hackathon-benchmarks.js';
-import { MutationEvolutionController } from '../../benchmarks/mutation-evolution-controller.js';
+import type { PlannerOutput } from '../../kernel/planning/planner-types.js';
+import type { ArchitectureBlueprint } from '../../kernel/planning/architect-types.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { header, log, info, dim } from '../output.js';
 
@@ -43,12 +44,12 @@ export async function benchmarkCommand(ctx: CLIContext, args: CLIArgs): Promise<
         seed,
         adversarialMode: adversarial,
         repairLimit: 3,
-        planner: { execute: (async () => ({ output: {} })) as unknown },
-        architect: { execute: (async () => ({ output: {} })) as unknown },
+        planner: { execute: async () => ({ output: {} as PlannerOutput }) },
+        architect: { execute: async () => ({ output: {} as ArchitectureBlueprint }) },
         builderProvider: {
           build: async () => ({ status: 'success' as const, output: '', artifacts: [] }),
           execute: async () => ({}),
-        } as unknown,
+        } as never as import('../../kernel/builders/builder-provider.js').BuilderProvider,
       };
 
       const runner = new HackathonBenchmarkRunner(config);

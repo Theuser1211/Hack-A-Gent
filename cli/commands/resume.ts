@@ -42,7 +42,10 @@ export async function resumeCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
   ctx.orchestrator = internetOrch;
 
   // Reload state into the orchestrator
-  (internetOrch as unknown).loadState(loaded);
+  const orchAny = internetOrch as unknown as Record<string, unknown>;
+  if (typeof orchAny['loadState'] === 'function') {
+    (orchAny['loadState'] as (state: unknown) => void)(loaded);
+  }
 
   log('Continuing execution...');
   const executionTime = Date.now();

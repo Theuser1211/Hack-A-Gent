@@ -1,7 +1,7 @@
 import * as readline from 'node:readline';
 
 import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
+import type { CLIContext, CLIArgs, CLIResult, CommandName } from '../types.js';
 import { log, dim } from '../output.js';
 
 export async function chatCommand(ctx: CLIContext, _args: CLIArgs): Promise<CLIResult> {
@@ -53,7 +53,7 @@ export async function chatCommand(ctx: CLIContext, _args: CLIArgs): Promise<CLIR
 
       const parts = trimmed.split(/\s+/);
       const chatArgs: CLIArgs = {
-        command: parts[0] as unknown,
+        command: parts[0] as CommandName,
         subcommand: parts[1] === 'query' || parts[1] === 'stats' || parts[1] === 'clear' ? parts[1] : undefined,
         positional: parts.slice(1),
         flags: {},

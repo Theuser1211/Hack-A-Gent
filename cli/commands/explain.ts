@@ -84,12 +84,16 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
 
   // Project state summary
   if (state) {
+    const gh = state['gitHub'] as Record<string, unknown> | undefined;
+    const dep = state['deployment'] as Record<string, unknown> | undefined;
+    const builds = state['buildHistory'] as unknown[] | undefined;
+    const errs = state['errors'] as string[] | undefined;
     log('Project State:');
-    log(`Phase: ${state.phase as string}`);
-    log(`GitHub: ${(state.gitHub as unknown)?.repoUrl ?? 'N/A'}`);
-    log(`Deploy URL: ${(state.deployment as unknown)?.url ?? 'N/A'}`);
-    log(`Builds: ${(state.buildHistory as unknown[])?.length ?? 0}`);
-    log(`Errors: ${(state.errors as string[])?.length ?? 0}`);
+    log(`Phase: ${String(state['phase'] ?? 'unknown')}`);
+    log(`GitHub: ${gh?.['repoUrl'] ?? 'N/A'}`);
+    log(`Deploy URL: ${dep?.['url'] ?? 'N/A'}`);
+    log(`Builds: ${builds?.length ?? 0}`);
+    log(`Errors: ${errs?.length ?? 0}`);
     log('');
   }
 
@@ -102,7 +106,7 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
       log(`  Suggested: Check ${fp.category} patterns in memory`);
     }
   } else if (state) {
-    const errors = (state.errors as string[]) ?? [];
+    const errors = (state['errors'] as string[] | undefined) ?? [];
     if (errors.length > 0) {
       for (const e of errors.slice(0, 3)) {
         log(`${e.slice(0, 100)}`);

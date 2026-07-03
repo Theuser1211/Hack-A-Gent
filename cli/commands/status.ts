@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync as fsReaddirSync } from 'node:fs'
 import * as path from 'node:path';
 
 import type { ProjectStateSnapshot } from '../../benchmarks/remote-project-state.js';
+import type { TaskGraphSnapshot } from '../../benchmarks/task-graph.js';
 import type { CLIContext, CLIArgs, CLIResult, CLIExecutionState } from '../types.js';
 import { header, log, labeled, divider } from '../output.js';
 
@@ -70,7 +71,7 @@ export async function statusCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
     projectId: state.projectId,
     phase: state.phase,
     startedAt: state.createdAt,
-    taskGraphSnapshot: state.taskGraphState as unknown,
+    taskGraphSnapshot: state.taskGraphState as unknown as TaskGraphSnapshot | null,
     decisionLog: [],
     errors: [],
     currentPhase: state.phase,
