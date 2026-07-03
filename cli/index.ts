@@ -23,6 +23,10 @@ const VALID_COMMANDS: CommandName[] = [
   'hack-agent',
   'config',
   'setup',
+  'doctor',
+  'models',
+  'providers',
+  'version',
 ];
 
 const COMMAND_ALIASES: Record<string, CommandName> = {
@@ -128,6 +132,10 @@ function showHelp(): void {
     explain [projectId]  Show decision traces and debug analysis
     health               System health check
     chat                 Interactive conversational mode
+    doctor               System diagnostics — check Node, git, config, provider
+    models               List available models from configured provider
+    providers            Show configured provider status
+    version              Show version information
     help                 Show this help message
 
   Global Flags:
@@ -249,6 +257,26 @@ async function main(): Promise<void> {
       case 'setup': {
         const { setupCommand } = await import('./commands/setup.js');
         result = await setupCommand(ctx, args);
+        break;
+      }
+      case 'doctor': {
+        const { doctorCommand } = await import('./commands/doctor.js');
+        result = await doctorCommand(ctx, args);
+        break;
+      }
+      case 'models': {
+        const { modelsCommand } = await import('./commands/models.js');
+        result = await modelsCommand(ctx, args);
+        break;
+      }
+      case 'providers': {
+        const { providersCommand } = await import('./commands/providers.js');
+        result = await providersCommand(ctx, args);
+        break;
+      }
+      case 'version': {
+        const { versionCommand } = await import('./commands/version.js');
+        result = await versionCommand(ctx, args);
         break;
       }
       default:

@@ -26,7 +26,11 @@ export type CommandName =
   | 'simulate'
   | 'hack-agent'
   | 'config'
-  | 'setup';
+  | 'setup'
+  | 'doctor'
+  | 'models'
+  | 'providers'
+  | 'version';
 
 export interface CLIArgs {
   command: CommandName;
