@@ -14,6 +14,7 @@ import { parseDevpostUrl } from '../devpost-parser.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { initializeProviders, getProviderInfo } from '../provider-init.js';
 import { RouterEngine } from '../../kernel/llm/router-engine.js';
+import { header, log, success, error, warn, info, dim, labeled, step, divider, Spinner } from '../output.js';
 
 export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const input = args.positional[0];
@@ -25,15 +26,14 @@ export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIRes
   const dryRun = args.flags['dry-run'] === true || ctx.dryRun;
   const demoMode = args.flags.demo === true;
 
-  console.log(`\n  Hack-A-Gent — ${demoMode ? 'Demo Surface' : 'Full Pipeline'} Run (seed ${seed})`);
-  console.log(`  ${'='.repeat(50)}\n`);
+  header(`${demoMode ? 'Demo Surface' : 'Full Pipeline'} — seed ${seed}`);
 
-  console.log('  • Parsing input...');
+  step('Parsing input');
   const parsed = await parseInput(input);
   if (!parsed) {
     return { success: false, message: `Cannot parse input: ${input}` };
   }
-  console.log(`    title: "${parsed.title}"`);
+  labeled('title', `"${parsed.title}"`);
 
   if (demoMode) {
     return runDemoSurfacePipeline(ctx, parsed, seed, dryRun);
@@ -159,17 +159,17 @@ async function runFullPipeline(
   const phase12 = new Phase12Orchestrator(seed);
   ctx.phase12orchestrator = phase12;
 
-  console.log('  • Initializing LLM providers...');
+  step('Initializing LLM providers');
   let routerEngine: RouterEngine | null = null;
   try {
     const providerResult = initializeProviders();
     routerEngine = providerResult.router;
-    console.log(`    ${getProviderInfo(providerResult.config)}`);
+    info(getProviderInfo(providerResult.config));
   } catch (err) {
-    console.log(`    LLM providers unavailable — using templates: ${err instanceof Error ? err.message : String(err)}`);
+    warn(`LLM providers unavailable — using templates: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  console.log('  • Running strategy competition...');
+  step('Running strategy competition');
   const strategyReport = await phase12.runProject({
     title: parsed.title,
     problemStatement: parsed.problemStatement,
@@ -178,9 +178,9 @@ async function runFullPipeline(
     techStack: parsed.recommendedStack,
     preferredStack: parsed.recommendedStack,
   });
-  console.log(`    winner: ${strategyReport.strategyCompetition.winner.name}`);
-  console.log(`    candidates: ${strategyReport.strategyCompetition.candidates.length}`);
-  console.log(`    predicted reward: ${(strategyReport.rewardPrediction.predicted * 100).toFixed(1)}%`);
+  labeled('winner', strategyReport.strategyCompetition.winner.name);
+  labeled('candidates', String(strategyReport.strategyCompetition.candidates.length));
+  labeled('predicted reward', `${(strategyReport.rewardPrediction.predicted * 100).toFixed(1)}%`);
 
   if (dryRun) {
     return {
@@ -199,27 +199,27 @@ async function runFullPipeline(
   ctx.orchestrator = internetOrch;
 
   internetOrch.setDevpostData(parsed);
-  console.log('  • Extracting requirements...');
+  step('Extracting requirements');
   const reqs = await internetOrch.extractRequirements(parsed);
-  console.log(`    requirements: ${reqs.length}`);
-  console.log('  • Building TaskGraph...');
+  labeled('requirements', String(reqs.length));
+  step('Building TaskGraph');
   const executionPlan = await internetOrch.createExecutionPlan(parsed, reqs);
-  console.log(`    tasks: ${executionPlan.taskGraph.getAllNodes().length}`);
+  labeled('tasks', String(executionPlan.taskGraph.getAllNodes().length));
 
-  console.log('  • Executing pipeline...');
+  step('Executing pipeline');
   const executionTime = Date.now();
 
   try {
     const result = await internetOrch.executeFullPipeline();
     const elapsed = Date.now() - executionTime;
 
-    console.log(`\n  ${'='.repeat(50)}`);
-    console.log(`  Pipeline complete in ${formatDuration(elapsed)}`);
-    console.log(`  Phase: ${result.phase}`);
-    console.log(`  URL: ${result.deployUrl ?? 'N/A'}`);
-    console.log(`  Errors: ${result.errors.length}`);
+    divider();
+    labeled('Pipeline complete', formatDuration(elapsed));
+    labeled('Phase', result.phase);
+    labeled('URL', result.deployUrl ?? 'N/A');
+    labeled('Errors', String(result.errors.length));
 
-    console.log('  • Running post-project learning cycle...');
+    step('Running post-project learning cycle');
     const learningOutput = await phase12.runPostProject({
       projectName,
       projectDescription: parsed.problemStatement,
@@ -235,7 +235,7 @@ async function runFullPipeline(
       judgeScore: result.judgeScore ?? 0.7,
       demoAvailable: result.deployUrl !== null,
     });
-    console.log(`    memory updated: ${learningOutput.memorySummary.totalProjects} projects`);
+    info(`Memory updated: ${learningOutput.memorySummary.totalProjects} projects`);
 
     return {
       success: true,
@@ -259,7 +259,7 @@ async function runFullPipeline(
   } catch (err) {
     const elapsed = Date.now() - executionTime;
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`  ✗ Pipeline failed after ${formatDuration(elapsed)}: ${msg}`);
+    error(`Pipeline failed after ${formatDuration(elapsed)}: ${msg}`);
     return {
       success: false,
       message: `Pipeline failed: ${msg}`,

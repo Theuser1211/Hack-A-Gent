@@ -1,7 +1,8 @@
 import * as readline from 'node:readline';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
-import { getConfig, setLLMConfig, setDeployConfig, type LLMConfig } from '../config-manager.js';
+import { getConfig, setLLMConfig, type LLMConfig } from '../config-manager.js';
 import { initializeProviders } from '../provider-init.js';
+import { header, success, warn, info } from '../output.js';
 
 const PROVIDER_CHOICES = [
   { name: 'NVIDIA NIMs', value: 'nvidia' },
@@ -21,8 +22,9 @@ function ask(rl: readline.ReadLine, question: string): Promise<string> {
 export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const existing = getConfig();
   if (existing?.llm.apiKey) {
-    console.log('\n  Configuration already exists. Run `hackagent config --show` to view.');
-    console.log('  Use `hackagent config --clear` to reset, or continue to overwrite.\n');
+    warn('Configuration already exists. Use `hackagent config --show` to view.');
+    warn('Use `hackagent config --clear` to reset, or continue to overwrite.');
+    console.log();
   }
 
   const rl = readline.createInterface({
@@ -31,14 +33,15 @@ export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIR
   });
 
   try {
-    console.log('\n  ╔══════════════════════════════════════════╗');
+    console.log();
+    console.log('  ╔══════════════════════════════════════════╗');
     console.log('  ║      Hack-A-Gent Setup Wizard            ║');
-    console.log('  ╚══════════════════════════════════════════╝\n');
+    console.log('  ╚══════════════════════════════════════════╝');
+    console.log();
 
     console.log('  Choose an LLM provider:\n');
     for (let i = 0; i < PROVIDER_CHOICES.length; i++) {
-      const choice = PROVIDER_CHOICES[i]!;
-      console.log(`    ${i + 1}. ${choice.name}`);
+      console.log(`    ${i + 1}. ${PROVIDER_CHOICES[i]!.name}`);
     }
     console.log();
 
@@ -52,7 +55,6 @@ export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIR
     }
 
     const chosenProvider = PROVIDER_CHOICES[providerIndex]!;
-    const provider = chosenProvider.value;
     console.log(`  Selected: ${chosenProvider.name}\n`);
 
     const apiKey = await ask(rl, '  Enter API key: ');
@@ -61,16 +63,14 @@ export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIR
     }
 
     let baseUrl = '';
-    if (provider === 'custom') {
-      baseUrl = await ask(rl, '  Enter endpoint URL (e.g. http://localhost:11434/v1): ');
-    } else if (provider === 'nvidia') {
+    if (providerIndex === 0) {
       baseUrl = await ask(rl, '  Enter endpoint URL (press Enter for default NVIDIA NIMs endpoint): ');
     }
 
     const model = await ask(rl, '  Enter model name (press Enter for default): ');
 
     const llmConfig: LLMConfig = {
-      provider: provider as LLMConfig['provider'],
+      provider: chosenProvider.value as LLMConfig['provider'],
       apiKey,
       baseUrl: baseUrl || undefined,
       model: model || undefined,
@@ -78,26 +78,29 @@ export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIR
 
     setLLMConfig(llmConfig);
 
-    console.log('\n  ✓ Configuration saved.\n');
+    success('Configuration saved.\n');
 
     const verifyAnswer = await ask(rl, '  Verify connection with this provider? (Y/n): ');
     if (verifyAnswer.toLowerCase() !== 'n') {
-      console.log('  Verifying...\n');
+      info('Verifying...\n');
       try {
         const result = initializeProviders();
-        const health = result.providers[0]?.getHealth();
-        if (health && health.status === 'healthy') {
-          console.log('  ✓ Connection verified! Provider is healthy.\n');
-        } else {
-          console.log(`  ⚠ Provider configured but status: ${health?.status ?? 'unknown'}\n`);
+        const provider = result.providers[0];
+        if (provider) {
+          const health = await provider.checkHealth();
+          if (health.status === 'healthy') {
+            success('Connection verified! Provider is healthy.\n');
+          } else {
+            warn(`Provider configured but status: ${health.status}\n`);
+          }
         }
       } catch (err) {
-        console.log(`  ⚠ Verification warning: ${err instanceof Error ? err.message : String(err)}`);
-        console.log('  Configuration is saved. You can retry with: hackagent config --verify\n');
+        warn(`Verification: ${err instanceof Error ? err.message : String(err)}`);
+        info('Configuration is saved. You can retry with: hackagent config --verify\n');
       }
     }
 
-    console.log('  Setup complete! Run: hackagent run <devpost-url>\n');
+    success('Setup complete! Run: hag run <devpost-url>\n');
     return { success: true, message: 'Setup complete.' };
   } finally {
     rl.close();
