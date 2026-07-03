@@ -1,5 +1,6 @@
 import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
+import { header, log, info, warn, dim } from '../output.js';
 
 export async function memoryCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const sub = args.subcommand ?? 'stats';
@@ -11,17 +12,17 @@ export async function memoryCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
         return { success: false, message: 'Usage: hackagent memory query "<text>"' };
       }
       const results = ctx.memory.querySimilarProjects(queryText, 5);
-      console.log(`\n  Memory Query: "${queryText}"`);
-      console.log(`  ${'='.repeat(50)}`);
-      console.log(`  Similarity: ${(results.similarity * 100).toFixed(1)}%`);
-      console.log(`  Matches: ${results.snapshots.length}`);
-      console.log();
+      log(`Memory Query: "${queryText}"`);
+      dim('='.repeat(50));
+      log(`Similarity: ${(results.similarity * 100).toFixed(1)}%`);
+      log(`Matches: ${results.snapshots.length}`);
+      log('');
       for (const snap of results.snapshots) {
-        console.log(`  • ${snap.projectName}`);
-        console.log(`    Score: ${(snap.overallScore * 100).toFixed(1)}% | Deploy: ${snap.deploySuccess}`);
-        console.log(`    Strategy: ${snap.strategy.winningStrategy.slice(0, 60)}`);
-        console.log(`    Stack: ${snap.techStack.join(', ').slice(0, 60)}`);
-        console.log();
+        log(`${snap.projectName}`);
+        log(`  Score: ${(snap.overallScore * 100).toFixed(1)}% | Deploy: ${snap.deploySuccess}`);
+        log(`  Strategy: ${snap.strategy.winningStrategy.slice(0, 60)}`);
+        log(`  Stack: ${snap.techStack.join(', ').slice(0, 60)}`);
+        log('');
       }
       return {
         success: true,
@@ -36,25 +37,25 @@ export async function memoryCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
       const patterns = ctx.memory.getFailurePatterns();
       const wins = ctx.memory.getWinningPatterns();
 
-      console.log(`\n  Organizational Memory`);
-      console.log(`  ${'='.repeat(50)}`);
-      console.log(`  Total Projects: ${summary.totalProjects}`);
-      console.log(`  Average Score:  ${(summary.averageScore * 100).toFixed(1)}%`);
-      console.log(`  Top Technologies:`);
+      log('Organizational Memory');
+      dim('='.repeat(50));
+      log(`Total Projects: ${summary.totalProjects}`);
+      log(`Average Score:  ${(summary.averageScore * 100).toFixed(1)}%`);
+      log('Top Technologies:');
       for (const tech of summary.topTechnologies.slice(0, 10)) {
-        console.log(`    • ${tech}`);
+        log(`  ${tech}`);
       }
-      console.log();
-      console.log(`  Failure Patterns: ${patterns.length}`);
+      log('');
+      log(`Failure Patterns: ${patterns.length}`);
       for (const fp of patterns.slice(0, 5)) {
-        console.log(`    [${fp.category}] ${fp.description.slice(0, 60)} (x${fp.frequency})`);
+        log(`  [${fp.category}] ${fp.description.slice(0, 60)} (x${fp.frequency})`);
       }
-      console.log();
-      console.log(`  Winning Patterns: ${wins.length}`);
+      log('');
+      log(`Winning Patterns: ${wins.length}`);
       for (const wp of wins.slice(0, 5)) {
-        console.log(`    ${wp.strategy.slice(0, 60)} — avg ${(wp.avgScore * 100).toFixed(1)}% (${wp.count}x)`);
+        log(`  ${wp.strategy.slice(0, 60)} — avg ${(wp.avgScore * 100).toFixed(1)}% (${wp.count}x)`);
       }
-      console.log();
+      log('');
 
       return {
         success: true,
@@ -64,8 +65,7 @@ export async function memoryCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
     }
 
     case 'clear': {
-      // Memory is in-memory; this just resets the current session
-      console.log('  Memory cleared (session only — persistent storage not affected)');
+      warn('Memory cleared (session only — persistent storage not affected)');
       return { success: true, message: 'Session memory cleared' };
     }
 

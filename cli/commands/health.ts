@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import * as path from 'node:path';
 
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
+import { header, log, labeled, dim } from '../output.js';
 
 export async function healthCommand(ctx: CLIContext, _args: CLIArgs): Promise<CLIResult> {
   const memoryUsage = process.memoryUsage();
@@ -36,31 +37,31 @@ export async function healthCommand(ctx: CLIContext, _args: CLIArgs): Promise<CL
     }
   });
 
-  console.log(`\n  System Health`);
-  console.log(`  ${'='.repeat(50)}`);
-  console.log();
-  console.log(`  Runtime:`);
-  console.log(`  Memory (heap):   ${memMB} MB / ${rssMB} MB RSS`);
-  console.log(`  Uptime:          ${Math.floor(process.uptime())}s`);
-  console.log(`  Seed:            ${ctx.seed}`);
-  console.log(`  Workspace:       ${ctx.workspaceRoot}`);
-  console.log();
-  console.log(`  Projects:`);
-  console.log(`  Total:           ${projectCount}`);
-  console.log(`  State dir:       ${ctx.stateDir}`);
-  console.log(`  Snapshots:       ${snapshotCount}`);
-  console.log();
-  console.log(`  Memory Bank:`);
-  console.log(`  Projects:        ${memSummary.totalProjects}`);
-  console.log(`  Avg score:       ${(memSummary.averageScore * 100).toFixed(1)}%`);
-  console.log(`  Top techs:       ${memSummary.topTechnologies.slice(0, 5).join(', ') || 'none'}`);
-  console.log();
-  console.log(`  Recent Runs:`);
+  log('System Health');
+  dim('='.repeat(50));
+  log('');
+  log('Runtime:');
+  labeled('Memory (heap)', `${memMB} MB / ${rssMB} MB RSS`);
+  labeled('Uptime', `${Math.floor(process.uptime())}s`);
+  labeled('Seed', String(ctx.seed));
+  labeled('Workspace', ctx.workspaceRoot);
+  log('');
+  log('Projects:');
+  labeled('Total', String(projectCount));
+  labeled('State dir', ctx.stateDir);
+  labeled('Snapshots', String(snapshotCount));
+  log('');
+  log('Memory Bank:');
+  labeled('Projects', String(memSummary.totalProjects));
+  labeled('Avg score', `${(memSummary.averageScore * 100).toFixed(1)}%`);
+  labeled('Top techs', `${memSummary.topTechnologies.slice(0, 5).join(', ') || 'none'}`);
+  log('');
+  log('Recent Runs:');
   for (const run of recentRuns) {
-    console.log(`  • ${run.projectName.padEnd(25)} ${String(run.phase).padEnd(15)} ${run.updatedAt}`);
+    log(`${run.projectName.padEnd(25)} ${String(run.phase).padEnd(15)} ${run.updatedAt}`);
   }
-  if (recentRuns.length === 0) console.log('  (no recent runs)');
-  console.log();
+  if (recentRuns.length === 0) log('(no recent runs)');
+  log('');
 
   return {
     success: true,

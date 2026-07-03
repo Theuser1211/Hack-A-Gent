@@ -9,6 +9,7 @@ import {
   validateDeterministicEquality,
 } from '../../benchmarks/replay-engine.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
+import { log, dim, error as showError } from '../output.js';
 
 export async function replayCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const runId = args.positional[0];
@@ -33,8 +34,9 @@ export async function replayCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
     return { success: false, message: `No snapshot found for run: ${runId}. Check hackagent data/snapshots/` };
   }
 
-  console.log(`\n  Replaying Run: ${runId}`);
-  console.log(`  ${'='.repeat(50)}\n`);
+  log(`Replaying Run: ${runId}`);
+  dim('='.repeat(50));
+  log('');
 
   let snapshot;
   try {
@@ -46,29 +48,28 @@ export async function replayCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
   const rng = getSeededRandom(snapshot.masterSeed ?? ctx.seed);
 
   if (stepByStep) {
-    console.log('  Step-by-step replay enabled\n');
+    log('Step-by-step replay enabled');
+    log('');
     if (snapshot.mutationSequence) {
       for (let i = 0; i < snapshot.mutationSequence.length; i++) {
         const entry = snapshot.mutationSequence[i]!;
-        console.log(
-          `  Step ${i + 1}: ${entry.mutationType} on ${entry.moduleTarget}${entry.fileTarget ? `/${entry.fileTarget}` : ''}`,
-        );
-        console.log(`    Intensity: ${entry.intensity}`);
-        console.log();
+        log(`Step ${i + 1}: ${entry.mutationType} on ${entry.moduleTarget}${entry.fileTarget ? `/${entry.fileTarget}` : ''}`);
+        log(`  Intensity: ${entry.intensity}`);
+        log('');
       }
     }
-    console.log(`  Total steps: ${snapshot.mutationSequence?.length ?? 0}`);
+    log(`Total steps: ${snapshot.mutationSequence?.length ?? 0}`);
   } else {
     try {
       const replayResult = replayMutationSequence(snapshot);
-      console.log('  Replay completed successfully');
-      console.log(`  Mutations applied: ${replayResult.mutationSequence.length}`);
-      console.log(`  Original modules: ${replayResult.originalRepository.modules.length}`);
-      console.log(`  Final modules: ${replayResult.finalRepository.modules.length}`);
-      console.log();
+      log('Replay completed successfully');
+      log(`Mutations applied: ${replayResult.mutationSequence.length}`);
+      log(`Original modules: ${replayResult.originalRepository.modules.length}`);
+      log(`Final modules: ${replayResult.finalRepository.modules.length}`);
+      log('');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`  Replay error: ${msg}`);
+      showError(`Replay error: ${msg}`);
       return {
         success: false,
         message: `Replay failed: ${msg}`,

@@ -2,14 +2,16 @@ import * as readline from 'node:readline';
 
 import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
+import { log, dim } from '../output.js';
 
 export async function chatCommand(ctx: CLIContext, _args: CLIArgs): Promise<CLIResult> {
-  console.log(`\n  Hack-A-Gent Interactive Mode`);
-  console.log(`  ${'='.repeat(50)}`);
-  console.log(`  Commands: run <input> | status | memory query <text> | memory stats`);
-  console.log(`            deploy <id> | test <id> --url <url> | explain <id>`);
-  console.log(`            health | exit | help`);
-  console.log(`  ${'='.repeat(50)}\n`);
+  log('Hack-A-Gent Interactive Mode');
+  dim('='.repeat(50));
+  log(`Commands: run <input> | status | memory query <text> | memory stats`);
+  log(`          deploy <id> | test <id> --url <url> | explain <id>`);
+  log(`          health | exit | help`);
+  dim('='.repeat(50));
+  log('');
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -28,23 +30,23 @@ export async function chatCommand(ctx: CLIContext, _args: CLIArgs): Promise<CLIR
       }
 
       if (trimmed === 'exit' || trimmed === 'quit') {
-        console.log('Goodbye.');
+        log('Goodbye.');
         rl.close();
         resolve({ success: true, message: 'Interactive session ended' });
         return;
       }
 
       if (trimmed === 'help') {
-        console.log('  Available commands:');
-        console.log('    run <input>        — Run full pipeline');
-        console.log('    status             — Show current project status');
-        console.log('    memory query <txt> — Search organizational memory');
-        console.log('    memory stats       — Show memory statistics');
-        console.log('    deploy <id>        — Deploy a project');
-        console.log('    test <id> --url    — Run browser tests');
-        console.log('    explain <id>       — Debug/explain analysis');
-        console.log('    health             — System health check');
-        console.log('    exit               — Exit interactive mode');
+        log('Available commands:');
+        log('  run <input>        \u2014 Run full pipeline');
+        log('  status             \u2014 Show current project status');
+        log('  memory query <txt> \u2014 Search organizational memory');
+        log('  memory stats       \u2014 Show memory statistics');
+        log('  deploy <id>        \u2014 Deploy a project');
+        log('  test <id> --url    \u2014 Run browser tests');
+        log('  explain <id>       \u2014 Debug/explain analysis');
+        log('  health             \u2014 System health check');
+        log('  exit               \u2014 Exit interactive mode');
         rl.prompt();
         return;
       }
@@ -90,14 +92,14 @@ export async function chatCommand(ctx: CLIContext, _args: CLIArgs): Promise<CLIR
             result = await healthCommand(ctx, chatArgs);
             break;
           default:
-            console.log(`  Unknown command: ${chatArgs.command}. Type 'help' for available commands.`);
+            log(`Unknown command: ${chatArgs.command}. Type 'help' for available commands.`);
             rl.prompt();
             return;
         }
 
-        console.log(`  → ${result.success ? 'OK' : 'FAIL'}: ${result.message.slice(0, 100)}`);
+        log(`\u2192 ${result.success ? 'OK' : 'FAIL'}: ${result.message.slice(0, 100)}`);
       } catch (err) {
-        console.log(`  Error: ${err instanceof Error ? err.message : String(err)}`);
+        log(`Error: ${err instanceof Error ? err.message : String(err)}`);
       }
 
       rl.prompt();

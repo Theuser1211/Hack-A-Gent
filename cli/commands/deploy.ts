@@ -5,6 +5,7 @@ import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js'
 import { InternetHackathonOrchestrator } from '../../benchmarks/internet-hackathon-orchestrator.js';
 import { RemoteProjectState } from '../../benchmarks/remote-project-state.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
+import { header, log, success, error as showError, dim } from '../output.js';
 
 export async function deployCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const projectId = args.positional[0];
@@ -17,8 +18,9 @@ export async function deployCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
     return { success: false, message: `No project found: ${projectId}. Run 'hackagent run' first.` };
   }
 
-  console.log(`\n  Deploying Project: ${projectId}`);
-  console.log(`  ${'='.repeat(50)}\n`);
+  log(`Deploying Project: ${projectId}`);
+  dim('='.repeat(50));
+  log('');
 
   const stateManager = new RemoteProjectState(ctx.stateDir, ctx.seed);
   const state = stateManager.load(projectId);
@@ -29,10 +31,10 @@ export async function deployCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
   const internetOrch = new InternetHackathonOrchestrator(ctx.workspaceRoot, ctx.stateDir, ctx.seed);
   ctx.orchestrator = internetOrch;
 
-  console.log('  • Starting deployment repair controller...');
-  console.log(`  • Target: ${state.metadata.deployTarget ?? 'vercel'}`);
-  console.log(`  • GitHub repo: ${state.gitHub?.repoName ?? 'N/A'}`);
-  console.log();
+  log('Starting deployment repair controller...');
+  log(`Target: ${state.metadata.deployTarget ?? 'vercel'}`);
+  log(`GitHub repo: ${state.gitHub?.repoName ?? 'N/A'}`);
+  log('');
 
   const executionTime = Date.now();
 
@@ -41,26 +43,27 @@ export async function deployCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
     const deployResult = await internetOrch.getToolGateway().deploy({ target: 'vercel', projectDir });
     const elapsed = Date.now() - executionTime;
 
-    console.log(`  Deployment status: ${deployResult.success ? 'success' : 'failed'}`);
-    console.log(`  URL: ${deployResult.url ?? 'N/A'}`);
-    if (deployResult.error) console.log(`  Error: ${deployResult.error}`);
+    log(`Deployment status: ${deployResult.success ? 'success' : 'failed'}`);
+    log(`URL: ${deployResult.url ?? 'N/A'}`);
+    if (deployResult.error) log(`Error: ${deployResult.error}`);
 
     // Run browser validation
     if (deployResult.url) {
-      console.log('\n  • Running post-deploy browser validation...');
+      log('');
+      log('Running post-deploy browser validation...');
       try {
         const spec = internetOrch
           .getBrowserAgent()
           .buildTestSpec('deploy-validation', deployResult.url, ['main', 'h1'], ['Welcome']);
         const testResult = await internetOrch.getBrowserAgent().runTest(spec);
         const validation = { allPassed: testResult.passed, results: [testResult] };
-        console.log(`  Tests passed: ${validation.allPassed}`);
-        console.log(
-          `  Results: ${validation.results.length} tests, ${validation.results.filter((r: { passed: boolean }) => r.passed).length} passed`,
+        log(`Tests passed: ${validation.allPassed}`);
+        log(
+          `Results: ${validation.results.length} tests, ${validation.results.filter((r: { passed: boolean }) => r.passed).length} passed`,
         );
       } catch (browserErr) {
-        console.log(
-          `  Browser validation error: ${browserErr instanceof Error ? browserErr.message : String(browserErr)}`,
+        log(
+          `Browser validation error: ${browserErr instanceof Error ? browserErr.message : String(browserErr)}`,
         );
       }
     }
@@ -77,7 +80,7 @@ export async function deployCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
   } catch (err) {
     const elapsed = Date.now() - executionTime;
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`  ✗ Deployment failed after ${Math.floor(elapsed / 1000)}s: ${msg}`);
+    showError(`Deployment failed after ${Math.floor(elapsed / 1000)}s: ${msg}`);
     return {
       success: false,
       message: `Deployment failed: ${msg}`,

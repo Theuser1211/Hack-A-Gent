@@ -3,17 +3,18 @@ import { HackathonBenchmarkRunner, type BenchmarkRunnerConfig } from '../../benc
 import { ALL_BENCHMARKS } from '../../benchmarks/hackathon-benchmarks.js';
 import { MutationEvolutionController } from '../../benchmarks/mutation-evolution-controller.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
+import { header, log, info, dim } from '../output.js';
 
 export async function benchmarkCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const sub = args.subcommand ?? 'run';
 
   switch (sub) {
     case 'list': {
-      console.log('\n  Available Benchmarks:\n');
+      log('Available Benchmarks:');
       for (const b of ALL_BENCHMARKS) {
-        console.log(`  • ${b.id.padEnd(30)} ${b.name.slice(0, 50)}`);
+        log(`${b.id.padEnd(30)} ${b.name.slice(0, 50)}`);
       }
-      console.log();
+      log('');
       return {
         success: true,
         message: `${ALL_BENCHMARKS.length} benchmarks available`,
@@ -33,9 +34,10 @@ export async function benchmarkCommand(ctx: CLIContext, args: CLIArgs): Promise<
         return { success: false, message: `Unknown benchmark: ${benchmarkId}. Use 'hackagent benchmark list'` };
       }
 
-      console.log(`\n  Running Benchmark: ${benchmarkId}`);
-      console.log(`  Seed: ${seed} | Mutation Level: ${mutationLevel} | Adversarial: ${adversarial}`);
-      console.log(`  ${'='.repeat(50)}\n`);
+      log(`Running Benchmark: ${benchmarkId}`);
+      log(`Seed: ${seed} | Mutation Level: ${mutationLevel} | Adversarial: ${adversarial}`);
+      dim('='.repeat(50));
+      log('');
 
       const config: BenchmarkRunnerConfig = {
         seed,
@@ -57,22 +59,22 @@ export async function benchmarkCommand(ctx: CLIContext, args: CLIArgs): Promise<
       const target = benchmark ?? ALL_BENCHMARKS[0]!;
       const result = await runner.runBenchmark(target);
 
-      console.log(`  Results:`);
-      console.log(`  Overall Score: ${(result.overall_success ? 100 : 0).toFixed(1)}%`);
-      console.log(`  Passed: ${result.overall_success}`);
-      console.log(
-        `  Duration: ${Math.floor((result.completed_at ? new Date(result.completed_at).getTime() - new Date(result.started_at).getTime() : 0) / 1000)}s`,
+      log('Results:');
+      log(`Overall Score: ${(result.overall_success ? 100 : 0).toFixed(1)}%`);
+      log(`Passed: ${result.overall_success}`);
+      log(
+        `Duration: ${Math.floor((result.completed_at ? new Date(result.completed_at).getTime() - new Date(result.started_at).getTime() : 0) / 1000)}s`,
       );
-      console.log();
+      log('');
 
       if (result.phases) {
-        console.log(`  Phase Breakdown:`);
+        log('Phase Breakdown:');
         for (const phase of result.phases) {
-          console.log(
-            `    • ${phase.phase ?? 'unknown'}: ${phase.success ? 'PASS' : 'FAIL'} (${(phase.success ? 100 : 0).toFixed(1)}%)`,
+          log(
+            `  ${phase.phase ?? 'unknown'}: ${phase.success ? 'PASS' : 'FAIL'} (${(phase.success ? 100 : 0).toFixed(1)}%)`,
           );
         }
-        console.log();
+        log('');
       }
 
       return {

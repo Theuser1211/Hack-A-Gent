@@ -5,6 +5,7 @@ import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js'
 import { InternetHackathonOrchestrator } from '../../benchmarks/internet-hackathon-orchestrator.js';
 import { RemoteProjectState } from '../../benchmarks/remote-project-state.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
+import { log, dim, warn, error as showError, labeled } from '../output.js';
 
 export async function resumeCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const projectId = args.positional[0];
@@ -28,13 +29,14 @@ export async function resumeCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
     return { success: false, message: `Cannot resume project "${projectId}": ${resumeResult.warnings.join('; ')}` };
   }
 
-  console.log(`\n  Resuming project: ${projectId}`);
-  console.log(`  Phase: ${loaded.phase}`);
-  console.log(`  Resume point: ${resumeResult.resumePoint}`);
+  log(`Resuming project: ${projectId}`);
+  labeled('Phase', loaded.phase);
+  labeled('Resume point', resumeResult.resumePoint);
   if (resumeResult.warnings.length > 0) {
-    for (const w of resumeResult.warnings) console.log(`  ⚠ ${w}`);
+    for (const w of resumeResult.warnings) warn(w);
   }
-  console.log(`  ${'='.repeat(50)}\n`);
+  dim('='.repeat(50));
+  log('');
 
   const internetOrch = new InternetHackathonOrchestrator(ctx.workspaceRoot, ctx.stateDir, ctx.seed);
   ctx.orchestrator = internetOrch;
@@ -42,18 +44,18 @@ export async function resumeCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
   // Reload state into the orchestrator
   (internetOrch as unknown).loadState(loaded);
 
-  console.log('  • Continuing execution...');
+  log('Continuing execution...');
   const executionTime = Date.now();
 
   try {
     const result = await internetOrch.executeFullPipeline();
     const elapsed = Date.now() - executionTime;
 
-    console.log(`\n  ${'='.repeat(50)}`);
-    console.log(`  Resume complete in ${Math.floor(elapsed / 1000)}s`);
-    console.log(`  Phase: ${result.phase}`);
-    console.log(`  URL: ${result.deployUrl ?? 'N/A'}`);
-    console.log(`  Errors: ${result.errors.length}`);
+    dim('='.repeat(50));
+    log(`Resume complete in ${Math.floor(elapsed / 1000)}s`);
+    labeled('Phase', result.phase);
+    labeled('URL', result.deployUrl ?? 'N/A');
+    labeled('Errors', String(result.errors.length));
 
     return {
       success: result.errors.length === 0,
@@ -65,7 +67,7 @@ export async function resumeCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
   } catch (err) {
     const elapsed = Date.now() - executionTime;
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`  ✗ Resume failed after ${Math.floor(elapsed / 1000)}s: ${msg}`);
+    showError(`Resume failed after ${Math.floor(elapsed / 1000)}s: ${msg}`);
     return {
       success: false,
       message: `Resume failed: ${msg}`,

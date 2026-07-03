@@ -3,6 +3,7 @@ import * as path from 'node:path';
 
 import type { ProjectStateSnapshot } from '../../benchmarks/remote-project-state.js';
 import type { CLIContext, CLIArgs, CLIResult, CLIExecutionState } from '../types.js';
+import { header, log, labeled, divider } from '../output.js';
 
 export async function statusCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const projectId = args.positional[0];
@@ -55,13 +56,11 @@ export async function statusCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
       }
     });
 
-    console.log(`\n  Projects (${projects.length} total):\n`);
+    log(`Projects (${projects.length} total):`);
     for (const p of projects) {
-      console.log(
-        `  ${p.projectId.padEnd(20)} ${p.projectName.padEnd(25)} ${String(p.phase).padEnd(15)} ${p.updatedAt}`,
-      );
+      log(`${p.projectId.padEnd(20)} ${p.projectName.padEnd(25)} ${String(p.phase).padEnd(15)} ${p.updatedAt}`);
     }
-    console.log();
+    log('');
 
     return { success: true, message: `${projects.length} projects found`, data: { projects } };
   }
@@ -82,28 +81,28 @@ export async function statusCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
     repairCycles: state.deployment?.logs.length ?? 0,
   };
 
-  console.log(`\n  Project: ${state.projectName}`);
-  console.log(`  ${'='.repeat(50)}`);
-  console.log(`  ID:           ${state.projectId}`);
-  console.log(`  Phase:        ${state.phase}`);
-  console.log(`  Created:      ${state.createdAt}`);
-  console.log(`  Updated:      ${state.updatedAt}`);
-  console.log(`  Seed:         ${state.seed}`);
-  console.log();
-  console.log(`  GitHub:       ${state.gitHub?.repoUrl ?? 'Not configured'}`);
-  console.log(`  Deployment:   ${state.deployment?.url ?? 'Not deployed'}`);
-  console.log(`  Deploy Status: ${state.deployment?.status ?? 'N/A'}`);
-  console.log();
-  console.log(`  Builds:       ${state.buildHistory.length}`);
+  log(`Project: ${state.projectName}`);
+  divider();
+  labeled('ID', state.projectId);
+  labeled('Phase', state.phase);
+  labeled('Created', state.createdAt);
+  labeled('Updated', state.updatedAt);
+  labeled('Seed', String(state.seed));
+  log('');
+  labeled('GitHub', state.gitHub?.repoUrl ?? 'Not configured');
+  labeled('Deployment', state.deployment?.url ?? 'Not deployed');
+  labeled('Deploy Status', state.deployment?.status ?? 'N/A');
+  log('');
+  labeled('Builds', String(state.buildHistory.length));
   for (const b of state.buildHistory.slice(-3)) {
-    console.log(`    #${b.buildNumber}: ${b.status}${b.durationMs ? ` (${b.durationMs}ms)` : ''}`);
+    log(`  #${b.buildNumber}: ${b.status}${b.durationMs ? ` (${b.durationMs}ms)` : ''}`);
   }
-  console.log();
-  console.log(`  Agent Logs:   ${state.agentLogs.length}`);
+  log('');
+  labeled('Agent Logs', String(state.agentLogs.length));
   const running = state.agentLogs.filter((l) => l.status === 'running').length;
   const failed = state.agentLogs.filter((l) => l.status === 'failed').length;
-  console.log(`    Running: ${running}, Failed: ${failed}`);
-  console.log();
+  log(`  Running: ${running}, Failed: ${failed}`);
+  log('');
 
   return {
     success: true,
