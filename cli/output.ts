@@ -32,6 +32,19 @@ export function log(message: string): void {
   console.log(`  ${message}`);
 }
 
+export function logRaw(message: string): void {
+  console.log(message);
+}
+
+export function banner(): void {
+  logRaw('');
+  logRaw(`  ${BOLD}${color('┌─────────────────────────────────────────────┐', 'cyan')}${RESET}`);
+  logRaw(`  ${BOLD}${color('│        Welcome to Hack-A-Gent! 🚀             │', 'cyan')}${RESET}`);
+  logRaw(`  ${BOLD}${color('│  Autonomous Hackathon Engineering CLI          │', 'cyan')}${RESET}`);
+  logRaw(`  ${BOLD}${color('└─────────────────────────────────────────────┘', 'cyan')}${RESET}`);
+  logRaw('');
+}
+
 export function success(message: string): void {
   console.log(`  ${icons.success} ${message}`);
 }

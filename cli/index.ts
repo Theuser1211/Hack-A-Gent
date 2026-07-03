@@ -5,6 +5,8 @@ import * as path from 'node:path';
 
 import { createContext, formatDuration } from './context.js';
 import type { CLIArgs, CLIResult, CommandName } from './types.js';
+import { getConfig } from './config-manager.js';
+import { banner } from './output.js';
 
 const VALID_COMMANDS: CommandName[] = [
   'run',
@@ -157,10 +159,45 @@ function showHelp(): void {
 `);
 }
 
+async function ensureConfig(command: CommandName): Promise<boolean> {
+  const needsLLM: CommandName[] = ['run', 'simulate', 'chat', 'explain', 'deploy', 'test', 'models'];
+  if (!needsLLM.includes(command)) return true;
+
+  const config = getConfig();
+  if (config?.llm.apiKey) return true;
+
+  if (command === 'run') {
+    banner();
+    console.log('  No AI provider is configured.');
+    console.log('  Let\'s get you set up.\n');
+    const { setupCommand } = await import('./commands/setup.js');
+    const result = await setupCommand(createContext(42), {
+      command: 'setup' as CommandName,
+      subcommand: undefined,
+      positional: [],
+      flags: {},
+    });
+    if (!result.success) {
+      console.log('\n  Setup cancelled. Run `hag setup` to configure later.\n');
+      return false;
+    }
+    console.log();
+    return true;
+  }
+
+  return true;
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv);
 
   if (args.command === 'help' || args.command === undefined) {
+    const config = getConfig();
+    if (!config?.llm.apiKey) {
+      banner();
+      console.log('  No AI provider is configured.');
+      console.log('  Run `hag setup` to get started.\n');
+    }
     showHelp();
     process.exitCode = 0;
     return;
@@ -177,6 +214,11 @@ async function main(): Promise<void> {
   ctx.outputFormat = args.flags.json === true ? 'json' : args.flags.quiet === true ? 'quiet' : 'pretty';
   ctx.verbose = args.flags.verbose === true;
   ctx.dryRun = args.flags['dry-run'] === true;
+
+  if (!(await ensureConfig(args.command))) {
+    process.exitCode = 1;
+    return;
+  }
 
   let result: CLIResult;
 
@@ -283,8 +325,9 @@ async function main(): Promise<void> {
         result = { success: false, message: `Unknown command: ${args.command}. Use 'hackagent help'.` };
     }
   } catch (err) {
+    const debug = args.flags.debug === true;
     const msg = err instanceof Error ? err.message : String(err);
-    result = { success: false, message: `Fatal error: ${msg}` };
+    result = { success: false, message: debug ? `Fatal error: ${msg}` : msg };
   }
 
   result.durationMs = Date.now() - executionTime;
@@ -313,6 +356,12 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error('Fatal error:', err);
+  const debug = process.argv.includes('--debug');
+  if (debug) {
+    console.error('Fatal error:', err);
+  } else {
+    console.error(`  ✗ ${err instanceof Error ? err.message : String(err)}`);
+    console.error('  Pass --debug for details.');
+  }
   process.exitCode = 1;
 });
