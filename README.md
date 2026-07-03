@@ -1,130 +1,166 @@
 # Hack-A-Gent
 
-Give it a Devpost link, and it builds the project. An autonomous hackathon agent that reads competition briefs and generates fully functional code.
+Autonomous hackathon engineering CLI. Give it a Devpost URL, and it generates a complete project.
 
 ## Quick Start
 
 ```bash
-# Interactive setup (recommended for first-time users)
-hackagent setup
+# Install globally
+npm install -g hack-agent
 
-# Or configure manually
-hag config --provider nvidia --api-key YOUR_KEY
+# Interactive setup (first time)
+hag setup
 
-# Run the full pipeline with a Devpost URL
+# Run the pipeline with a Devpost URL
 hag run https://devpost.com/software/my-project
 ```
 
-Done. It'll parse the competition, pick a winning strategy, generate the code, and deploy it.
+The CLI detects an unconfigured state and launches the setup wizard automatically on first use.
 
-## Shorthands
+## Installation
 
-All commands have short aliases:
-
-| Full | Short |
-|------|-------|
-| `hackagent` | `hag` |
-| `hackagent config` | `hag c` |
-| `hackagent setup` | `hag s` |
-
-## Configuration
-
-### Interactive wizard (recommended)
+### Global install (recommended)
 
 ```bash
-hackagent setup
+npm install -g hack-agent
+hag setup
 ```
 
-Walks you through provider selection, API key entry, endpoint URL, and optionally verifies the connection.
-
-### CLI config
-
-```bash
-# NVIDIA NIMs (recommended for speed)
-hag config --provider nvidia --api-key nvapi-xxx --endpoint https://integrate.api.nvidia.com/v1
-
-# Provider aliases also work
-hag config --provider nvidia-nims --api-key nvapi-xxx
-
-# OpenAI
-hag config --provider openai --api-key sk-xxx
-
-# Custom endpoint (Ollama, LM Studio, anything OpenAI-compatible)
-hag config --provider custom --api-key your-key --endpoint http://localhost:11434/v1
-
-# Verify the connection works
-hag config --verify
-
-# Show current config
-hag config --show
-```
-
-### .env file
-
-Create a `.env` in your project root:
-
-```env
-HACKAGENT_PROVIDER=nvidia
-HACKAGENT_API_KEY=nvapi-xxx
-HACKAGENT_BASE_URL=https://integrate.api.nvidia.com/v1
-```
-
-For deployment features, you can also set:
-- `--github-token` or `GITHUB_TOKEN` — GitHub repo creation
-- `--vercel-token` or `VERCEL_TOKEN` — Vercel deployment
-- `--netlify-token` or `NETLIFY_AUTH_TOKEN` — Netlify deployment
-
-## Running locally
+### From source
 
 ```bash
 git clone https://github.com/Theuser1211/Hack-A-Gent.git
 cd Hack-A-Gent
 npm install
 npm run build
-
-# Try it out
-npx tsx cli/index.ts run "Build a URL shortener with analytics"
+npm link
 ```
 
-Or use `tsx` directly without building:
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `hag setup` (or `s`) | Interactive setup wizard — provider, API key, verify |
+| `hag config` (or `c`) | View or change LLM/config settings |
+| `hag run <input>` | Full pipeline: parse, strategize, generate, deploy |
+| `hag doctor` | System diagnostics — Node, Git, config, provider, workspace |
+| `hag models` | List available models from configured provider |
+| `hag providers` | Show status of all 6 supported providers |
+| `hag version` | Display version |
+| `hag status [id]` | Project status, list saved projects |
+| `hag memory <query\|stats\|clear>` | Organizational memory |
+| `hag benchmark list\|run` | Benchmark suite |
+| `hag replay <id>` | Deterministic replay |
+| `hag deploy <id>` | Deploy a built project |
+| `hag test <id>` | Run browser tests |
+| `hag explain [id]` | Decision traces and debug analysis |
+| `hag health` | System health check |
+| `hag chat` | Interactive REPL mode |
+| `hag simulate <input>` | Simulation only |
+
+## Configuration
+
+### Interactive wizard
 
 ```bash
-npm run hag -- config --provider nvidia --api-key nvapi-xxx
-npm run hag -- run https://devpost.com/software/my-project
+hag setup
 ```
 
-## What it does
+Walks through provider selection, API key entry, endpoint URL, and optional connection verification.
 
-- **Parses Devpost URLs** — pulls title, tech stack, judging criteria, and constraints automatically
-- **Runs strategy competition** — multiple agents battle it out to pick the best approach
-- **Generates real code** — not toy templates, actual working projects with React, Node.js, databases
-- **Builds and deploys** — compiles the project and publishes it live
+### CLI config
 
-## How it works
+```bash
+# NVIDIA NIMs (recommended for speed)
+hag config --provider nvidia --api-key nvapi-xxx
 
-The pipeline has three phases. First, it scrapes the Devpost page and extracts everything — the problem statement, what technologies they're looking for, how judges will score it. Second, it runs a strategy competition where multiple planning agents propose different approaches and vote on which one wins. Third, it generates the actual code using your configured LLM provider.
+# OpenAI
+hag config --provider openai --api-key sk-xxx
 
-The strategy selection isn't random. It looks at past hackathon winners and picks a pattern that matches the competition type — portfolio projects get minimalist designs, developer tools get clean APIs, consumer apps get social features as the hook.
+# Custom endpoint (Ollama, LM Studio, any OpenAI-compatible)
+hag config --provider custom --api-key your-key --endpoint http://localhost:11434/v1
 
-The whole system is deterministic. Same seed, same Devpost URL, same output every time. This makes it useful for benchmarking and testing.
+# Verify the connection
+hag config --verify
+
+# Show current config
+hag config --show
+```
+
+Provider aliases: `nvidia-nims`, `nvidia-nim` → `nvidia`. Endpoint aliases: `--endpoint` → `--base-url`.
+
+### .env file
+
+```env
+HACKAGENT_PROVIDER=nvidia
+HACKAGENT_API_KEY=nvapi-xxx
+HACKAGENT_BASE_URL=https://integrate.api.nvidia.com/v1
+HACKAGENT_MODEL=meta/llama-3.1-8b-instruct
+```
+
+## Supported providers
+
+| Provider | Flag value | Auto-detects models | Health check |
+|----------|-----------|-------------------|--------------|
+| NVIDIA NIMs | `nvidia` | Yes | Real API call |
+| OpenAI | `openai` | Yes | Cached |
+| Anthropic | `anthropic` | Yes | Cached |
+| Gemini | `gemini` | Yes | Cached |
+| OpenRouter | `openrouter` | Yes | Cached |
+| Custom | `custom` | No | Real GET /models |
+
+## Pipeline stages
+
+When you run `hag run`, the pipeline shows structured progress:
+
+1. **Parsing input** — Devpost URL, file, or text specification
+2. **Initializing LLM providers** — connects to configured provider
+3. **Running strategy competition** — multiple agents propose approaches
+4. **Extracting requirements** — structured requirements from parsed input
+5. **Building TaskGraph** — execution plan with task dependencies
+6. **Executing pipeline** — code generation, builds, deployment
+7. **Post-project learning** — memory update for future runs
+
+A rich summary is shown on completion with elapsed time, task count, and next steps.
+
+## Error handling
+
+All errors include contextual what/why/fix messages:
+
+```
+✘ Connection failed
+  Why: The provider endpoint is unreachable or not responding.
+  Fix: Check your internet connection and verify the endpoint URL.
+```
+
+Pass `--debug` to any command for full stack traces.
+
+## Global flags
+
+| Flag | Effect |
+|------|--------|
+| `--seed <N>` | Deterministic seed |
+| `--json` | JSON output |
+| `--quiet` | Minimal output |
+| `--verbose` | Verbose logging |
+| `--dry-run` | Simulate without execution |
+| `--debug` | Show stack traces |
 
 ## Architecture
 
-The codebase is split into a few layers:
+The codebase is split into four layers:
 
-- **CLI** (`cli/`) — command-line interface and config management
-- **Benchmarks** (`benchmarks/`) — the core hackathon simulation and generation engines
-- **Kernel** (`kernel/`) — LLM providers, routing, and tool execution
-- **Agents** (`agents/`) — architect, builder, and frontend agents that do the actual work
+- **CLI** (`cli/`) — command-line interface, config, output formatting, error handling
+- **Benchmarks** (`benchmarks/`) — hackathon simulation and generation engines
+- **Kernel** (`kernel/`) — LLM providers, routing, tool execution
+- **Agents** (`agents/`) — architect, builder, and frontend agents
+
+The system is deterministic — same seed + same input = same output every time.
 
 ## Requirements
 
 - Node.js 20+
-- An LLM API key (NVIDIA, OpenAI, Anthropic, or any OpenAI-compatible endpoint)
-
-## Credits
-
-Built as an autonomous hackathon competition system. Uses Zod for validation, XState for state management, and native fetch for LLM calls.
+- LLM API key (NVIDIA, OpenAI, Anthropic, Gemini, OpenRouter, or any OpenAI-compatible endpoint)
 
 ## License
 
