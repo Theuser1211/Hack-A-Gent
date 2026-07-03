@@ -85,7 +85,14 @@ async function runDemoSurfacePipeline(
 
   if (dryRun) {
     pipelineFooter();
-    log('Dry run — no execution performed.\n');
+    divider();
+    success('Demo Surface Plan (dry run)');
+    labeled('Project', `"${parsed.title}"`);
+    labeled('Win Score', `${plan.winScore}/100`);
+    labeled('Steps', String(plan.executionSteps.length));
+    labeled('Target', plan.deployTarget);
+    info('Next: run `hag run <input>` without --dry-run to execute.');
+    log('');
     return {
       success: true,
       message: `Demo surface plan generated (score ${plan.winScore}/100)`,
@@ -132,6 +139,16 @@ async function runDemoSurfacePipeline(
   ctx.finalDemoOutput = finalOutput;
 
   pipelineFooter();
+
+  divider();
+  success('Demo Mode Complete');
+  labeled('Project', `"${parsed.title}"`);
+  labeled('Win Score', `${plan.winScore}/100`);
+  labeled('Predicted Score', `${simResult.finalJudgeVerdict.total}/100`);
+  labeled('Sim Failures', String(simResult.failureTimeline.length));
+  labeled('Sim Repairs', String(simResult.repairTimeline.length));
+  info('Next: run `hag run <input>` for the full pipeline.');
+  log('');
 
   return {
     success: true,
@@ -194,7 +211,14 @@ async function runFullPipeline(
 
   if (dryRun) {
     pipelineFooter();
-    log('Dry run — no execution performed.\n');
+    divider();
+    success('Dry Run Complete');
+    labeled('Project', `"${parsed.title}"`);
+    labeled('Winner', strategyReport.strategyCompetition.winner.name);
+    labeled('Candidates', String(strategyReport.strategyCompetition.candidates.length));
+    labeled('Predicted Reward', `${(strategyReport.rewardPrediction.predicted * 100).toFixed(1)}%`);
+    info('Next: run without --dry-run to execute the full pipeline.');
+    log('');
     return {
       success: true,
       message: 'Dry run complete. Strategy selected, no execution performed.',
@@ -255,15 +279,25 @@ async function runFullPipeline(
 
     pipelineFooter();
 
-    labeled('Pipeline complete', formatDuration(elapsed));
-    labeled('Phase', result.phase);
-    labeled('URL', result.deployUrl ?? 'N/A');
+    const deployStatus = result.deployUrl ? result.deployUrl : 'not deployed';
+    divider();
+    success('Pipeline Complete');
+    labeled('Project', `"${parsed.title}"`);
+    labeled('Strategy', strategyReport.strategyCompetition.winner.name);
+    labeled('Duration', formatDuration(elapsed));
+    labeled('Tasks', String(taskCount));
     labeled('Errors', String(result.errors.length));
+    labeled('Deploy', deployStatus);
+    if (result.errors.length === 0) {
+      info('Next: run `hag test <project-id>` to run browser tests');
+    } else {
+      info('Next: run `hag explain <project-id>` to review errors');
+    }
     log('');
 
     return {
       success: true,
-      message: `Pipeline completed for "${parsed.title}"`,
+      message: `Pipeline completed for "${parsed.title}" — ${formatDuration(elapsed)}, ${taskCount} tasks`,
       data: {
         projectName,
         phase: result.phase,
@@ -285,6 +319,10 @@ async function runFullPipeline(
     const msg = err instanceof Error ? err.message : String(err);
     stageFail('Pipeline execution', msg);
     pipelineFooter();
+    divider();
+    printError(formatError(err, 'Pipeline'));
+    info('Next: run `hag doctor` to check provider status.');
+    log('');
     return {
       success: false,
       message: `Pipeline failed: ${msg}`,
