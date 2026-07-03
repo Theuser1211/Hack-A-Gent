@@ -14,7 +14,10 @@ import { parseDevpostUrl } from '../devpost-parser.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { initializeProviders, getProviderInfo } from '../provider-init.js';
 import { RouterEngine } from '../../kernel/llm/router-engine.js';
-import { header, log, success, error, warn, info, dim, labeled, step, divider, Spinner } from '../output.js';
+import {
+  header, log, success, error, warn, info, dim, labeled, step, divider, Spinner,
+  pipelineHeader, pipelineFooter, stageStart, stageDone, stageFail,
+} from '../output.js';
 
 export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const input = args.positional[0];
@@ -26,13 +29,17 @@ export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIRes
   const dryRun = args.flags['dry-run'] === true || ctx.dryRun;
   const demoMode = args.flags.demo === true;
 
-  header(`${demoMode ? 'Demo Surface' : 'Full Pipeline'} — seed ${seed}`);
+  pipelineHeader(demoMode ? 'Demo Surface Pipeline' : 'Full Pipeline');
 
-  step('Parsing input');
+  const t0 = Date.now();
+
+  stageStart('Parsing input');
   const parsed = await parseInput(input);
   if (!parsed) {
+    stageFail('Parsing input', 'Cannot parse input');
     return { success: false, message: `Cannot parse input: ${input}` };
   }
+  stageDone('Parsing input', Date.now() - t0);
   labeled('title', `"${parsed.title}"`);
 
   if (demoMode) {
@@ -50,7 +57,7 @@ async function runDemoSurfacePipeline(
 ): Promise<CLIResult> {
   const executionTime = Date.now();
 
-  console.log('  • Running Demo Surface Compilation...');
+  stageStart('Demo Surface Compilation');
   const compiler = new DemoSurfaceCompiler(seed + 13000);
   const plan = compiler.compile({
     title: parsed.title,
@@ -60,23 +67,14 @@ async function runDemoSurfacePipeline(
     constraints: parsed.constraints,
   });
   ctx.demoSurfacePlan = plan;
-  console.log(`    win score: ${plan.winScore}/100`);
-  console.log(`    wow moment: ${plan.wowMoment.type} (${plan.wowMoment.description.slice(0, 60)})`);
-  console.log(`    execution steps: ${plan.executionSteps.length}`);
-  console.log(`    deploy target: ${plan.deployTarget}`);
-
-  const wowValidation = compiler.validateWowMoment();
-  if (!wowValidation.valid) {
-    console.log(`  ⚠ Wow moment issue: ${wowValidation.reason}`);
-    if (wowValidation.suggestion) console.log(`    suggestion: ${wowValidation.suggestion}`);
-  }
-
-  if (plan.winScore < 80) {
-    console.log(`  ⚠ Win score below 80 threshold — pipeline simplification active`);
-  }
+  stageDone('Demo Surface Compilation', Date.now() - executionTime);
+  labeled('win score', `${plan.winScore}/100`);
+  labeled('wow moment', `${plan.wowMoment.type} (${plan.wowMoment.description.slice(0, 60)})`);
+  labeled('steps', String(plan.executionSteps.length));
 
   if (dryRun) {
-    const elapsed = Date.now() - executionTime;
+    pipelineFooter();
+    log('Dry run — no execution performed.\n');
     return {
       success: true,
       message: `Demo surface plan generated (score ${plan.winScore}/100)`,
@@ -90,12 +88,12 @@ async function runDemoSurfacePipeline(
           criticalPath: plan.criticalPath,
         },
       },
-      metrics: { durationMs: elapsed, winScore: plan.winScore, steps: plan.executionSteps.length },
+      metrics: { durationMs: Date.now() - executionTime, winScore: plan.winScore, steps: plan.executionSteps.length },
       traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
     };
   }
 
-  console.log('  • Running Simulation Preview...');
+  stageStart('Simulation Preview');
   const simEngine = new HackathonSimulationEngine(seed + 14000);
   const simResult = simEngine.simulate({
     devpost: {
@@ -115,17 +113,14 @@ async function runDemoSurfacePipeline(
     seed,
   });
   ctx.simulationResult = simResult;
-  console.log(`    predicted winner: "${simResult.winnerStrategy.name}"`);
-  console.log(`    predicted judge score: ${simResult.finalJudgeVerdict.total}/100`);
-  console.log(`    failures: ${simResult.failureTimeline.length}, repairs: ${simResult.repairTimeline.length}`);
-  console.log(
-    `    recommendation: ${simResult.finalJudgeVerdict.total >= 75 ? '✓ proceed' : '⚡ optimize before building'}`,
-  );
-
-  const elapsed = Date.now() - executionTime;
+  stageDone('Simulation Preview', Date.now() - executionTime);
+  labeled('predicted winner', `"${simResult.winnerStrategy.name}"`);
+  labeled('predicted score', `${simResult.finalJudgeVerdict.total}/100`);
 
   const finalOutput = compiler.produceFinalOutput(plan, plan.deployTarget);
   ctx.finalDemoOutput = finalOutput;
+
+  pipelineFooter();
 
   return {
     success: true,
@@ -145,7 +140,7 @@ async function runDemoSurfacePipeline(
         repairs: simResult.repairTimeline.length,
       },
     },
-    metrics: { durationMs: elapsed, winScore: plan.winScore, predictedScore: simResult.finalJudgeVerdict.total },
+    metrics: { durationMs: Date.now() - executionTime, winScore: plan.winScore, predictedScore: simResult.finalJudgeVerdict.total },
     traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
   };
 }
@@ -156,20 +151,22 @@ async function runFullPipeline(
   seed: number,
   dryRun: boolean,
 ): Promise<CLIResult> {
+  const t0 = Date.now();
   const phase12 = new Phase12Orchestrator(seed);
   ctx.phase12orchestrator = phase12;
 
-  step('Initializing LLM providers');
+  stageStart('Initializing LLM providers');
   let routerEngine: RouterEngine | null = null;
   try {
     const providerResult = initializeProviders();
     routerEngine = providerResult.router;
-    info(getProviderInfo(providerResult.config));
+    stageDone('Initializing LLM providers', Date.now() - t0);
   } catch (err) {
+    stageDone('Initializing LLM providers', Date.now() - t0);
     warn(`LLM providers unavailable — using templates: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  step('Running strategy competition');
+  stageStart('Running strategy competition');
   const strategyReport = await phase12.runProject({
     title: parsed.title,
     problemStatement: parsed.problemStatement,
@@ -178,11 +175,14 @@ async function runFullPipeline(
     techStack: parsed.recommendedStack,
     preferredStack: parsed.recommendedStack,
   });
+  stageDone('Running strategy competition', Date.now() - t0);
   labeled('winner', strategyReport.strategyCompetition.winner.name);
   labeled('candidates', String(strategyReport.strategyCompetition.candidates.length));
   labeled('predicted reward', `${(strategyReport.rewardPrediction.predicted * 100).toFixed(1)}%`);
 
   if (dryRun) {
+    pipelineFooter();
+    log('Dry run — no execution performed.\n');
     return {
       success: true,
       message: 'Dry run complete. Strategy selected, no execution performed.',
@@ -199,27 +199,30 @@ async function runFullPipeline(
   ctx.orchestrator = internetOrch;
 
   internetOrch.setDevpostData(parsed);
-  step('Extracting requirements');
-  const reqs = await internetOrch.extractRequirements(parsed);
-  labeled('requirements', String(reqs.length));
-  step('Building TaskGraph');
-  const executionPlan = await internetOrch.createExecutionPlan(parsed, reqs);
-  labeled('tasks', String(executionPlan.taskGraph.getAllNodes().length));
 
-  step('Executing pipeline');
+  stageStart('Extracting requirements');
+  const reqs = await internetOrch.extractRequirements(parsed);
+  stageDone('Extracting requirements', Date.now() - t0);
+  labeled('requirements', String(reqs.length));
+
+  stageStart('Building TaskGraph');
+  const executionPlan = await internetOrch.createExecutionPlan(parsed, reqs);
+  const taskCount = executionPlan.taskGraph.getAllNodes().length;
+  stageDone('Building TaskGraph', Date.now() - t0);
+  labeled('tasks', String(taskCount));
+
+  stageStart('Executing pipeline');
+
   const executionTime = Date.now();
 
   try {
     const result = await internetOrch.executeFullPipeline();
     const elapsed = Date.now() - executionTime;
 
+    stageDone('Executing pipeline', Date.now() - t0);
     divider();
-    labeled('Pipeline complete', formatDuration(elapsed));
-    labeled('Phase', result.phase);
-    labeled('URL', result.deployUrl ?? 'N/A');
-    labeled('Errors', String(result.errors.length));
 
-    step('Running post-project learning cycle');
+    stageStart('Running post-project learning cycle');
     const learningOutput = await phase12.runPostProject({
       projectName,
       projectDescription: parsed.problemStatement,
@@ -235,7 +238,16 @@ async function runFullPipeline(
       judgeScore: result.judgeScore ?? 0.7,
       demoAvailable: result.deployUrl !== null,
     });
-    info(`Memory updated: ${learningOutput.memorySummary.totalProjects} projects`);
+    stageDone('Post-project learning', Date.now() - t0);
+    info(`Memory: ${learningOutput.memorySummary.totalProjects} projects`);
+
+    pipelineFooter();
+
+    labeled('Pipeline complete', formatDuration(elapsed));
+    labeled('Phase', result.phase);
+    labeled('URL', result.deployUrl ?? 'N/A');
+    labeled('Errors', String(result.errors.length));
+    log('');
 
     return {
       success: true,
@@ -251,7 +263,7 @@ async function runFullPipeline(
       },
       metrics: {
         durationMs: elapsed,
-        taskCount: executionPlan.taskGraph.getAllNodes().length,
+        taskCount,
         errorCount: result.errors.length,
       },
       traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
@@ -259,7 +271,8 @@ async function runFullPipeline(
   } catch (err) {
     const elapsed = Date.now() - executionTime;
     const msg = err instanceof Error ? err.message : String(err);
-    error(`Pipeline failed after ${formatDuration(elapsed)}: ${msg}`);
+    stageFail('Pipeline execution', msg);
+    pipelineFooter();
     return {
       success: false,
       message: `Pipeline failed: ${msg}`,

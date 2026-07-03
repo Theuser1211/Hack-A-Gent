@@ -1,3 +1,5 @@
+import { formatDuration } from './context.js';
+
 const isTTY = process.stdout.isTTY && !process.env.CI;
 
 const RESET = '\x1b[0m';
@@ -42,6 +44,40 @@ export function banner(): void {
   logRaw(`  ${BOLD}${color('│        Welcome to Hack-A-Gent! 🚀             │', 'cyan')}${RESET}`);
   logRaw(`  ${BOLD}${color('│  Autonomous Hackathon Engineering CLI          │', 'cyan')}${RESET}`);
   logRaw(`  ${BOLD}${color('└─────────────────────────────────────────────┘', 'cyan')}${RESET}`);
+  logRaw('');
+}
+
+export function stageStart(label: string): void {
+  log(`${icons.arrow} ${color(label, 'magenta')}...`);
+}
+
+export function stageDone(label: string, elapsedMs?: number): void {
+  const time = elapsedMs !== undefined ? color(formatDuration(elapsedMs), 'gray') : '';
+  console.log(`  \r  ${icons.success} ${label}${time ? ' ' + time : ''}`);
+}
+
+export function stageFail(label: string, detail?: string): void {
+  const msg = detail ? ` — ${detail}` : '';
+  console.log(`  \r  ${icons.error} ${label}${msg}`);
+}
+
+export function progressBar(current: number, total: number): string {
+  const width = 20;
+  const filled = Math.round((current / total) * width);
+  const bar = '█'.repeat(filled) + '░'.repeat(width - filled);
+  return `${bar} ${Math.round((current / total) * 100)}%`;
+}
+
+export function pipelineHeader(title: string): void {
+  logRaw('');
+  logRaw(`  ${BOLD}${color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'cyan')}${RESET}`);
+  logRaw(`  ${BOLD}${color('  🚀  ' + title, 'cyan')}${RESET}`);
+  logRaw(`  ${color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'cyan')}${RESET}`);
+  logRaw('');
+}
+
+export function pipelineFooter(): void {
+  logRaw(`  ${color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'cyan')}${RESET}`);
   logRaw('');
 }
 
