@@ -1,7 +1,8 @@
 import { createDeterministicUuid, deterministicNow } from './determinism-kernel.js';
+import type { DeployTarget } from './internet-tool-gateway.js';
 import type { HumanControlLayer } from './human-control-layer.js';
 import type { InternetToolGateway, DeployResult } from './internet-tool-gateway.js';
-import type { TaskGraph } from './task-graph.js';
+import type { TaskCategory, TaskGraph } from './task-graph.js';
 
 export type DeploymentStatus = 'pending' | 'deploying' | 'live' | 'failed' | 'rolled_back' | 'repairing';
 export type FailureCategory =
@@ -104,7 +105,7 @@ export class DeploymentRepairController {
       durationMs: 0,
     };
     this.cycles.push(cycle);
-    return this.toolGateway.deploy({ target: deployTarget as unknown, projectDir });
+    return this.toolGateway.deploy({ target: deployTarget as DeployTarget, projectDir });
   }
 
   async monitorAndRepair(
@@ -228,6 +229,7 @@ export class DeploymentRepairController {
       }
 
       return {
+        type,
         actionId:
           'rep-' + createDeterministicUuid(this.seed, this.cycles.length * 100 + failures.indexOf(f)).slice(0, 8),
         targetTaskId,
@@ -240,7 +242,7 @@ export class DeploymentRepairController {
   }
 
   private findTaskByCategory(category: string): string | null {
-    const nodes = this.taskGraph.getNodesByCategory(category as unknown);
+    const nodes = this.taskGraph.getNodesByCategory(category as TaskCategory);
     return nodes.length > 0 ? nodes[nodes.length - 1]!.id : null;
   }
 

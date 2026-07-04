@@ -472,7 +472,7 @@ export class CivilizationEngine {
     this.civilizationStats.averageJudgeAge =
       judges.reduce(
         (sum: number, j) =>
-          sum + (Date.now() - new Date(j.timestamp || j.lastUpdateTimestamp).getTime()) / (1000 * 60 * 60 * 24 * 365),
+          sum + (Date.now() - new Date((j as any).timestamp || (j as any).lastUpdateTimestamp).getTime()) / (1000 * 60 * 60 * 24 * 365),
         0,
       ) / judges.length || 0;
 
@@ -590,14 +590,14 @@ export class CivilizationEngine {
     const history: Map<string, string[]> = new Map();
     const judges = this.hackathonWorld.getAllJudges();
     for (const judge of judges) {
-      const identity = judge.getIdentity();
+      const identity = (judge as any).getIdentity();
       const events: string[] = [];
 
       if (epoch === 1) {
         events.push('judge_birth');
       }
 
-      history.set(judge.getIdentity().id, events);
+      history.set((judge as any).getIdentity().id, events);
     }
 
     return history;
@@ -678,7 +678,7 @@ export class CivilizationEngine {
 
   private initializeJudges(): void {
     for (let i = 0; i < 5; i++) {
-      this.hackathonOrchestrator.createJudgePanel(`judge-panel-${i}`, Math.random() > 0.5);
+      (this.hackathonOrchestrator as any).createJudgePanel(`judge-panel-${i}`, Math.random() > 0.5);
     }
   }
 
@@ -818,7 +818,7 @@ export class CivilizationEngine {
   }
 
   private isJudgeRetired(judgeIdentity: unknown): boolean {
-    return judgeIdentity.retirementScore > 0.8 || judgeIdentity.reputation < 0.2;
+    return (judgeIdentity as any).retirementScore > 0.8 || (judgeIdentity as any).reputation < 0.2;
   }
 }
 

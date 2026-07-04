@@ -1002,12 +1002,12 @@ export class UnifiedRuntimeOS {
 
     const seed = this.config.seed;
     const config: BenchmarkRunnerConfig = {
-      planner: { execute: async () => ({ output: { tasks: [], description: '', estimatedDuration: 0 } }) } as unknown,
-      architect: { execute: async () => ({ output: { modules: [], architecture: '', rationale: '' } }) } as unknown,
+      planner: { execute: async () => ({ output: { tasks: [], description: '', estimatedDuration: 0 } }) } as any,
+      architect: { execute: async () => ({ output: { modules: [], architecture: '', rationale: '' } }) } as any,
       builderProvider: {
         build: async () => ({ status: 'success' as const, output: '', artifacts: [] }),
         execute: async () => ({}),
-      } as unknown,
+      } as any,
     };
     this.benchmarkRunner = new HackathonBenchmarkRunner({ ...config, seed });
 
@@ -1131,12 +1131,12 @@ export class UnifiedRuntimeOS {
     const rng = getSeededRandom(seed);
 
     const config: BenchmarkRunnerConfig = {
-      planner: { execute: async () => ({ output: { tasks: [], description: '', estimatedDuration: 0 } }) } as unknown,
-      architect: { execute: async () => ({ output: { modules: [], architecture: '', rationale: '' } }) } as unknown,
+      planner: { execute: async () => ({ output: { tasks: [], description: '', estimatedDuration: 0 } }) } as any,
+      architect: { execute: async () => ({ output: { modules: [], architecture: '', rationale: '' } }) } as any,
       builderProvider: {
         build: async () => ({ status: 'success' as const, output: '', artifacts: [] }),
         execute: async () => ({}),
-      } as unknown,
+      } as any,
     };
     const runner = new HackathonBenchmarkRunner({ ...config, seed });
 

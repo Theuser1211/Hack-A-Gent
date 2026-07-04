@@ -270,8 +270,8 @@ export class AnthropicProvider implements LLMProvider {
                 totalOutput = usage.output_tokens ?? totalOutput;
               }
             }
-            if (event.type === 'message_stop' || (event as unknown).stop_reason) {
-              const stopReason = (event as unknown).stop_reason ?? 'stop';
+            if (event.type === 'message_stop' || (event as any).stop_reason) {
+              const stopReason = (event as any).stop_reason ?? 'stop';
               onChunk({ content: '', finish_reason: stopReason });
             }
           } catch {

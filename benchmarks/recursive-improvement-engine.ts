@@ -306,20 +306,21 @@ export class RecursiveImprovementEngine {
   }
 
   public importImprovementData(data: unknown): void {
-    if (data.history) {
-      this.improvementHistory = new Map(Object.entries(data.history)) as Map<string, ImprovementHistory>;
+    const d = data as any;
+    if (d.history) {
+      this.improvementHistory = new Map(Object.entries(d.history)) as Map<string, ImprovementHistory>;
     }
-    if (data.proposals) {
-      this.improvementProposals = data.proposals;
+    if (d.proposals) {
+      this.improvementProposals = d.proposals;
     }
-    if (data.systemMetrics) {
-      this.systemMetrics = data.systemMetrics;
+    if (d.systemMetrics) {
+      this.systemMetrics = d.systemMetrics;
     }
-    if (data.adaptationGoals) {
-      this.adaptationGoals = data.adaptationGoals;
+    if (d.adaptationGoals) {
+      this.adaptationGoals = d.adaptationGoals;
     }
-    if (data.historicalBenchmarks) {
-      this.historicalBenchmarks = data.historicalBenchmarks;
+    if (d.historicalBenchmarks) {
+      this.historicalBenchmarks = d.historicalBenchmarks;
     }
   }
 

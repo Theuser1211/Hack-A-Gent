@@ -7,6 +7,14 @@ import {
 } from '../../benchmarks/determinism-kernel.js';
 import type { StrategyTemplate } from '../../benchmarks/winning-strategy-templates.js';
 
+interface UnknownGlobal {
+  localStorage: {
+    setItem(key: string, value: string): void;
+    getItem(key: string): string | null;
+    removeItem(key: string): void;
+  };
+}
+
 export interface StrategyGene {
   geneId: string;
   name: string;
@@ -373,7 +381,7 @@ class GlobalStrategyGenome {
     try {
       const data = JSON.stringify(this.toJSON());
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-        (globalThis as unknown).localStorage.setItem(this.storageKey, data);
+        (globalThis as UnknownGlobal).localStorage.setItem(this.storageKey, data);
       }
     } catch {}
   }
@@ -381,7 +389,7 @@ class GlobalStrategyGenome {
   private loadFromStorage(): void {
     try {
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-        const raw = (globalThis as unknown).localStorage.getItem(this.storageKey);
+        const raw = (globalThis as UnknownGlobal).localStorage.getItem(this.storageKey);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed.genes)) {

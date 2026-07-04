@@ -10,7 +10,7 @@ import { InternetHackathonOrchestrator } from '../../benchmarks/internet-hackath
 import { JudgeSimulator } from '../../benchmarks/judge-simulator.js';
 import { Phase12Orchestrator } from '../../benchmarks/phase-12-orchestrator.js';
 import { formatDuration } from '../context.js';
-import { parseDevpostUrl } from '../devpost-parser.js';
+import { parseDevpostUrl, CompetitionIntelligence, WinningStrategyGenerator, HackathonPipelineOrchestrator } from '../devpost-parser.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { initializeProviders, getProviderInfo } from '../provider-init.js';
 import { RouterEngine } from '../../kernel/llm/router-engine.js';
@@ -258,7 +258,25 @@ async function runFullPipeline(
     stageDone('Executing pipeline', Date.now() - t0);
     divider();
 
-    stageStart('Running post-project learning cycle');
+    stageStart('Running competition intelligence analysis');
+    const intelligence = new CompetitionIntelligence();
+    const competitionAnalysis = intelligence.analyze(parsed);
+    stageDone('Competition intelligence', Date.now() - t0);
+    labeled('criteria', String(competitionAnalysis.judgingCriteria.length));
+    labeled('sponsor APIs', String(competitionAnalysis.sponsorAPIs.length));
+
+    stageStart('Generating winning strategy');
+    const strategyGenerator = new WinningStrategyGenerator();
+    const winningStrategy = strategyGenerator.generate(competitionAnalysis);
+    stageDone('Winning strategy', Date.now() - t0);
+    labeled('estimated score', `${winningStrategy.estimatedJudgeScore}/100`);
+    labeled('differentiators', String(winningStrategy.differentiators.length));
+
+    // Initialize the full pipeline orchestrator with pre-computed analysis and strategy
+    const orchestrator = new HackathonPipelineOrchestrator(seed);
+    orchestrator.init(competitionAnalysis, winningStrategy);
+
+  stageStart('Running post-project learning cycle');
     const learningOutput = await phase12.runPostProject({
       projectName,
       projectDescription: parsed.problemStatement,
@@ -276,6 +294,22 @@ async function runFullPipeline(
     });
     stageDone('Post-project learning', Date.now() - t0);
     info(`Memory: ${learningOutput.memorySummary.totalProjects} projects`);
+
+    // Run the new pipeline stages: self-review, optimization, quality, report
+    stageStart('Running self-review & optimization');
+    const finalReport = orchestrator.completePipeline({
+      features: result.uxResults?.map(u => u.journeyName) ?? ['Project scaffold', 'Core features', 'Deployment'],
+      errors: result.errors,
+      deployUrl: result.deployUrl,
+      taskCount,
+      buildSuccess: result.errors.length === 0,
+      testPassRate: result.completionRate ?? 0.8,
+      durationMs: elapsed,
+    });
+    stageDone('Self-review & optimization', Date.now() - t0);
+    labeled('overall score', `${finalReport.judgeScorePrediction}/100`);
+    labeled('review scores', `${finalReport.innovationScore}/${finalReport.technicalDepthScore}/${finalReport.feasibilityScore}/${finalReport.presentationScore}/${finalReport.completenessScore}/${finalReport.maintainabilityScore}/${finalReport.judgeAlignmentScore}`);
+    labeled('improvements', String(finalReport.futureImprovements.length));
 
     pipelineFooter();
 
@@ -306,11 +340,33 @@ async function runFullPipeline(
         strategy: strategyReport.strategyCompetition.winner.name,
         predictedReward: strategyReport.rewardPrediction.predicted,
         memoryUpdated: learningOutput.memorySummary.totalProjects,
+        competitionAnalysis: {
+          criteriaCount: competitionAnalysis.judgingCriteria.length,
+          sponsorAPIs: competitionAnalysis.sponsorAPIs.length,
+          theme: competitionAnalysis.challenge.theme,
+        },
+        winningStrategy: {
+          projectName: winningStrategy.projectName,
+          estimatedScore: winningStrategy.estimatedJudgeScore,
+          targetedCriteria: winningStrategy.targetedCriteria.map(c => c.name),
+        },
+        reviewScores: {
+          innovation: finalReport.innovationScore,
+          technicalDepth: finalReport.technicalDepthScore,
+          feasibility: finalReport.feasibilityScore,
+          presentation: finalReport.presentationScore,
+          completeness: finalReport.completenessScore,
+          maintainability: finalReport.maintainabilityScore,
+          judgeAlignment: finalReport.judgeAlignmentScore,
+          overall: finalReport.judgeScorePrediction,
+        },
+        futureImprovements: finalReport.futureImprovements,
       },
       metrics: {
         durationMs: elapsed,
         taskCount,
         errorCount: result.errors.length,
+        judgeScorePrediction: finalReport.judgeScorePrediction,
       },
       traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
     };

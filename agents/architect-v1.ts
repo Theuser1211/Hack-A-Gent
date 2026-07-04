@@ -137,8 +137,8 @@ export class ArchitectAgent implements Agent {
 
       // ── 3. Design folder structure ───────────────────────────────────
       const folderStructure = await this.provider.designFolderStructure(plan, stack);
-      await this.log('success', `Designed folder structure with ${this.countFolderEntries(folderStructure.entries)} entries`);
-      await this.emitEvent('STRUCTURE_DESIGNED', { task_id: task.task_id, entry_count: this.countFolderEntries(folderStructure.entries) });
+      await this.log('success', `Designed folder structure with ${this.countFolderEntries(folderStructure.entries as Array<{ children?: Array<unknown> }>)} entries`);
+      await this.emitEvent('STRUCTURE_DESIGNED', { task_id: task.task_id, entry_count: this.countFolderEntries(folderStructure.entries as Array<{ children?: Array<unknown> }>) });
 
       // ── 4. Design database schema ────────────────────────────────────
       const dbSchemaRaw = await this.provider.designDatabaseSchema(plan, stack);

@@ -138,7 +138,7 @@ export class TypeEvolutionSystem {
       agentId: learnerId,
       eventType: 'cross_learning',
       skillChanges: { [learnerSpec.primaryType]: newLearning.learningImpact * 0.5 },
-      specializationChanges: null as unknown,
+      specializationChanges: null as any,
       learningAccelerated: true,
       impactOnPerformance: newLearning.learningImpact * 0.3,
     });
@@ -299,7 +299,7 @@ export class TypeEvolutionSystem {
     try {
       const data = JSON.stringify(this.toJSON());
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-        (globalThis as unknown).localStorage.setItem(this.storageKey, data);
+        (globalThis as any).localStorage.setItem(this.storageKey, data);
       }
     } catch {}
   }
@@ -307,7 +307,7 @@ export class TypeEvolutionSystem {
   private loadFromStorage(): void {
     try {
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-        const raw = (globalThis as unknown).localStorage.getItem(this.storageKey);
+        const raw = (globalThis as any).localStorage.getItem(this.storageKey);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed.typeSpecializations)) {

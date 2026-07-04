@@ -1,6 +1,6 @@
 import type { BuildFailure } from '../execution/execution-types.js';
 import type { JudgeIssue } from '../judge/judge-types.js';
-import type { LLMRequest } from '../llm/llm-types.js';
+import type { LLMRequest, ProviderId } from '../llm/llm-types.js';
 import type { RouterEngine } from '../llm/router-engine.js';
 
 import type { GenerationMetricsTracker } from './generation-metrics.js';
@@ -165,7 +165,7 @@ export class CodeRepairProvider {
         const request: LLMRequest = {
           model_id: modelId,
           provider: this.config.routerEngine.selectModel(this.config.taskType ?? 'coding', prompt.length)
-            .provider as unknown,
+            .provider as ProviderId,
           messages: [
             {
               role: 'system',

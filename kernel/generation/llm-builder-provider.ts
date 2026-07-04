@@ -3,7 +3,7 @@ import { v4 as uuid } from 'uuid';
 import type { BuilderProvider } from '../builders/builder-provider.js';
 import type { GeneratedModule, GeneratedFile } from '../builders/builder-types.js';
 import { GeneratedModuleSchema } from '../builders/builder-types.js';
-import type { LLMRequest, LLMResponse } from '../llm/llm-types.js';
+import type { LLMRequest, LLMResponse, ProviderId } from '../llm/llm-types.js';
 import type { RouterEngine } from '../llm/router-engine.js';
 import type { ArchitectureBlueprint } from '../planning/architect-types.js';
 
@@ -269,7 +269,7 @@ Return a JSON object with the following structure:
 
         const request: LLMRequest = {
           model_id: modelId,
-          provider: this.router.selectModel(this.taskType, adjustedPrompt.length).provider as unknown,
+          provider: this.router.selectModel(this.taskType, adjustedPrompt.length).provider as any,
           messages: [
             {
               role: 'system',
@@ -310,7 +310,7 @@ Return a JSON object with the following structure:
     const latency = Date.now() - startTime;
     this.metricsTracker?.recordGeneration(false, 0, latency, true, true);
     return {
-      file: null as unknown,
+      file: null as unknown as StructuredCodeOutput,
       attempt: this.selfRepairConfig.max_attempts - 1,
       success: false,
       error: lastError ?? 'Unknown generation error',
@@ -434,11 +434,11 @@ Return a JSON object with the following structure:
 
     if (blueprint.folder_structure?.entries?.length) {
       const feEntries = blueprint.folder_structure.entries.filter(
-        (e) => e.path.startsWith(moduleType) || e.path.includes(moduleType),
+        (e: any) => e.path.startsWith(moduleType) || e.path.includes(moduleType),
       );
       if (feEntries.length) {
         parts.push(
-          `## Folder Structure\n${feEntries.map((e) => `- ${e.path} (${e.type})${e.description ? `: ${e.description}` : ''}`).join('\n')}`,
+          `## Folder Structure\n${feEntries.map((e: any) => `- ${e.path} (${e.type})${e.description ? `: ${e.description}` : ''}`).join('\n')}`,
         );
       }
     }

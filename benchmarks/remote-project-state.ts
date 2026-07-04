@@ -1,4 +1,4 @@
-import { execSync as realExecSync } from 'node:child_process';
+import { execSync as realExecSync, type StdioOptions } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import * as path from 'node:path';
 
@@ -290,9 +290,9 @@ export class RemoteProjectState {
   }
 }
 
-function execSync(cmd: string, opts: { encoding: string; stdio: string[] }): string {
+function execSync(cmd: string, opts: { encoding: string; stdio?: unknown[] }): string {
   try {
-    return realExecSync(cmd, opts).toString();
+    return realExecSync(cmd, opts as Parameters<typeof realExecSync>[1]).toString();
   } catch {
     return '';
   }

@@ -179,7 +179,7 @@ export class ExecutionPolicyOptimizer {
   private getFieldValue(policy: ExecutionPolicy, field: string): number {
     const parts = field.split('.');
     let val: unknown = policy;
-    for (const p of parts) val = val?.[p];
+    for (const p of parts) val = (val as Record<string, unknown>)?.[p];
     return typeof val === 'number' ? val : 0;
   }
 

@@ -1,6 +1,6 @@
 import { DecisionLogger } from './decision-trace.js';
 import { createDeterministicUuid, deterministicNow } from './determinism-kernel.js';
-import { type TaskNode } from './task-graph.js';
+import { type TaskNode, type TaskGraph } from './task-graph.js';
 import type { ToolType } from './tool-executor.js';
 
 export interface ToolNode {

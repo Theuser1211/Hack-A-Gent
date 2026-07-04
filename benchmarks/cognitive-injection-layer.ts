@@ -170,11 +170,11 @@ export class CognitiveInjectionLayer {
     if (memory.length === 0) return 0.5;
 
     const normalized = memory.map((snap) => {
-      if (category === 'strategy') return (snap as unknown).strategy?.successScore ?? 0.5;
+      if (category === 'strategy') return (snap as any).strategy?.successScore ?? 0.5;
       if (category === 'agent') return snap.deploySuccess ? 1.0 : 0.0;
       if (category === 'judge') return snap.overallScore / 100;
       if (category === 'mutation') return snap.mutations.length || 0;
-      if (category === 'resource') return (snap as unknown).toolCallsUsed ?? 0;
+      if (category === 'resource') return (snap as any).toolCallsUsed ?? 0;
       return 0.5;
     });
 
@@ -199,7 +199,7 @@ export class CognitiveInjectionLayer {
   private analyzeTrends(trends: unknown[], category: string): number {
     if (trends.length === 0) return 0.5;
 
-    const categoryValues = trends.filter((t) => t.category === category).map((t) => t.value || 0.5);
+    const categoryValues = (trends as any[]).filter((t: any) => t.category === category).map((t: any) => t.value || 0.5);
     if (categoryValues.length === 0) return 0.5;
 
     return categoryValues.reduce((a, b) => a + b, 0) / categoryValues.length;
@@ -208,7 +208,7 @@ export class CognitiveInjectionLayer {
   private analyzeFailures(failures: unknown[], category: string): number {
     if (failures.length === 0) return 0.0;
 
-    const failuresInCategory = failures.filter((f) => f.category === category);
+    const failuresInCategory = (failures as any[]).filter((f: any) => f.category === category);
     return Math.min(1.0, failuresInCategory.length / 20);
   }
 
@@ -274,7 +274,7 @@ export class CognitiveInjectionLayer {
 
     const topRole = Object.entries(agentBias).sort(([, a], [, b]) => b - a)[0];
     if (topRole) {
-      (injectedState as unknown).executivePriority = topRole[0] as unknown;
+      (injectedState as any).executivePriority = topRole[0] as any;
     }
 
     return injectedState;
@@ -356,7 +356,7 @@ export class CognitiveInjectionLayer {
     try {
       const data = JSON.stringify(this.toJSON());
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-        (globalThis as unknown).localStorage.setItem(this.storageKey, data);
+        (globalThis as any).localStorage.setItem(this.storageKey, data);
       }
     } catch {}
   }
@@ -364,7 +364,7 @@ export class CognitiveInjectionLayer {
   private loadFromStorage(): void {
     try {
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-        const raw = (globalThis as unknown).localStorage.getItem(this.storageKey);
+        const raw = (globalThis as any).localStorage.getItem(this.storageKey);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed.injectionHistory)) {

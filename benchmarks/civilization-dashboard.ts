@@ -181,12 +181,12 @@ export class DashboardGenerator {
 
     return {
       growthTrajectory: this.calculateGrowthTrajectory(history),
-      innovationRate: metrics.innovationRate,
-      economicResilience: metrics.economicResilience,
-      organizationalComplexity: metrics.organizationalComplexity,
-      knowledgeAccumulation: metrics.knowledgeAccumulation,
-      diversityEvolution: metrics.diversityEvolution,
-      historicalSignificance: metrics.historicalSignificance,
+      innovationRate: metrics.innovationRate ?? 0,
+      economicResilience: metrics.economicResilience ?? 0,
+      organizationalComplexity: metrics.organizationalComplexity ?? 0,
+      knowledgeAccumulation: metrics.knowledgeAccumulation ?? 0,
+      diversityEvolution: metrics.diversityEvolution ?? 0,
+      historicalSignificance: metrics.historicalSignificance ?? 0,
       futurePredictions: this.generatePredictions(history),
     };
   }
@@ -202,7 +202,7 @@ export class DashboardGenerator {
     });
   }
 
-  public exportDashboardData(): Record<string, unknown> {
+  public exportDashboardData(): any {
     return {
       civilizationId: this.historyEngine.getCivilizationMemory().civilizationId,
       statistics: this.civilizationEngine.getCurrentSnapshot().statistics,
@@ -222,17 +222,19 @@ export class DashboardGenerator {
   }
 
   private calculateStatistics(snapshot: unknown, history: unknown): DashboardStatistics {
+    const h = history as any;
+    const s = snapshot as any;
     return {
-      totalCompanies: history.companyLifecycle?.length || 0,
+      totalCompanies: h.companyLifecycle?.length || 0,
       activeCompanies:
-        history.companyLifecycle?.filter((c: unknown) => c.retirementTimestamp === undefined).length || 0,
-      totalJudges: history.judgeLifecycle?.length || 0,
-      totalAgents: history.agentLifecycle?.length || 0,
-      innovationCount: history.innovationRecords?.length || 0,
-      economicActivity: history.economyRecords?.length || 0,
+        h.companyLifecycle?.filter((c: unknown) => (c as any).retirementTimestamp === undefined).length || 0,
+      totalJudges: h.judgeLifecycle?.length || 0,
+      totalAgents: h.agentLifecycle?.length || 0,
+      innovationCount: h.innovationRecords?.length || 0,
+      economicActivity: h.economyRecords?.length || 0,
       diversityScore: this.calculateDiversityScore(history),
       complexityScore: this.calculateComplexityScore(history),
-      civilizationAge: snapshot.statistics?.civilizationAge || 0,
+      civilizationAge: s.statistics?.civilizationAge || 0,
     };
   }
 
@@ -361,12 +363,12 @@ export class DashboardGenerator {
     ];
   }
 
-  private calculateHistoricalMetrics(snapshots: unknown[]): DashboardMetric[] {
+  private calculateHistoricalMetrics(snapshots: any[]): DashboardMetric[] {
     return [
       {
         id: 'historical_innovation_velocity',
         title: 'Historical Innovation Velocity',
-        value: snapshots.reduce((sum, s) => sum + (s.statistics?.innovationCount || 0), 0) / snapshots.length,
+        value: snapshots.reduce((sum, s) => sum + ((s as any).statistics?.innovationCount || 0), 0) / snapshots.length,
         previousValue: 0,
         change: 0,
         changePercent: 0,
@@ -379,7 +381,7 @@ export class DashboardGenerator {
       {
         id: 'historical_economic_activity',
         title: 'Historical Economic Activity',
-        value: snapshots.reduce((sum, s) => sum + (s.statistics?.economicActivity || 0), 0) / snapshots.length,
+        value: snapshots.reduce((sum, s) => sum + ((s as any).statistics?.economicActivity || 0), 0) / snapshots.length,
         previousValue: 0,
         change: 0,
         changePercent: 0,
@@ -393,11 +395,12 @@ export class DashboardGenerator {
   }
 
   private generateCharts(snapshot: unknown, history: unknown): ChartData[] {
+    const h = history as any;
     return [
       {
         type: ChartType.LINE,
         title: 'Population Growth Over Time',
-        data: this.generatePopulationChartData(history.populationHistory || []),
+        data: this.generatePopulationChartData(h.populationHistory || []),
         options: { colors: ['#ff6b6b', '#4ecdc4', '#45b7d1'], stack: false, smoothed: true },
       },
       {
@@ -409,7 +412,7 @@ export class DashboardGenerator {
       {
         type: ChartType.AREA,
         title: 'Innovation Activity Timeline',
-        data: this.generateInnovationChartData(history.innovationRecords || []),
+        data: this.generateInnovationChartData(h.innovationRecords || []),
         options: { colors: ['#667eea', '#764ba2'], stack: false, smoothed: true },
       },
     ];
@@ -461,12 +464,13 @@ export class DashboardGenerator {
   }
 
   private getTrendingEvents(history: unknown): CivilizationEvent[] {
-    const recentEvents = history.eventRecords?.slice(-10) || [];
-    return recentEvents.map((event: unknown) => ({
-      eventId: event.eventId,
-      type: event.eventType,
-      description: event.description,
-      timestamp: event.timestamp,
+    const h = history as any;
+    const recentEvents = (h.eventRecords as Array<any> | undefined)?.slice(-10) || [];
+    return recentEvents.map((event) => ({
+      eventId: event.eventId as string,
+      type: event.eventType as string,
+      description: event.description as string,
+      timestamp: event.timestamp as string,
     }));
   }
 
@@ -501,18 +505,19 @@ export class DashboardGenerator {
   }
 
   private calculateGrowthTrajectory(history: unknown): GrowthTrajectory {
+    const h = history as any;
     return {
       companiesGrowth: this.calculateLinearTrend(
-        history.companyLifecycle?.length || 0,
-        history.populationHistory?.length || 0,
+        (h.companyLifecycle?.length || 0) as number,
+        (h.populationHistory?.length || 0) as number,
       ),
       innovationGrowth: this.calculateLinearTrend(
-        history.innovationRecords?.length || 0,
-        history.populationHistory?.length || 0,
+        (h.innovationRecords?.length || 0) as number,
+        (h.populationHistory?.length || 0) as number,
       ),
       economicGrowth: this.calculateLinearTrend(
-        history.economyRecords?.length || 0,
-        history.populationHistory?.length || 0,
+        (h.economyRecords?.length || 0) as number,
+        (h.populationHistory?.length || 0) as number,
       ),
     };
   }
@@ -522,11 +527,13 @@ export class DashboardGenerator {
   }
 
   private calculateDiversityScore(history: unknown): number {
-    return Math.min(1, (history.companyLifecycle?.length || 0) / 100);
+    const h = history as any;
+    return Math.min(1, ((h.companyLifecycle?.length || 0) as number) / 100);
   }
 
   private calculateComplexityScore(history: unknown): number {
-    return Math.min(1, (history.populationHistory?.length || 0) / 500);
+    const h = history as any;
+    return Math.min(1, ((h.populationHistory?.length || 0) as number) / 500);
   }
 
   private getPreviousValue(metricId: string, history: unknown): number {
@@ -554,27 +561,31 @@ export class DashboardGenerator {
   }
 
   private calculateMetricsFromHistory(history: unknown): Record<string, number> {
+    const h = history as any;
+    const popHistory = (h.populationHistory as Array<any> | undefined) || [];
+    const lastPop = popHistory[popHistory.length - 1];
     return {
       innovationRate:
-        (history.innovationRecords?.length || 0) /
-        Math.max(1, history.populationHistory?.[history.populationHistory.length - 1]?.totalCompanies || 1),
+        ((h.innovationRecords?.length || 0) as number) /
+        Math.max(1, (lastPop?.totalCompanies as number) || 1),
       economicResilience:
-        (history.economyRecords?.length || 0) /
-        Math.max(1, history.populationHistory?.[history.populationHistory.length - 1]?.totalCompanies || 1),
+        ((h.economyRecords?.length || 0) as number) /
+        Math.max(1, (lastPop?.totalCompanies as number) || 1),
       organizationalComplexity:
-        (history.companyLifecycle?.length || 0) /
-        Math.max(1, history.populationHistory?.[history.populationHistory.length - 1]?.totalCompanies || 1),
+        ((h.companyLifecycle?.length || 0) as number) /
+        Math.max(1, (lastPop?.totalCompanies as number) || 1),
       knowledgeAccumulation:
-        (history.discoveryHistory?.length || 0) /
-        Math.max(1, history.populationHistory?.[history.populationHistory.length - 1]?.totalCompanies || 1),
+        ((h.discoveryHistory?.length || 0) as number) /
+        Math.max(1, (lastPop?.totalCompanies as number) || 1),
       diversityEvolution:
-        (history.companyLifecycle?.filter((c: unknown) => c.retirementTimestamp === undefined).length || 0) /
-        Math.max(1, history.companyLifecycle?.length || 1),
+        ((h.companyLifecycle as Array<any> | undefined)?.filter((c) => c.retirementTimestamp === undefined).length || 0) /
+        Math.max(1, (h.companyLifecycle?.length || 0) as number),
       historicalSignificance: this.calculateHistoricalSignificanceScore(history),
     };
   }
 
   private calculateHistoricalSignificanceScore(history: unknown): number {
+    const h = history as any;
     const eventWeight = {
       innovation: 2,
       discovery: 3,
@@ -587,38 +598,49 @@ export class DashboardGenerator {
     };
 
     let significance = 0;
-    for (const event of history.eventRecords || []) {
-      significance += (event.significance || 0) * (eventWeight[event.eventType as keyof typeof eventWeight] || 0);
+    const events = (h.eventRecords as Array<any> | undefined) || [];
+    for (const event of events) {
+      significance += ((event.significance as number) || 0) * (eventWeight[event.eventType as keyof typeof eventWeight] || 0);
     }
 
     return Math.min(1, significance / 100);
   }
 
   private generatePopulationChartData(populationHistory: unknown[]): ChartDataPoint[] {
-    return populationHistory.map((p, index) => ({
-      timestamp: p.timestamp,
-      value: p.totalCompanies,
-      category: `Epoch ${p.epoch}`,
-    }));
+    return populationHistory.map((p, index) => {
+      const rec = p as any;
+      return {
+        timestamp: rec.timestamp as string,
+        value: rec.totalCompanies as number,
+        category: `Epoch ${rec.epoch}`,
+      };
+    });
   }
 
   private generateEntityChartData(history: unknown): ChartDataPoint[] {
+    const h = history as any;
     return [
       { timestamp: 'start', value: 0, category: 'companies' },
-      { timestamp: 'now', value: history.companyLifecycle?.length || 0, category: 'companies' },
+      { timestamp: 'now', value: (h.companyLifecycle?.length || 0) as number, category: 'companies' },
     ];
   }
 
   private generateInnovationChartData(innovationRecords: unknown[]): ChartDataPoint[] {
-    return innovationRecords.map((record) => ({
-      timestamp: record.timestamp,
-      value: record.innovationType === 'technology' ? 2 : 1,
-      category: record.companyId,
-    }));
+    return innovationRecords.map((record) => {
+      const rec = record as any;
+      return {
+        timestamp: rec.timestamp as string,
+        value: rec.innovationType === 'technology' ? 2 : 1,
+        category: rec.companyId as string,
+      };
+    });
   }
 
   private generateHistoricalInnovationData(snapshots: unknown[]): ChartDataPoint[] {
-    return snapshots.map((s, index) => ({ timestamp: `Epoch ${s.epoch}`, value: s.statistics?.innovationCount || 0 }));
+    return snapshots.map((s, index) => {
+      const rec = s as any;
+      return { timestamp: `Epoch ${rec.epoch}`, value: (rec.statistics?.innovationCount || 0) as number };
+    });
   }
 
   private generatePredictions(history: unknown): Prediction[] {

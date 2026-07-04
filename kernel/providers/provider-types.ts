@@ -291,7 +291,7 @@ export async function withRetry<T>(
     if (attempt >= config.maxRetries) throw err;
 
     const status =
-      err instanceof Response ? err.status : ((err as unknown)?.status ?? (err as unknown)?.statusCode ?? 0);
+      err instanceof Response ? err.status : ((err as any)?.status ?? (err as any)?.statusCode ?? 0);
 
     if (status !== 0 && !isRetryable(status)) throw err;
 

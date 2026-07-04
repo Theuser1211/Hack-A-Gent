@@ -2,6 +2,7 @@ import type { LLMProvider } from './llm-provider.js';
 import type {
   ModelSpec,
   ProviderHealth,
+  ProviderId,
   RoutingDecision,
   LLMRequest,
   LLMResponse,
@@ -103,7 +104,7 @@ export class RouterEngine {
 
     return {
       model_id: 'none',
-      provider: 'local' as unknown,
+      provider: 'local' as ProviderId,
       confidence: 0,
       fallback_level: 5,
       reason: 'No provider available',
@@ -143,9 +144,9 @@ export class RouterEngine {
         health.consecutive_failures++;
         health.failed_requests++;
         if (health.consecutive_failures >= this.config.unhealthy_threshold) {
-          (health as unknown).status = 'unhealthy';
+          (health as any).status = 'unhealthy';
         } else if (health.consecutive_failures >= this.config.degraded_threshold) {
-          (health as unknown).status = 'degraded';
+          (health as any).status = 'degraded';
         }
       }
       throw err;
@@ -190,7 +191,7 @@ export class RouterEngine {
 
     return {
       model_id: modelId,
-      provider: 'local' as unknown,
+      provider: 'local' as ProviderId,
       confidence: 0,
       fallback_level: level,
       reason: 'Model not available or unhealthy',

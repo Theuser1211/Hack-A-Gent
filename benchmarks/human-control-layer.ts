@@ -135,6 +135,7 @@ export class HumanControlLayer {
   ): PendingApproval {
     const approval: PendingApproval = {
       approvalId: 'appr-' + createDeterministicUuid(this.seed, this.state.pendingApprovals.length + 1).slice(0, 8),
+      type,
       description,
       context,
       createdAt: deterministicNow(this.seed),
@@ -176,6 +177,7 @@ export class HumanControlLayer {
   injectConstraint(description: string, type: ConstraintInjection['type'], value: unknown): ConstraintInjection {
     const constraint: ConstraintInjection = {
       constraintId: 'constr-' + createDeterministicUuid(this.seed, this.state.activeConstraints.length + 1).slice(0, 8),
+      type,
       description,
       value,
       active: true,

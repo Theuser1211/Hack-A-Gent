@@ -189,6 +189,7 @@ export class InternetHackathonOrchestrator {
     confidence: number,
   ): AutoDecision {
     const d: AutoDecision = {
+      type,
       decisionId: 'dec-' + createDeterministicUuid(this.seed, this.decisionLog.length).slice(0, 8),
       targetId,
       reason,
@@ -962,7 +963,7 @@ ${fileType === 'backend' && context.specificTask ? `Focus on: ${context.specific
   }
 
   injectConstraint(description: string, type: ConstraintInjection['type'], value: unknown): ConstraintInjection {
-    return this.humanControl.injectConstraint(description, value);
+    return this.humanControl.injectConstraint(description, type as any, value);
   }
 
   skipTask(taskId: string, reason: string): OverrideDecision {

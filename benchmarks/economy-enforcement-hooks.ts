@@ -406,7 +406,7 @@ export class EconomyEnforcementHooks {
   integrateOrchestrator(orchestrator: HackathonCompanyOrchestrator, executor: unknown): void {
     const originalRun = orchestrator.runCompetition;
 
-    orchestrator.runCompetition = (spec: unknown) => {
+    orchestrator.runCompetition = (spec: any) => {
       const companies = spec.companyCount;
       const simulationCost = companies * 20;
 
@@ -429,11 +429,11 @@ export class EconomyEnforcementHooks {
     };
 
     this.economy.ledger.persistToStorage();
-    (this.economy.marketModel as unknown).persistToStorage();
+    (this.economy.marketModel as any).persistToStorage();
   }
 
   private adjustOrchestratorEconomy(orchestrator: HackathonCompanyOrchestrator): void {
-    const companyList = (orchestrator as unknown)['companies'] || [];
+    const companyList = (orchestrator as any)['companies'] || [];
     for (const company of companyList) {
       const metrics = {
         toolCalls: company.agents.length * 10,

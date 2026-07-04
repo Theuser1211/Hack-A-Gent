@@ -55,6 +55,7 @@ export class InteractionManager {
   ): ClarificationQuestion {
     const question: ClarificationQuestion = {
       id: `q-${createDeterministicUuid(this.seed, this.pendingQuestions.length + 1).slice(0, 8)}`,
+      type,
       prompt,
       options,
       context,

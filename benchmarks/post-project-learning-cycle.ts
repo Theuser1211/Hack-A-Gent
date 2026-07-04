@@ -130,7 +130,7 @@ export class PostProjectLearningCycle {
           suggestedFix: fp.suggestedFix,
           fixedByMutation: null,
         };
-        const mutation = this.evolutionEngine.proposeMutation(fpRecord as unknown);
+        const mutation = this.evolutionEngine.proposeMutation(fpRecord as any);
         const sim = this.evolutionEngine.simulateMutation(mutation);
         if (sim.predictedImprovement > 0.5) {
           this.evolutionEngine.activateMutation(mutation.id);

@@ -82,8 +82,6 @@ export interface OrchestratorEvent {
 }
 
 export class HackathonOrchestrator {
-  createJudgePanel(panelId: string, useAdversarial: boolean): void {}
-
   private readonly seed: number;
   private readonly orchestratorId: string;
   private readonly workspaceRoot: string;
@@ -138,6 +136,7 @@ export class HackathonOrchestrator {
   private emit(type: OrchestratorEventType, data: Record<string, unknown>): void {
     const event: OrchestratorEvent = {
       id: 'evt-' + createDeterministicUuid(this.seed, this.events.length + 1).slice(0, 8),
+      type,
       timestamp: deterministicNow(this.seed + this.events.length),
       data,
     };
@@ -765,7 +764,7 @@ export class HackathonOrchestrator {
     };
     const orchestrator = new HackathonOrchestrator(workspaceRoot, data.seed);
     const TaskGraphModule = await import('./task-graph.js');
-    (orchestrator as unknown).taskGraph = TaskGraphModule.TaskGraph.fromJSON(data.taskGraph as unknown) as TaskGraph;
+    (orchestrator as any).taskGraph = TaskGraphModule.TaskGraph.fromJSON(data.taskGraph as any) as TaskGraph;
     orchestrator.state = data.state;
     return orchestrator;
   }

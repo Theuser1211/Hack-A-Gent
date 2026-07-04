@@ -67,7 +67,7 @@ export class UXEvaluationAgent {
   }
 
   setBaseUrl(url: string): void {
-    (this as unknown).baseUrl = url;
+    (this as any).baseUrl = url;
   }
 
   defineStandardJourneys(): UserJourney[] {

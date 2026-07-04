@@ -60,7 +60,7 @@ export class MultiStrategyExecutionEngine {
     ];
 
     for (const type of types) {
-      const plan = this.mutatePlan(basePlan, judgingCriteria, constraints);
+      const plan = this.mutatePlan(basePlan, type, judgingCriteria, constraints);
       const id = 'strat-' + createDeterministicUuid(this.seed, strategies.length).slice(0, 8);
       const uxScore = this.simulateUX(type);
       const deployProb = this.simulateDeployProbability(type, constraints);
@@ -74,6 +74,7 @@ export class MultiStrategyExecutionEngine {
 
       strategies.push({
         strategyId: id,
+        type,
         name: this.strategyName(type),
         plan: { ...plan, id },
         simulationScore: totalScore,

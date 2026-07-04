@@ -114,7 +114,7 @@ export class ResourceMarketModel {
     this.persistToStorage();
   }
 
-  calculateOptimalPricing(budget: ResourceBudget, executionMetrics: unknown): Record<ResourceType, number> {
+  calculateOptimalPricing(budget: ResourceBudget, executionMetrics: any): Record<ResourceType, number> {
     const pressures = this.calculateMarketPressure(budget, executionMetrics);
     const optimalPrices = {} as Record<ResourceType, number>;
 
@@ -138,7 +138,7 @@ export class ResourceMarketModel {
     return optimalPrices;
   }
 
-  calculateSupplyDemand(budget: ResourceBudget, executionMetrics: unknown): Record<ResourceType, number> {
+  calculateSupplyDemand(budget: ResourceBudget, executionMetrics: any): Record<ResourceType, number> {
     const supplyDemand = {} as Record<ResourceType, number>;
 
     const computeSupply = budget.computeTokens;
@@ -168,13 +168,13 @@ export class ResourceMarketModel {
 
   recordResourceUtilization(companyId: string, resourceType: ResourceType, utilization: number): void {
     if (!this.marketState.resourceUtilization[companyId]) {
-      this.marketState.resourceUtilization[companyId] = {} as unknown;
+      this.marketState.resourceUtilization[companyId] = {} as any;
     }
-    (this.marketState.resourceUtilization[companyId] as unknown)[resourceType] = utilization;
+    (this.marketState.resourceUtilization[companyId] as any)[resourceType] = utilization;
   }
 
   getResourceUtilization(companyId: string, resourceType: ResourceType): number {
-    return (this.marketState.resourceUtilization[companyId] as unknown)[resourceType] || 0;
+    return (this.marketState.resourceUtilization[companyId] as any)[resourceType] || 0;
   }
 
   calculateInflation(budget: ResourceBudget): number {
@@ -226,7 +226,7 @@ export class ResourceMarketModel {
     };
   }
 
-  private updatePrice(resourceType: ResourceType, budget: ResourceBudget, executionMetrics: unknown): void {
+  private updatePrice(resourceType: ResourceType, budget: ResourceBudget, executionMetrics: any): void {
     const price = this.marketState.prices[resourceType];
     const pressure = this.calculateMarketPressure(budget, executionMetrics);
     const market = this.getMarket(`${resourceType}-market`);
@@ -255,7 +255,7 @@ export class ResourceMarketModel {
     price.volatility = Math.max(0.1, Math.min(1, 1 - price.supply / price.demand));
   }
 
-  private calculateComputePrice(pressure: unknown, executionMetrics: unknown): number {
+  private calculateComputePrice(pressure: any, executionMetrics: any): number {
     const basePrice = 1.0;
     const usageMultiplier = (executionMetrics.toolCalls || 0) * 0.02;
     const stabilityFactor = 1 / (1 + Math.log10(this.getTotalComputeSupply() + 1));
@@ -264,7 +264,7 @@ export class ResourceMarketModel {
     return basePrice * usageMultiplier * stabilityFactor * volatilityMultiplier;
   }
 
-  private calculateMutationPrice(pressure: unknown, executionMetrics: unknown): number {
+  private calculateMutationPrice(pressure: any, executionMetrics: any): number {
     const basePrice = 0.5;
     const innovationDemand = (executionMetrics.simulationSteps || 0) * 0.8;
     const complexityFactor = Math.sqrt(executionMetrics.repairCycles || 1);
@@ -273,7 +273,7 @@ export class ResourceMarketModel {
     return ((basePrice * innovationDemand) / complexityFactor) * scarcityFactor;
   }
 
-  private calculateEvaluationPrice(pressure: unknown, executionMetrics: unknown): number {
+  private calculateEvaluationPrice(pressure: any, executionMetrics: any): number {
     const basePrice = 1.5;
     const judgeDemand = 1;
     const evaluationComplexity =
@@ -283,7 +283,7 @@ export class ResourceMarketModel {
     return basePrice * judgeDemand * evaluationComplexity * qualityMultiplier;
   }
 
-  private calculateDeploymentPrice(pressure: unknown, executionMetrics: unknown): number {
+  private calculateDeploymentPrice(pressure: any, executionMetrics: any): number {
     const basePrice = 2.0;
     const deploySuccess = (executionMetrics.deployAttempts || 0) * 1.5;
     const infrastructureFactor = 1 + (executionMetrics.repairCycles || 0) * 0.2;
@@ -292,7 +292,7 @@ export class ResourceMarketModel {
     return basePrice * deploySuccess * infrastructureFactor * stabilityFactor;
   }
 
-  private calculateMarketPressure(budget: ResourceBudget, executionMetrics: unknown): any {
+  private calculateMarketPressure(budget: ResourceBudget, executionMetrics: any): any {
     const supplyDemand = this.calculateSupplyDemand(budget, executionMetrics);
     const pressures: any = {};
 
@@ -323,7 +323,7 @@ export class ResourceMarketModel {
     }
   }
 
-  private getResourceDemand(resourceType: ResourceType, executionMetrics: unknown): number {
+  private getResourceDemand(resourceType: ResourceType, executionMetrics: any): number {
     switch (resourceType) {
       case ResourceType.COMPUTE_TOKENS:
         return (executionMetrics.toolCalls || 0) * 0.5 + (executionMetrics.simulationSteps || 0) * 0.3;
@@ -360,7 +360,7 @@ export class ResourceMarketModel {
   private loadFromStorage(): void {
     try {
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-        const raw = (globalThis as unknown).localStorage.getItem(this.storageKey);
+        const raw = (globalThis as any).localStorage.getItem(this.storageKey);
         if (raw) {
           const parsed = JSON.parse(raw);
           this.marketState = { ...this.marketState, ...parsed };
@@ -373,7 +373,7 @@ export class ResourceMarketModel {
     try {
       const data = JSON.stringify(this.marketState);
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-        (globalThis as unknown).localStorage.setItem(this.storageKey, data);
+        (globalThis as any).localStorage.setItem(this.storageKey, data);
       }
     } catch {}
   }

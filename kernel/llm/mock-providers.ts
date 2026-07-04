@@ -1,5 +1,5 @@
 import type { LLMProvider } from './llm-provider.js';
-import type { LLMRequest, LLMResponse, ProviderHealth, ModelSpec } from './llm-types.js';
+import type { LLMRequest, LLMResponse, ProviderHealth, ModelSpec, ProviderId } from './llm-types.js';
 
 class BaseMockProvider implements LLMProvider {
   public readonly providerId: string;
@@ -11,7 +11,7 @@ class BaseMockProvider implements LLMProvider {
     this.providerId = providerId;
     this.models = models;
     this.health = {
-      provider_id: providerId as unknown,
+      provider_id: providerId as ProviderId,
       status: 'healthy',
       last_check: new Date().toISOString(),
       consecutive_failures: 0,
@@ -59,7 +59,7 @@ class BaseMockProvider implements LLMProvider {
     return {
       content,
       model_id: modelId,
-      provider: this.providerId as unknown,
+      provider: this.providerId as ProviderId,
       usage: {
         prompt_tokens: request.messages.reduce((sum, m) => sum + m.content.length, 0),
         completion_tokens: content.length,

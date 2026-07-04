@@ -29,7 +29,7 @@ export class JudgeDatabase {
     this.rng = getSeededRandom(seed + 60000);
   }
 
-  createJudge(builder: unknown): Judge {
+  createJudge(builder: any): Judge {
     const judge = createJudge(builder);
     this.judges.set(judge.getIdentity().id, judge);
     return judge;
@@ -240,7 +240,7 @@ export class JudgeDatabase {
     };
   }
 
-  importDatabase(data: unknown): void {
+  importDatabase(data: any): void {
     this.judges.clear();
     this.archives.clear();
 

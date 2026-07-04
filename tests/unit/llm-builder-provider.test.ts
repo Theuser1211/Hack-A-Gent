@@ -41,6 +41,15 @@ function createMockLLMProvider(): LLMProvider {
       failed_requests: 0,
       avg_latency_ms: 100,
     }),
+    checkHealth: async () => ({
+      provider_id: 'local' as const,
+      status: 'healthy' as const,
+      last_check: new Date().toISOString(),
+      consecutive_failures: 0,
+      total_requests: 10,
+      failed_requests: 0,
+      avg_latency_ms: 100,
+    }),
     execute: vi.fn().mockResolvedValue({
       content: JSON.stringify({
         path: 'src/frontend/App.tsx',

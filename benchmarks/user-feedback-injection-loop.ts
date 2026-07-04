@@ -51,6 +51,7 @@ export class UserFeedbackInjectionLoop {
   ): UserFeedback {
     const feedback: UserFeedback = {
       feedbackId: 'fb-' + createDeterministicUuid(this.seed, this.feedbackHistory.length).slice(0, 8),
+      type,
       message,
       source,
       priority,

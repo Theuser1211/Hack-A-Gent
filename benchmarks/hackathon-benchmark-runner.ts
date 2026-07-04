@@ -622,10 +622,10 @@ export class HackathonBenchmarkRunner {
         if (oldModule) {
           diffs.push(computeModuleDiff(oldModule, newModule));
         }
-        patches.push({ module: newModule });
+patches.push({ type, module: newModule });
         overallStrategy = 'module regeneration';
       } else if (fileErrors.size > 0) {
-        // File-level errors only Ã¢â‚¬â€ try targeted repair
+        // File-level errors only — try targeted repair
         const moduleReport: ModuleErrorReport = { errors: moduleErrors, fileErrors, moduleLevelErrors: [] };
 
         const repairResult = await codeRepair.repairModule(module, moduleReport);
@@ -635,8 +635,8 @@ export class HackathonBenchmarkRunner {
           if (oldModule) {
             diffs.push(computeModuleDiff(oldModule, repairResult.module));
           }
-          patches.push({ module: repairResult.module });
-          patchedModules.push({ module: repairResult.module, patchedFiles: repairResult.patchedFiles });
+          patches.push({ type, module: repairResult.module });
+          patchedModules.push({ type, module: repairResult.module, patchedFiles: repairResult.patchedFiles });
           overallStrategy = 'file-level patch';
         } else {
           // Fall back to full module regeneration
@@ -646,7 +646,7 @@ export class HackathonBenchmarkRunner {
           if (oldModule) {
             diffs.push(computeModuleDiff(oldModule, newModule));
           }
-          patches.push({ module: newModule });
+          patches.push({ type, module: newModule });
           overallStrategy = 'module regeneration';
         }
       }
@@ -662,7 +662,7 @@ export class HackathonBenchmarkRunner {
         if (oldModule) {
           diffs.push(computeModuleDiff(oldModule, newModule));
         }
-        patches.push({ module: newModule });
+        patches.push({ type, module: newModule });
       }
     }
 

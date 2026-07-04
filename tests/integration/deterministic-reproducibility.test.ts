@@ -134,6 +134,15 @@ function makeDeterministicLLMProvider(providerSeed: number): LLMProvider {
       failed_requests: 0,
       avg_latency_ms: 50,
     }),
+    checkHealth: async () => ({
+      provider_id: 'local',
+      status: 'healthy',
+      last_check: deterministicNow(providerSeed),
+      consecutive_failures: 0,
+      total_requests: 0,
+      failed_requests: 0,
+      avg_latency_ms: 50,
+    }),
     execute: async (request: LLMRequest): Promise<LLMResponse> => {
       counter++;
       const userMsg = request.messages.find((m) => m.role === 'user');

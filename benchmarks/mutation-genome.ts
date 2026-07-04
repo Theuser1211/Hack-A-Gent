@@ -108,6 +108,7 @@ export class MutationGenome {
     const id = this.createGeneId(type);
     return {
       id,
+      type,
       parentIds,
       generation,
       createdAt: deterministicNow(this.rng.nextInt(0, 100000)),

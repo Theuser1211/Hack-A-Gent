@@ -47,7 +47,9 @@ export class AgentRegistry {
   }
 
   findByTaskType(taskType: string): AgentRecord[] {
-    return Array.from(this.agents.values()).filter((a) => a.manifest.accepted_tasks.includes(taskType as unknown));
+    return Array.from(this.agents.values()).filter((a) =>
+      a.manifest.accepted_tasks.includes(taskType as (typeof a.manifest.accepted_tasks)[number]),
+    );
   }
 
   findAvailable(taskType: string): AgentRecord | null {

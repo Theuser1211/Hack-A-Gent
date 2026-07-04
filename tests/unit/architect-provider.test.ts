@@ -99,8 +99,8 @@ describe('MockArchitectProvider', () => {
     it('includes src, tests, infra, and docs directories', async () => {
       const stack = await provider.selectStack(plan);
       const structure = await provider.designFolderStructure(plan, stack);
-      const paths = structure.entries.map((e) => e.path);
-      expect(paths.some((p) => p.includes('tests'))).toBe(true);
+      const paths = structure.entries.map((e: any) => e.path);
+      expect(paths.some((p: any) => p.includes('tests'))).toBe(true);
       expect(paths.some((p) => p.includes('infra'))).toBe(true);
       expect(paths.some((p) => p.includes('docs'))).toBe(true);
     });

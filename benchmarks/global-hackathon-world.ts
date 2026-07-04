@@ -352,7 +352,7 @@ export class GlobalHackathonWorld {
     this.currentEpoch = 0;
     try {
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-        (globalThis as unknown).localStorage.removeItem(this.storageKey);
+        (globalThis as any).localStorage.removeItem(this.storageKey);
       }
     } catch {}
   }
@@ -370,7 +370,7 @@ export class GlobalHackathonWorld {
         updatedAt: deterministicNow(this.seed),
       });
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-        (globalThis as unknown).localStorage.setItem(this.storageKey, data);
+        (globalThis as any).localStorage.setItem(this.storageKey, data);
       }
     } catch {}
   }
@@ -378,7 +378,7 @@ export class GlobalHackathonWorld {
   private loadFromStorage(): void {
     try {
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-        const raw = (globalThis as unknown).localStorage.getItem(this.storageKey);
+        const raw = (globalThis as any).localStorage.getItem(this.storageKey);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed.events)) this.events = parsed.events;

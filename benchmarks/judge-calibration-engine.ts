@@ -46,7 +46,7 @@ export class JudgeCalibrationEngine {
     this.seed = seed;
   }
 
-  compareJudge(judge: unknown): CalibrationComparison {
+  compareJudge(judge: any): CalibrationComparison {
     const comparisonId = `comp-${createDeterministicUuid(this.seed, ++this._counter)}`;
 
     const biasMagnitude = calculateBiasMagnitude(judge);
@@ -68,7 +68,7 @@ export class JudgeCalibrationEngine {
     };
   }
 
-  calculateJudgeBias(judge: unknown): Record<string, number> {
+  calculateJudgeBias(judge: any): Record<string, number> {
     const biasVector: Record<string, number> = {};
 
     const biasIndicators = [
@@ -92,7 +92,7 @@ export class JudgeCalibrationEngine {
     return biasVector;
   }
 
-  calculateCalibrationAccuracy(judge: unknown): number {
+  calculateCalibrationAccuracy(judge: any): number {
     if (judge.lifetimeEvaluations === 0) return 0.5;
 
     const weights = { accuracy: 0.4, reputation: 0.3, consistency: 0.2, auditScore: 0.1 };
@@ -105,11 +105,11 @@ export class JudgeCalibrationEngine {
     );
   }
 
-  calculateConsistencyScore(judge: unknown): number {
+  calculateConsistencyScore(judge: any): number {
     const rewardHistory = judge.memory?.rewardHistory || [];
     if (rewardHistory.length === 0) return 0.5;
 
-    const recentRewards = rewardHistory.filter((r: unknown) => {
+    const recentRewards = rewardHistory.filter((r: any) => {
       const rewardDate = new Date(r.timestamp);
       const now = new Date();
       const diffDays = (now.getTime() - rewardDate.getTime()) / (1000 * 60 * 60 * 24);
@@ -118,8 +118,8 @@ export class JudgeCalibrationEngine {
 
     if (recentRewards.length === 0) return 0.5;
 
-    const positiveRewards = recentRewards.filter((r: unknown) => r.rewardType === 'bonus');
-    const negativeRewards = recentRewards.filter((r: unknown) => r.rewardType === 'penalty');
+    const positiveRewards = recentRewards.filter((r: any) => r.rewardType === 'bonus');
+    const negativeRewards = recentRewards.filter((r: any) => r.rewardType === 'penalty');
 
     const consistency = positiveRewards.length / Math.max(1, recentRewards.length);
     const stabilityPenalty = Math.min(0.3, negativeRewards.length * 0.05);
@@ -127,11 +127,11 @@ export class JudgeCalibrationEngine {
     return Math.max(0, consistency - stabilityPenalty);
   }
 
-  calculateVarianceScore(judge: unknown): number {
+  calculateVarianceScore(judge: any): number {
     const rewardHistory = judge.memory?.rewardHistory || [];
     if (rewardHistory.length < 3) return 0.5;
 
-    const scores = rewardHistory.map((r: unknown) => r.score);
+    const scores = rewardHistory.map((r: any) => r.score);
     const mean = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
 
     const variance = scores.reduce((sum: number, score: number) => sum + Math.pow(score - mean, 2), 0) / scores.length;
@@ -177,7 +177,7 @@ export class JudgeCalibrationEngine {
       for (let i = 0; i < judge.memory.rewardHistory.length; i += 10) {
         const chunk = judge.memory.rewardHistory.slice(i, i + 10);
         if (chunk.length > 0) {
-          const avgScore = chunk.reduce((sum: number, r: unknown) => sum + r.score, 0) / chunk.length;
+          const avgScore = chunk.reduce((sum: number, r: any) => sum + r.score, 0) / chunk.length;
           accuracyTrend.push({
             timestamp: chunk[chunk.length - 1].timestamp,
             value: avgScore,
@@ -214,7 +214,7 @@ export class JudgeCalibrationEngine {
     }
 
     const recentEvaluations =
-      (judge.memory?.rewardHistory || []).filter((r: unknown) => {
+      (judge.memory?.rewardHistory || []).filter((r: any) => {
         const rDate = new Date(r.timestamp);
         const now = new Date();
         const diffDays = (now.getTime() - rDate.getTime()) / (1000 * 60 * 60 * 24);
@@ -234,7 +234,7 @@ export class JudgeCalibrationEngine {
       };
     }
 
-    const scores = recentEvaluations.map((r: unknown) => r.score);
+    const scores = recentEvaluations.map((r: any) => r.score);
     const firstHalf = scores.slice(0, Math.ceil(scores.length / 2));
     const secondHalf = scores.slice(Math.ceil(scores.length / 2));
 
@@ -273,7 +273,7 @@ export class JudgeCalibrationEngine {
   }
 }
 
-function calculateBiasMagnitude(judge: unknown): number {
+function calculateBiasMagnitude(judge: any): number {
   const biasKeys = [
     'leniencyBias',
     'harshnessBias',
@@ -298,7 +298,7 @@ function calculateBiasMagnitude(judge: unknown): number {
   return count > 0 ? totalMagnitude / count : 0;
 }
 
-function calculateSystematicBias(judge: unknown): Record<string, number> {
+function calculateSystematicBias(judge: any): Record<string, number> {
   const systematicBias: Record<string, number> = {};
 
   const biasKeys = [
@@ -361,13 +361,13 @@ function alignTrend(judgeId: string, adjustment: number): void {
   if (!judge.memory?.rewardHistory || judge.memory.rewardHistory.length === 0) return;
 
   const recentScores = judge.memory.rewardHistory
-    .filter((r: unknown) => {
+    .filter((r: any) => {
       const rDate = new Date(r.timestamp);
       const now = new Date();
       const diffDays = (now.getTime() - rDate.getTime()) / (1000 * 60 * 60 * 24);
       return diffDays <= 7;
     })
-    .map((r: unknown) => r.score);
+    .map((r: any) => r.score);
 
   if (recentScores.length < 3) return;
 
@@ -382,12 +382,12 @@ function alignTrend(judgeId: string, adjustment: number): void {
   }
 }
 
-function getJudgeById(judgeId: string): unknown {
+function getJudgeById(judgeId: string): any {
   const judges = Array.from(globalJudges.values());
   return judges.find((j) => j.id === judgeId);
 }
 
-const globalJudges = new Map<string, unknown>();
+const globalJudges = new Map<string, any>();
 
 export interface CalibrationReport {
   judgeId: string;
@@ -419,7 +419,7 @@ export interface DriftAnalysis {
   currentTimestamp: string;
 }
 
-function generateRecommendedActions(judge: unknown): string[] {
+function generateRecommendedActions(judge: any): string[] {
   const actions: string[] = [];
 
   if (judge.accuracyScore < 0.4) actions.push('Increase calibration accuracy through more consistent evaluations');

@@ -255,7 +255,7 @@ export class GlobalResourceLedger {
     try {
       const data = JSON.stringify(this.toJSON());
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-        (globalThis as unknown).localStorage.setItem(this.storageKey, data);
+        (globalThis as any).localStorage.setItem(this.storageKey, data);
       }
     } catch {}
   }

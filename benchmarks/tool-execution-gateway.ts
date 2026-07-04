@@ -102,10 +102,10 @@ export class ToolExecutionGateway {
           });
           break;
         case 'push_files':
-          result = await this.toolGateway.pushCommits(params.repoName as string, params as unknown);
+          result = await this.toolGateway.pushCommits(params.repoName as string, params as any);
           break;
         case 'commit':
-          result = await this.toolGateway.pushCommits(params.repoName as string, params as unknown);
+          result = await this.toolGateway.pushCommits(params.repoName as string, params as any);
           break;
         default:
           throw new Error(`Unknown GitHub action: ${action}`);
@@ -116,7 +116,7 @@ export class ToolExecutionGateway {
         toolType: 'github',
         action,
         input: params,
-        output: result as unknown,
+        output: result as any,
         success: true,
         durationMs: Date.now() - startTime,
         timestamp: deterministicNow(this.seed),
@@ -156,8 +156,8 @@ export class ToolExecutionGateway {
         callId,
         toolType: 'deploy',
         action: 'deploy',
-        input: config as unknown,
-        output: result as unknown,
+        input: config as any,
+        output: result as any,
         success: true,
         durationMs: Date.now() - startTime,
         timestamp: deterministicNow(this.seed),
@@ -170,7 +170,7 @@ export class ToolExecutionGateway {
         callId,
         toolType: 'deploy',
         action: 'deploy',
-        input: config as unknown,
+        input: config as any,
         output: null,
         success: false,
         durationMs: Date.now() - startTime,
@@ -196,7 +196,7 @@ export class ToolExecutionGateway {
         toolType: 'browser_test',
         action: 'test_url',
         input: { url },
-        output: result as unknown,
+        output: result as any,
         success: result.passed,
         durationMs: Date.now() - startTime,
         timestamp: deterministicNow(this.seed),
@@ -234,7 +234,7 @@ export class ToolExecutionGateway {
         toolType: 'fetch',
         action: 'fetch',
         input: { url },
-        output: result as unknown,
+        output: result as any,
         success: response.ok,
         durationMs: Date.now() - startTime,
         timestamp: deterministicNow(this.seed),

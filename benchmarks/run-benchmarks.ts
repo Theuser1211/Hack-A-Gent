@@ -65,7 +65,7 @@ function createMockModule(type: GeneratedModule['type'], name: string, fileCount
       language: 'typescript',
     });
   }
-  return { name, files };
+  return { name, type, files };
 }
 
 const MOCK_PLANNER = {
@@ -148,6 +148,7 @@ function createDeterministicLLMProvider(): LLMProvider {
       failed_requests: 0,
       avg_latency_ms: 50,
     }),
+    checkHealth: async () => ({ provider_id: 'local', status: 'healthy', last_check: deterministicNow(masterSeed), consecutive_failures: 0, total_requests: 0, failed_requests: 0, avg_latency_ms: 50 }),
     execute: async (request: LLMRequest): Promise<LLMResponse> => {
       globalFileCounter++;
       const userMsg = request.messages.find((m) => m.role === 'user');
@@ -640,7 +641,7 @@ async function singleAgentMain(): Promise<void> {
   // Initialize adaptive adversarial system
   const difficultyController = new MutationDifficultyController();
   const memoryBuffer = new PerformanceMemoryBuffer();
-  const curriculum = new (AdversarialCurriculum as unknown)(
+  const curriculum = new (AdversarialCurriculum as any)(
     difficultyController,
     memoryBuffer,
   ) as AdversarialCurriculum;
@@ -818,7 +819,7 @@ async function multiAgentLeagueMain(): Promise<void> {
 
   const difficultyController = new MutationDifficultyController();
   const memoryBuffer = new PerformanceMemoryBuffer();
-  const curriculum = new (AdversarialCurriculum as unknown)(
+  const curriculum = new (AdversarialCurriculum as any)(
     difficultyController,
     memoryBuffer,
   ) as AdversarialCurriculum;

@@ -501,7 +501,8 @@ export class OrganizationEvolutionEngine { private readonly seed: number;
         effectiveness: 0.8,
         latency: 20,
         redundancy: 0.1,
-        complexity: 1.2 }; });
+        complexity: 1.2,
+        type: DepartmentType.ENGINEERING }; });
 
     return specialized; }
 
