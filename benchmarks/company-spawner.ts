@@ -161,7 +161,7 @@ export class CompanySpawner {
 
     while (pool.length < count) {
       const fallback = WINNING_STRATEGIES[Math.floor(rng.next() * WINNING_STRATEGIES.length)]!;
-      if (!pool.includes(fallback)) pool.push(fallback);
+      pool.push(fallback);
     }
 
     return pool.slice(0, count);

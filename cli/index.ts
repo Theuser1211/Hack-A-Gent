@@ -363,7 +363,7 @@ async function main(): Promise<void> {
   if (ctx.outputFormat === 'json') {
     console.log(JSON.stringify(result, null, 2));
   } else if (ctx.outputFormat === 'pretty') {
-    if (result.success) {
+    if (result.success && result.message) {
       logSuccess(result.message);
     } else if (args.flags.debug === true) {
       logError(result.message);

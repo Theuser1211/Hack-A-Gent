@@ -2,18 +2,41 @@
   "name": "hack-agent",
   "version": "0.1.0",
   "description": "Autonomous hackathon agent runtime",
+  "keywords": [
+    "ai",
+    "agent",
+    "cli",
+    "hackathon",
+    "devpost",
+    "automation",
+    "typescript"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Theuser1211/Hack-A-Gent",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Theuser1211/Hack-A-Gent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Theuser1211/Hack-A-Gent/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
-  "main": "dist/cli/index.js",
   "types": "dist/cli/index.d.ts",
   "files": [
-    "dist/"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "bin": {
-      "hackagent": "dist/cli/index.js",
-      "hag": "dist/cli/index.js"
-    },
+    "hackagent": "dist/cli/index.js",
+    "hag": "dist/cli/index.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build && node --eval \"import{rmSync,readdirSync,existsSync}from'fs';import{join}from'path';if(existsSync('dist/tests'))rmSync('dist/tests',{recursive:true});function rmFiles(dir){if(!existsSync(dir))return;for(const e of readdirSync(dir,{withFileTypes:true})){const p=join(dir,e.name);if(e.isDirectory())rmFiles(p);else if(e.name.endsWith('.d.ts')||e.name.endsWith('.d.ts.map')||e.name.endsWith('.js.map')||e.name.endsWith('.map'))rmSync(p);}}rmFiles('dist');\"",
     "dev": "tsx watch src/index.ts",
     "hackagent": "tsx cli/index.ts",
     "hag": "tsx cli/index.ts",

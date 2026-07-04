@@ -39,7 +39,7 @@ const SHARED_RUBRIC_BASE = {
 
 export const AI_HACKATHON: HackathonBenchmarkDefinition = {
   id: 'bench-ai-001',
-  name: 'AI Hackathon â€” Smart Assistant',
+  name: 'AI Hackathon — Smart Assistant',
   category: 'ai',
   devpost_url: 'https://devpost.com/software/ai-smart-assistant',
   description:
@@ -84,7 +84,7 @@ export const AI_HACKATHON: HackathonBenchmarkDefinition = {
 
 export const SAAS_HACKATHON: HackathonBenchmarkDefinition = {
   id: 'bench-saas-001',
-  name: 'SaaS Hackathon â€” Subscription Manager',
+  name: 'SaaS Hackathon — Subscription Manager',
   category: 'saas',
   devpost_url: 'https://devpost.com/software/saas-subscription-manager',
   description: 'Build a SaaS subscription management platform with billing, user management, and analytics.',
@@ -129,7 +129,7 @@ export const SAAS_HACKATHON: HackathonBenchmarkDefinition = {
 
 export const WEBAPP_HACKATHON: HackathonBenchmarkDefinition = {
   id: 'bench-web-001',
-  name: 'Web App Hackathon â€” Team Collaboration',
+  name: 'Web App Hackathon — Team Collaboration',
   category: 'webapp',
   devpost_url: 'https://devpost.com/software/team-collab-app',
   description: 'Build a real-time team collaboration app with kanban boards, chat, and file sharing.',
@@ -169,7 +169,7 @@ export const WEBAPP_HACKATHON: HackathonBenchmarkDefinition = {
 
 export const HEALTHCARE_HACKATHON: HackathonBenchmarkDefinition = {
   id: 'bench-health-001',
-  name: 'Healthcare Hackathon â€” Patient Portal',
+  name: 'Healthcare Hackathon — Patient Portal',
   category: 'healthcare',
   devpost_url: 'https://devpost.com/software/patient-portal',
   description: 'Build a patient portal with appointment scheduling, medical records, and telehealth features.',
@@ -219,7 +219,7 @@ export const HEALTHCARE_HACKATHON: HackathonBenchmarkDefinition = {
 
 export const EDUCATION_HACKATHON: HackathonBenchmarkDefinition = {
   id: 'bench-edu-001',
-  name: 'Education Hackathon â€” Learning Platform',
+  name: 'Education Hackathon — Learning Platform',
   category: 'education',
   devpost_url: 'https://devpost.com/software/learning-platform',
   description: 'Build an online learning platform with courses, quizzes, progress tracking, and student analytics.',

@@ -4,18 +4,23 @@ import { ALL_BENCHMARKS } from '../../benchmarks/hackathon-benchmarks.js';
 import type { PlannerOutput } from '../../kernel/planning/planner-types.js';
 import type { ArchitectureBlueprint } from '../../kernel/planning/architect-types.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
-import { header, log, info, dim } from '../output.js';
+import { color, dim, log, logRaw } from '../output.js';
 
 export async function benchmarkCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const sub = args.subcommand ?? 'run';
 
   switch (sub) {
     case 'list': {
-      log('Available Benchmarks:');
+      const maxIdLen = Math.max(...ALL_BENCHMARKS.map(b => b.id.length));
+      logRaw('');
+      logRaw(`  ${color('Available Benchmarks', 'cyan')}`);
+      logRaw('');
+      logRaw(`  ${color('ID'.padEnd(maxIdLen), 'gray')}   ${color('Description', 'gray')}`);
+      logRaw(`  ${color('─'.repeat(maxIdLen + 4 + 48), 'gray')}`);
       for (const b of ALL_BENCHMARKS) {
-        log(`${b.id.padEnd(30)} ${b.name.slice(0, 50)}`);
+        logRaw(`  ${color(b.id.padEnd(maxIdLen), 'white')}   ${color(b.name.slice(0, 48), 'gray')}`);
       }
-      log('');
+      logRaw('');
       return {
         success: true,
         message: `${ALL_BENCHMARKS.length} benchmarks available`,

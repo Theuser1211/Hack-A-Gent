@@ -1,7 +1,7 @@
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { getConfig } from '../config-manager.js';
 import { initializeProviders } from '../provider-init.js';
-import { header, error, info } from '../output.js';
+import { color, logRaw, header, error } from '../output.js';
 
 export async function modelsCommand(_ctx: CLIContext, _args: CLIArgs): Promise<CLIResult> {
   const config = getConfig();
@@ -17,36 +17,30 @@ export async function modelsCommand(_ctx: CLIContext, _args: CLIArgs): Promise<C
   header(`Models — ${config.llm.provider}`);
 
   if (models.length === 0) {
-    info('No models available from this provider');
+    logRaw(`  ${color('No models available from this provider', 'gray')}`);
+    logRaw('');
     return { success: true, message: 'No models', data: { models: [] } };
   }
 
-  for (const model of models) {
-    const context = model.context_window ? `${model.context_window.toLocaleString()} ctx` : '';
-    const caps = model.capabilities ?? [];
-    const supports = [
-      caps.includes('json_output') ? 'JSON' : null,
-      caps.includes('streaming') ? 'stream' : null,
-      caps.includes('function_calling') ? 'functions' : null,
-    ].filter(Boolean).join(', ');
-    const costParts: string[] = [];
-    if (model.cost_per_1k_input) costParts.push(`$${model.cost_per_1k_input}/1k in`);
-    if (model.cost_per_1k_output) costParts.push(`$${model.cost_per_1k_output}/1k out`);
-    const cost = costParts.join(', ');
+  const maxModelLen = Math.max(...models.map(m => m.model_id.length));
+  const ctxLabel = 'Context';
+  const streamLabel = 'Streaming';
+  const colWidth = 12;
 
-    let line = `  ${model.model_id}`;
-    if (context) line += `  (${context})`;
-    if (supports) line += `  [${supports}]`;
-    if (cost) line += `  ${cost}`;
-    console.log(line);
+  logRaw(`  ${color('Model'.padEnd(maxModelLen), 'gray')}   ${color(ctxLabel.padEnd(colWidth), 'gray')}   ${color(streamLabel, 'gray')}`);
+  logRaw(`  ${color('─'.repeat(maxModelLen + 4 + colWidth + 4 + streamLabel.length), 'gray')}`);
+
+  for (const model of models) {
+    const ctx = model.context_window ? `${(model.context_window / 1000).toFixed(0)}k` : '-';
+    const streaming = (model.capabilities ?? []).includes('streaming') ? '✓' : '';
+    logRaw(`  ${color(model.model_id.padEnd(maxModelLen), 'white')}   ${color(ctx.padEnd(colWidth), 'gray')}   ${color(streaming, 'green')}`);
   }
 
-  console.log();
-  info(`${models.length} model(s) available`);
+  logRaw('');
 
   return {
     success: true,
-    message: `${models.length} model(s)`,
+    message: `${models.length} models`,
     data: { models: models.map(m => ({ id: m.model_id, contextWindow: m.context_window })) },
   };
 }

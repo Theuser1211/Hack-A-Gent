@@ -290,6 +290,9 @@ export async function withRetry<T>(
   } catch (err) {
     if (attempt >= config.maxRetries) throw err;
 
+    const isAbortError = err instanceof DOMException && err.name === 'AbortError';
+    if (isAbortError) throw err;
+
     const status =
       err instanceof Response ? err.status : ((err as any)?.status ?? (err as any)?.statusCode ?? 0);
 

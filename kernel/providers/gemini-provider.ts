@@ -117,7 +117,7 @@ export class GeminiProvider implements LLMProvider {
     }
 
     const model = request.model_id;
-    const fetcher = async (): Promise<Response> => {
+    const fetcher = async (): Promise<Record<string, unknown>> => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
       try {
@@ -143,15 +143,14 @@ export class GeminiProvider implements LLMProvider {
           throw Object.assign(new Error(`Gemini API error ${res.status}: ${text}`), { status: res.status });
         }
 
-        return res;
+        return (await res.json()) as Record<string, unknown>;
       } finally {
         clearTimeout(timeout);
       }
     };
 
     const retryConfig = { ...DEFAULT_RETRY_CONFIG, maxRetries: this.maxRetries };
-    const res = await withRetry(fetcher, retryConfig);
-    const data = (await res.json()) as Record<string, unknown>;
+    const data = await withRetry(fetcher, retryConfig);
 
     const latency = Date.now() - startTime;
 

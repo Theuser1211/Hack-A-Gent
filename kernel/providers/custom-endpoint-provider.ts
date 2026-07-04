@@ -48,7 +48,7 @@ export class CustomEndpointProvider implements LLMProvider {
     this.baseUrl = config.config?.baseUrls?.custom ?? config.config?.baseUrls?.nvidia ?? 'https://integrate.api.nvidia.com/v1';
     this.apiKeyEnvVar = config.providerId === 'nvidia' ? 'NVIDIA_API_KEY' : 'CUSTOM_LLM_API_KEY';
     this.maxRetries = config.config?.maxRetries ?? DEFAULT_RETRY_CONFIG.maxRetries;
-    this.timeoutMs = config.config?.timeoutMs ?? 60000;
+    this.timeoutMs = config.config?.timeoutMs ?? 30000;
     this.models = config.providerId === 'nvidia' ? DEFAULT_MODELS : DEFAULT_MODELS.map(m => ({ ...m, provider: 'custom' as const }));
     this.health = {
       provider_id: config.providerId as 'nvidia' | 'custom',
@@ -116,7 +116,7 @@ export class CustomEndpointProvider implements LLMProvider {
       body.response_format = { type: 'json_object' };
     }
 
-    const fetcher = async (): Promise<Response> => {
+    const fetcher = async (): Promise<Record<string, unknown>> => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
       try {
@@ -140,15 +140,14 @@ export class CustomEndpointProvider implements LLMProvider {
           throw Object.assign(new Error(`${this.providerId} API error ${res.status}: ${text}`), { status: res.status });
         }
 
-        return res;
+        return (await res.json()) as Record<string, unknown>;
       } finally {
         clearTimeout(timeout);
       }
     };
 
     const retryConfig = { ...DEFAULT_RETRY_CONFIG, maxRetries: this.maxRetries };
-    const res = await withRetry(fetcher, retryConfig);
-    const data = (await res.json()) as Record<string, unknown>;
+    const data = await withRetry(fetcher, retryConfig);
 
     const latency = Date.now() - startTime;
 

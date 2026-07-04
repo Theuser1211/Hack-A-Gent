@@ -105,6 +105,7 @@ export class InternetHackathonOrchestrator {
   private errors: string[] = [];
   private artifacts: string[] = [];
   private decisionLog: AutoDecision[] = [];
+  private generationAttempted = new Set<string>();
   private onPhaseChange: ((phase: OrchestratorPhase, data?: Record<string, unknown>) => void) | null = null;
 
   constructor(workspaceRoot: string, stateDir?: string, seed = 42, routerEngine?: RouterEngine) {
@@ -350,7 +351,7 @@ export class InternetHackathonOrchestrator {
     fe.push(this.addTask('Add responsive styling', 'frontend', [fe[2]!, fe[3]!]));
 
     const be: string[] = [];
-    be.push(this.addTask('Scaffold backend with Express', 'backend', infra));
+    be.push(this.addTask('Initialize backend with Express', 'backend', infra));
     be.push(this.addTask('Set up database schema', 'backend', [be[0]!]));
     be.push(this.addTask('Implement auth endpoints', 'backend', [be[1]!]));
     be.push(this.addTask('Implement core API endpoints', 'backend', [be[2]!]));
@@ -376,7 +377,7 @@ export class InternetHackathonOrchestrator {
       if (decision.type === 'ask_user') {
         const questions = this.interactionManager.getPendingQuestions();
         if (questions.length > 0) break;
-        continue;
+        break;
       }
       if (decision.type === 'skip_task' && decision.targetId) {
         this.taskGraph.markDone(decision.targetId);
@@ -734,6 +735,17 @@ export class InternetHackathonOrchestrator {
       return [];
     }
 
+    // Only attempt LLM once per fileType per pipeline run
+    if (this.generationAttempted.has(fileType)) {
+      console.error(`[Generate] ${fileType} already attempted, using template`);
+      if (fileType === 'scaffold') return this.generateScaffoldFiles(this.plan!);
+      if (fileType === 'frontend') return this.generateFrontendFiles({ description: context.specificTask ?? '' } as TaskNode, this.plan!);
+      if (fileType === 'backend') return this.generateBackendFiles({ description: context.specificTask ?? '' } as TaskNode, this.plan!);
+      return [];
+    }
+    this.generationAttempted.add(fileType);
+    console.error(`[Generate] ${fileType} start`);
+
     const taskDescriptions: Record<string, string> = {
       scaffold: 'Generate the complete project scaffold including package.json, tsconfig.json, next.config.js, src/app/layout.tsx, src/app/page.tsx, .gitignore, and any other essential config files.',
       frontend: `Generate frontend React/Next.js component code for: ${context.specificTask}. Include actual implementation, not stubs.`,
@@ -785,6 +797,7 @@ ${fileType === 'backend' && context.specificTask ? `Focus on: ${context.specific
       const parsed = JSON.parse(response.content);
 
       if (parsed.files && Array.isArray(parsed.files)) {
+        console.error(`[Generate] ${fileType} end (LLM success)`);
         return parsed.files.map((f: { path: string; content: string; language?: string }) => ({
           path: f.path,
           content: f.content,
@@ -792,11 +805,14 @@ ${fileType === 'backend' && context.specificTask ? `Focus on: ${context.specific
       }
 
       if (parsed.path && parsed.content) {
+        console.error(`[Generate] ${fileType} end (LLM success)`);
         return [{ path: parsed.path, content: parsed.content }];
       }
     } catch (err) {
       console.error(`LLM generation failed for ${fileType}, falling back to templates:`, err instanceof Error ? err.message : String(err));
     }
+
+    console.error(`[Generate] ${fileType} end (template fallback)`);
 
     if (fileType === 'scaffold') return this.generateScaffoldFiles(this.plan);
     if (fileType === 'frontend') return this.generateFrontendFiles({ description: context.specificTask ?? '' } as TaskNode, this.plan);

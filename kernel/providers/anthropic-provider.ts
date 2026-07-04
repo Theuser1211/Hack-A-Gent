@@ -117,11 +117,11 @@ export class AnthropicProvider implements LLMProvider {
       body.metadata = { ...((body.metadata as Record<string, unknown>) ?? {}), output_type: 'json' };
     }
 
-    const fetcher = async (): Promise<Response> => {
+    const fetcher = async (): Promise<Record<string, unknown>> => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
       try {
-        const res = await fetch(`${this.baseUrl}/messages`, {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -148,15 +148,14 @@ export class AnthropicProvider implements LLMProvider {
           throw Object.assign(new Error(`Anthropic API error ${res.status}: ${text}`), { status: res.status });
         }
 
-        return res;
+        return (await res.json()) as Record<string, unknown>;
       } finally {
         clearTimeout(timeout);
       }
     };
 
     const retryConfig = { ...DEFAULT_RETRY_CONFIG, maxRetries: this.maxRetries };
-    const res = await withRetry(fetcher, retryConfig);
-    const data = (await res.json()) as Record<string, unknown>;
+    const data = await withRetry(fetcher, retryConfig);
 
     const latency = Date.now() - startTime;
 

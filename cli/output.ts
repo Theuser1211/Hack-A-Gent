@@ -21,44 +21,75 @@ export function color(text: string, c: string): string {
   return `${COLORS[c] ?? ''}${text}${RESET}`;
 }
 
-const WELCOME = [
-  '',
-  `  ██╗  ██╗ █████╗  ██████╗██╗  ██╗      █████╗       ██████╗ ███████╗███╗   ██╗████████╗`,
-  `  ██║  ██║██╔══██╗██╔════╝██║ ██╔╝     ██╔══██╗     ██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝`,
-  `  ███████║███████║██║     █████╔╝█████╗███████║█████╗██║  ███╗█████╗  ██╔██╗ ██║   ██║`,
-  `  ██╔══██║██╔══██║██║     ██╔═██╗╚════╝██╔══██║╚════╝██║   ██║██╔══╝  ██║╚██╗██║   ██║`,
-  `  ██║  ██║██║  ██║╚██████╗██║  ██╗     ██║  ██║     ╚██████╔╝███████╗██║ ╚████║   ██║`,
-  `  ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝     ╚═╝  ╚═╝      ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝`,
-  '',
-];
+function stripAnsi(text: string): string {
+  return text.replace(/\x1b\[[0-9;]*m/g, '');
+}
+
+function center(text: string): string {
+  const width = process.stdout.columns ?? 80;
+  const pad = Math.max(0, Math.floor((width - stripAnsi(text).length) / 2));
+  return ' '.repeat(pad) + text;
+}
 
 export function showWelcome(version: string): void {
-  for (const line of WELCOME) {
-    logRaw(color(line, 'yellow'));
+  logRaw('');
+
+  const logoLines = [
+    '                           ██╗  ██╗ █████╗  ██████╗',
+    '                           ██║  ██║██╔══██╗██╔════╝',
+    '                           ███████║███████║██║  ███╗',
+    '                           ██╔══██║██╔══██║██║   ██║',
+    '                           ██║  ██║██║  ██║╚██████╔╝',
+    '                           ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝',
+  ];
+  const logoContentWidth = Math.max(...logoLines.map(l => l.trimStart().length));
+  const logoPad = Math.max(0, Math.floor(((process.stdout.columns ?? 80) - logoContentWidth) / 2));
+  const logoPadStr = ' '.repeat(logoPad);
+  logoLines.forEach(line => logRaw(logoPadStr + line.trimStart()));
+  logRaw('');
+
+  logRaw(center(color('Hack-A-Gent v' + version, 'cyan')));
+  logRaw(center(color('Autonomous Hackathon AI Agent', 'gray')));
+  logRaw(center(color('─'.repeat(42), 'gray')));
+  logRaw(center(color('Turn Devpost URLs into Working Projects', 'cyan')));
+
+  logRaw('');
+
+  function renderSection(header: string, commands: [string, string][], maxCmdLen: number): void {
+    const cmdWidth = maxCmdLen + 6;
+    logRaw(center(color(header, 'cyan')));
+    for (const [cmd, desc] of commands) {
+      const padding = ' '.repeat(Math.max(0, cmdWidth - cmd.length));
+      logRaw(center(color(cmd, 'green') + padding + color(desc, 'gray')));
+    }
   }
 
-  const pad = ' '.repeat(18);
-  logRaw(`${pad}${color('🚀 Hack-A-Gent v' + version, 'magenta')}`);
-  logRaw(`${' '.repeat(14)}${color('Turn Devpost URLs into Working Projects', 'cyan')}`);
-  logRaw(color('  ────────────────────────────────────────────────────────────────', 'gray'));
+  renderSection('Quick Start', [
+    ['hackagent setup', 'Configure your AI provider'],
+    ['hackagent run <url>', 'Generate a hackathon project'],
+    ['hackagent doctor', 'Verify your environment'],
+    ['hackagent chat', 'Interactive AI assistant'],
+  ], 18);
+
   logRaw('');
-  logRaw(`  ${color('Quick Start', 'cyan')}`);
-  logRaw(`  ${color('  hackagent setup', 'green')}                  ${color('Configure your AI provider', 'gray')}`);
-  logRaw(`  ${color('  hackagent run <devpost-url>', 'green')}      ${color('Generate a hackathon project', 'gray')}`);
-  logRaw(`  ${color('  hackagent doctor', 'green')}                 ${color('Verify your environment', 'gray')}`);
-  logRaw(`  ${color('  hackagent chat', 'green')}                   ${color('Interactive AI assistant', 'gray')}`);
+
+  renderSection('Useful Commands', [
+    ['hackagent providers', 'List available AI providers'],
+    ['hackagent models', 'List available models'],
+    ['hackagent benchmark list', 'List available benchmarks'],
+    ['hackagent config --show', 'Show current configuration'],
+  ], 26);
+
   logRaw('');
-  logRaw(`  ${color('Useful Commands', 'cyan')}`);
-  logRaw(`  ${color('  hackagent providers', 'green')}`);
-  logRaw(`  ${color('  hackagent models', 'green')}`);
-  logRaw(`  ${color('  hackagent benchmark list', 'green')}`);
-  logRaw(`  ${color('  hackagent config --show', 'green')}`);
+
+  renderSection('Need more help?', [
+    ['hackagent --help', 'Show all available commands'],
+  ], 17);
+
   logRaw('');
-  logRaw(`  ${color('Need more help?', 'cyan')}`);
-  logRaw(`  ${color('  hackagent --help', 'green')}`);
-  logRaw('');
-  logRaw(`  ${color('GitHub', 'cyan')}`);
-  logRaw(`  ${color('  https://github.com/Theuser1211/Hack-A-Gent', 'gray')}`);
+
+  logRaw(center(color('GitHub', 'cyan')));
+  logRaw(center(color('https://github.com/Theuser1211/Hack-A-Gent', 'gray')));
   logRaw('');
 }
 
@@ -143,10 +174,10 @@ export function dim(message: string): void {
 }
 
 export function header(title: string): void {
-  console.log();
-  console.log(`  ${BOLD}${title}${RESET}`);
-  console.log(`  ${'='.repeat(Math.min(title.length, 50))}`);
-  console.log();
+  logRaw('');
+  logRaw(`  ${BOLD}${color(title, 'cyan')}${RESET}`);
+  logRaw(`  ${color('─'.repeat(Math.min(stripAnsi(title).length + 2, 56)), 'gray')}`);
+  logRaw('');
 }
 
 export function labeled(label: string, value: string): void {
