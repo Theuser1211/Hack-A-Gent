@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-import { existsSync } from 'node:fs';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { createContext, formatDuration } from './context.js';
 import type { CLIArgs, CLIResult, CommandName } from './types.js';
 import { getConfig } from './config-manager.js';
-import { banner, success as logSuccess, error as logError, info, dim } from './output.js';
+import { banner, success as logSuccess, error as logError, info, dim, showWelcome } from './output.js';
 import { formatError, printError } from './errors.js';
 
 const VALID_COMMANDS: CommandName[] = [
@@ -94,6 +94,17 @@ function parseArgs(argv: string[]): CLIArgs {
   }
 
   return { command, subcommand, positional, flags };
+}
+
+function getVersion(): string {
+  try {
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    const pkgPath = path.resolve(__dirname, '../package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    return pkg.version ?? '0.1.0';
+  } catch {
+    return '0.1.0';
+  }
 }
 
 function showHelp(): void {
@@ -193,13 +204,18 @@ async function main(): Promise<void> {
   const args = parseArgs(process.argv);
 
   if (args.command === 'help' || args.command === undefined) {
-    const config = getConfig();
-    if (!config?.llm.apiKey) {
-      banner();
-      console.log('  No AI provider is configured.');
-      console.log('  Run `hag setup` to get started.\n');
+    const rawArgs = process.argv.slice(2);
+    if (rawArgs.length === 0) {
+      showWelcome(getVersion());
+      const config = getConfig();
+      if (!config?.llm.apiKey) {
+        console.log();
+        info('No AI provider configured — run hag setup to get started');
+        console.log();
+      }
+    } else {
+      showHelp();
     }
-    showHelp();
     process.exitCode = 0;
     return;
   }

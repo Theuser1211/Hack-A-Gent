@@ -21,6 +21,47 @@ export function color(text: string, c: string): string {
   return `${COLORS[c] ?? ''}${text}${RESET}`;
 }
 
+const WELCOME = [
+  '',
+  `  ██╗  ██╗ █████╗  ██████╗██╗  ██╗      █████╗       ██████╗ ███████╗███╗   ██╗████████╗`,
+  `  ██║  ██║██╔══██╗██╔════╝██║ ██╔╝     ██╔══██╗     ██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝`,
+  `  ███████║███████║██║     █████╔╝█████╗███████║█████╗██║  ███╗█████╗  ██╔██╗ ██║   ██║`,
+  `  ██╔══██║██╔══██║██║     ██╔═██╗╚════╝██╔══██║╚════╝██║   ██║██╔══╝  ██║╚██╗██║   ██║`,
+  `  ██║  ██║██║  ██║╚██████╗██║  ██╗     ██║  ██║     ╚██████╔╝███████╗██║ ╚████║   ██║`,
+  `  ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝     ╚═╝  ╚═╝      ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝`,
+  '',
+];
+
+export function showWelcome(version: string): void {
+  for (const line of WELCOME) {
+    logRaw(color(line, 'yellow'));
+  }
+
+  const pad = ' '.repeat(18);
+  logRaw(`${pad}${color('🚀 Hack-A-Gent v' + version, 'magenta')}`);
+  logRaw(`${' '.repeat(14)}${color('Turn Devpost URLs into Working Projects', 'cyan')}`);
+  logRaw(color('  ────────────────────────────────────────────────────────────────', 'gray'));
+  logRaw('');
+  logRaw(`  ${color('Quick Start', 'cyan')}`);
+  logRaw(`  ${color('  hackagent setup', 'green')}                  ${color('Configure your AI provider', 'gray')}`);
+  logRaw(`  ${color('  hackagent run <devpost-url>', 'green')}      ${color('Generate a hackathon project', 'gray')}`);
+  logRaw(`  ${color('  hackagent doctor', 'green')}                 ${color('Verify your environment', 'gray')}`);
+  logRaw(`  ${color('  hackagent chat', 'green')}                   ${color('Interactive AI assistant', 'gray')}`);
+  logRaw('');
+  logRaw(`  ${color('Useful Commands', 'cyan')}`);
+  logRaw(`  ${color('  hackagent providers', 'green')}`);
+  logRaw(`  ${color('  hackagent models', 'green')}`);
+  logRaw(`  ${color('  hackagent benchmark list', 'green')}`);
+  logRaw(`  ${color('  hackagent config --show', 'green')}`);
+  logRaw('');
+  logRaw(`  ${color('Need more help?', 'cyan')}`);
+  logRaw(`  ${color('  hackagent --help', 'green')}`);
+  logRaw('');
+  logRaw(`  ${color('GitHub', 'cyan')}`);
+  logRaw(`  ${color('  https://github.com/Theuser1211/Hack-A-Gent', 'gray')}`);
+  logRaw('');
+}
+
 export const icons = {
   success: color('✔', 'green'),
   error: color('✘', 'red'),
