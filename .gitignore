@@ -10,3 +10,5 @@ coverage/
 benchmark-results/
 hackathon-project/
 tmp/
+
+*.tgz

@@ -1,5 +1,5 @@
 {
-  "name": "hack-agent",
+  "name": "hag-cli",
   "version": "0.1.0",
   "description": "Autonomous hackathon agent runtime",
   "keywords": [
