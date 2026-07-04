@@ -6,7 +6,7 @@ Autonomous hackathon engineering CLI. Give it a Devpost URL, and it generates a 
 
 ```bash
 # Install globally
-npm install -g hack-agent
+npm install -g hag-cli
 
 # Interactive setup (first time)
 hag setup
