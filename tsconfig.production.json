@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "skipLibCheck": false,
+    "noEmitOnError": false
+  },
+  "include": [
+    "cli/**/*.ts",
+    "kernel/**/*.ts"
+  ],
+  "exclude": [
+    "benchmarks/**/*-benchmark*.ts",
+    "benchmarks/**/experiment*.ts",
+    "benchmarks/**/replay*.ts",
+    "benchmarks/**/test*.ts",
+    "benchmarks/**/*-test.ts",
+    "benchmarks/**/test.ts",
+    "agents/**/*",
+    "tests/**/*",
+    "docs/**/*",
+    "paper/**/*",
+    "coverage/**/*",
+    "dist/**/*"
+  ]
+}

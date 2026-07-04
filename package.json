@@ -5,7 +5,10 @@
   "type": "module",
   "main": "dist/cli/index.js",
   "types": "dist/cli/index.d.ts",
-    "bin": {
+  "files": [
+    "dist/"
+  ],
+  "bin": {
       "hackagent": "dist/cli/index.js",
       "hag": "dist/cli/index.js"
     },
