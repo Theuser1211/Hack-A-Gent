@@ -365,7 +365,7 @@ async function main(): Promise<void> {
   } else if (ctx.outputFormat === 'pretty') {
     if (result.success && result.message) {
       logSuccess(result.message);
-    } else if (args.flags.debug === true) {
+    } else if (!result.success && result.message) {
       logError(result.message);
     }
     if (result.metrics) {
