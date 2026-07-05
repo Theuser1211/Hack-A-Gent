@@ -299,7 +299,7 @@ export class HackathonSwarmOrchestrator {
           .length === 0,
       testPassRate: agentStrategy.taskCount / Math.max(agentStrategy.taskCount, 1),
       crashFree: simResult.failureTimeline.filter((f) => f.severity === 'critical').length === 0,
-      taskCompleteness: 0.85,
+      taskCompleteness: 0, // Not measured in simulation
       mockAI: agentStrategy.mockAI,
     });
 

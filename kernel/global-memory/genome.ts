@@ -105,7 +105,7 @@ class GlobalStrategyGenome {
     score: number,
     companyId: string,
   ): GlobalGenomeRecord {
-    const recordId = `record-${templateId}-${Date.now()}`;
+    const recordId = `record-${templateId}-${deterministicNow(this.seed)}`;
     const existing = this.records.get(recordId);
 
     if (existing) {

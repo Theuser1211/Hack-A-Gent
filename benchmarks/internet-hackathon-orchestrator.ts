@@ -465,7 +465,7 @@ export class InternetHackathonOrchestrator {
       uxResults: [],
       completionRate: fProgress.done / Math.max(fProgress.total, 1),
       failurePatterns: [],
-      judgeScore: fProgress.blocked === 0 ? 0.8 : 0.4,
+      judgeScore: 0, // Not computed — requires real evaluation
     };
   }
 

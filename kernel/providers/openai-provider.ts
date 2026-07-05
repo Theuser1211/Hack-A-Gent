@@ -126,7 +126,7 @@ export class OpenAIProvider implements LLMProvider {
         }
 
         if (!res.ok) {
-          const text = await res.text().catch(() => '');
+          const text = await res.text().catch(() => '‹response body unavailable›');
           throw Object.assign(new Error(`OpenAI API error ${res.status}: ${text}`), { status: res.status });
         }
 
@@ -207,7 +207,7 @@ export class OpenAIProvider implements LLMProvider {
       });
 
       if (!res.ok) {
-        const text = await res.text().catch(() => '');
+        const text = await res.text().catch(() => '‹response body unavailable›');
         throw new Error(`OpenAI API error ${res.status}: ${text}`);
       }
 

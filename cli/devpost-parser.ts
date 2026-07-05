@@ -922,7 +922,7 @@ export class PipelineReportGenerator {
         differentiators: ['Working product'],
         risks: [],
         recommendedStack: ['React', 'Node.js'],
-        estimatedJudgeScore: 70,
+        estimatedJudgeScore: 0, // Not computed — requires real evaluation
       },
       techStack: params.strategy?.recommendedStack ?? ['React', 'Node.js', 'PostgreSQL'],
       generatedFeatures: features,
@@ -933,7 +933,7 @@ export class PipelineReportGenerator {
         'Add CI/CD pipeline for faster iteration',
         'Enhance documentation with API reference',
       ],
-      judgeScorePrediction: params.strategy?.estimatedJudgeScore ?? 70,
+      judgeScorePrediction: params.strategy?.estimatedJudgeScore ?? 0, // 0 = not computed
       innovationScore: review.innovation,
       technicalDepthScore: review.technicalDepth,
       feasibilityScore: review.feasibility,

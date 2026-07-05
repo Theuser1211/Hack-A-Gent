@@ -66,11 +66,15 @@ export async function benchmarkCommand(ctx: CLIContext, args: CLIArgs): Promise<
       const result = await runner.runBenchmark(target);
 
       log('Results:');
-      log(`Overall Score: ${(result.overall_success ? 100 : 0).toFixed(1)}%`);
+      // Calculate score based on phase pass rate
+      const totalPhases = result.phases?.length ?? 0;
+      const passedPhases = result.phases?.filter(p => p.success).length ?? 0;
+      const phaseScore = totalPhases > 0 ? (passedPhases / totalPhases) * 100 : 0;
+      const overallScore = result.overall_success ? Math.min(100, phaseScore + (result.judge_score ?? 0)) : phaseScore;
+      
+      log(`Overall Score: ${overallScore.toFixed(1)}%`);
       log(`Passed: ${result.overall_success}`);
-      log(
-        `Duration: ${Math.floor((result.completed_at ? new Date(result.completed_at).getTime() - new Date(result.started_at).getTime() : 0) / 1000)}s`,
-      );
+      log(`Duration: ${Math.floor((result.total_duration_ms ?? 0) / 1000)}s`);
       log('');
 
       if (result.phases) {
@@ -87,7 +91,7 @@ export async function benchmarkCommand(ctx: CLIContext, args: CLIArgs): Promise<
         success: result.overall_success,
         message: `Benchmark "${benchmarkId}" completed: ${result.overall_success ? 'PASS' : 'FAIL'}`,
         data: result as unknown as Record<string, unknown>,
-        metrics: { overallScore: result.overall_success ? 1 : 0, passed: result.overall_success ? 1 : 0 },
+        metrics: { overallScore: overallScore, passed: result.overall_success ? 1 : 0, durationMs: result.total_duration_ms ?? 0 },
         traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
       };
     }

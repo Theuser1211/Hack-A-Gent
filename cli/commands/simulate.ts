@@ -86,7 +86,7 @@ export async function simulateCommand(ctx: CLIContext, args: CLIArgs): Promise<C
     deploySuccess: simResult.failureTimeline.filter((f) => f.phase === 'deploy').length === 0,
     testPassRate: simResult.winnerStrategy.taskCount / Math.max(simResult.winnerStrategy.taskCount, 1),
     crashFree: simResult.failureTimeline.filter((f) => f.severity === 'critical').length === 0,
-    taskCompleteness: 0.9,
+    taskCompleteness: 0, // Not measured in simulation
     mockAI: simResult.winnerStrategy.mockAI,
   });
 

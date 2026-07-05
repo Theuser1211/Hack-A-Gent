@@ -22,6 +22,7 @@ export class EventBus {
   private readonly store: JsonlEventStore;
   private readonly dlq: DeadLetterQueue;
   private running = false;
+  private subscriptionCounter = 0;
 
   constructor(baseDir: string) {
     this.store = new JsonlEventStore(baseDir);
@@ -36,7 +37,7 @@ export class EventBus {
     handler: EventHandler,
     filter?: (event: EventEnvelope) => boolean,
   ): string {
-    const id = `${subscriberId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const id = `${subscriberId}-${this.subscriptionCounter++}`;
     const patterns = typeof eventTypes === 'string' ? [eventTypes] : eventTypes;
 
     for (const pattern of patterns) {

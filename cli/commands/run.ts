@@ -133,7 +133,7 @@ async function runDemoSurfacePipeline(
   ctx.simulationResult = simResult;
   stageDone('Simulation Preview', Date.now() - executionTime);
   labeled('predicted winner', `"${simResult.winnerStrategy.name}"`);
-  labeled('predicted score', `${simResult.finalJudgeVerdict.total}/100`);
+  labeled('predicted score', 'N/A (simulation only)');
 
   const finalOutput = compiler.produceFinalOutput(plan, plan.deployTarget);
   ctx.finalDemoOutput = finalOutput;
@@ -207,7 +207,7 @@ async function runFullPipeline(
   stageDone('Running strategy competition', Date.now() - t0);
   labeled('winner', strategyReport.strategyCompetition.winner.name);
   labeled('candidates', String(strategyReport.strategyCompetition.candidates.length));
-  labeled('predicted reward', `${(strategyReport.rewardPrediction.predicted * 100).toFixed(1)}%`);
+  labeled('predicted reward', 'N/A (no historical data)');
 
   if (dryRun) {
     pipelineFooter();
@@ -216,7 +216,7 @@ async function runFullPipeline(
     labeled('Project', `"${parsed.title}"`);
     labeled('Winner', strategyReport.strategyCompetition.winner.name);
     labeled('Candidates', String(strategyReport.strategyCompetition.candidates.length));
-    labeled('Predicted Reward', `${(strategyReport.rewardPrediction.predicted * 100).toFixed(1)}%`);
+    labeled('Predicted Reward', 'N/A (no historical data)');
     info('Next: run without --dry-run to execute the full pipeline.');
     log('');
     return {
@@ -269,7 +269,7 @@ async function runFullPipeline(
     const strategyGenerator = new WinningStrategyGenerator();
     const winningStrategy = strategyGenerator.generate(competitionAnalysis);
     stageDone('Winning strategy', Date.now() - t0);
-    labeled('estimated score', `${winningStrategy.estimatedJudgeScore}/100`);
+    labeled('estimated score', 'N/A (not computed)');
     labeled('differentiators', String(winningStrategy.differentiators.length));
 
     // Initialize the full pipeline orchestrator with pre-computed analysis and strategy
@@ -307,7 +307,7 @@ async function runFullPipeline(
       durationMs: elapsed,
     });
     stageDone('Self-review & optimization', Date.now() - t0);
-    labeled('overall score', `${finalReport.judgeScorePrediction}/100`);
+    labeled('overall score', 'N/A (needs real evaluation)');
     labeled('review scores', `${finalReport.innovationScore}/${finalReport.technicalDepthScore}/${finalReport.feasibilityScore}/${finalReport.presentationScore}/${finalReport.completenessScore}/${finalReport.maintainabilityScore}/${finalReport.judgeAlignmentScore}`);
     labeled('improvements', String(finalReport.futureImprovements.length));
 

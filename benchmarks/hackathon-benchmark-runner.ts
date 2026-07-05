@@ -474,7 +474,7 @@ export class HackathonBenchmarkRunner {
       build_success: buildSuccess,
       test_success: testSuccess,
       total_tokens: totalTokens,
-      total_cost: totalTokens * 0.00002,
+      total_cost: 0, // Not computed — provider pricing varies
       repair_iterations: repairIterations,
       repair_strategies_used: loopResult.repairStrategies ?? [],
       per_mutation_type_stats: perTypeStats,

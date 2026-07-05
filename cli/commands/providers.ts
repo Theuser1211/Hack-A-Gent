@@ -1,7 +1,7 @@
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { getConfig } from '../config-manager.js';
 import { initializeProviders, type ProviderInitializationResult } from '../provider-init.js';
-import { header, success, warn } from '../output.js';
+import { header, success, warn, logRaw, color } from '../output.js';
 
 const ALL_PROVIDERS = ['anthropic', 'openai', 'gemini', 'openrouter', 'nvidia', 'custom'] as const;
 
@@ -14,8 +14,9 @@ export async function providersCommand(_ctx: CLIContext, _args: CLIArgs): Promis
   let active: ProviderInitializationResult | null = null;
   try {
     active = initializeProviders();
-  } catch {
-    // ignore, we'll show individual status below
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    warn(`Provider initialization failed: ${msg}`);
   }
 
   const healthyProviders: string[] = [];
@@ -43,12 +44,13 @@ export async function providersCommand(_ctx: CLIContext, _args: CLIArgs): Promis
 
     const configured = isConfigured ? 'yes' : 'no';
     const statusIcon = status === 'healthy' ? '✔' : status === 'not initialized' ? '○' : '⚠';
+    const statusColor = status === 'healthy' ? 'green' : status === 'not initialized' ? 'gray' : 'yellow';
 
-    console.log(`  ${statusIcon} ${providerId.padEnd(14)} ${status.padEnd(18)} configured: ${configured}`);
+    logRaw(`  ${color(statusIcon, statusColor)} ${color(providerId.padEnd(14), 'white')} ${color(status.padEnd(18), statusColor)} ${color(`configured: ${configured}`, 'gray')}`);
     dataRows.push({ provider: providerId, status, configured });
   }
 
-  console.log();
+  logRaw('');
   if (healthyProviders.length > 0) {
     success(`${healthyProviders.length} provider(s) healthy`);
   }

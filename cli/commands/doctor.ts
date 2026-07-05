@@ -72,14 +72,14 @@ export async function doctorCommand(_ctx: CLIContext, _args: CLIArgs): Promise<C
 
   // Print results
   for (const check of checks) {
-    const icon = check.status === 'pass' ? '✔' : check.status === 'warn' ? '⚠' : '✘';
-    console.log(`  ${icon} ${check.name}: ${check.message}`);
+    if (check.status === 'pass') success(`${check.name}: ${check.message}`);
+    else if (check.status === 'warn') warn(`${check.name}: ${check.message}`);
+    else error(`${check.name}: ${check.message}`);
   }
 
   const passed = checks.filter(c => c.status === 'pass').length;
   const warned = checks.filter(c => c.status === 'warn').length;
   const failed = checks.filter(c => c.status === 'fail').length;
-  console.log();
 
   if (failed > 0) {
     error(`${failed} check(s) failed, ${warned} warning(s)`);

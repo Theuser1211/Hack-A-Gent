@@ -60,6 +60,7 @@ export class AnomalyDetector {
   private errorHistory: Array<{ error: string; timestamp: number }> = [];
   private buildFailures: number = 0;
   private anomalies: Anomaly[] = [];
+  private anomalyCounter = 0;
 
   constructor(taskRepository: TaskRepository, eventBus: EventBus, config?: Partial<DetectorConfig>) {
     this.taskRepository = taskRepository;
@@ -81,7 +82,7 @@ export class AnomalyDetector {
 
     if (recent.length >= this.config.loopThreshold) {
       this.emitAnomaly({
-        id: `loop-${taskId}-${now}`,
+        id: `loop-${taskId}-${++this.anomalyCounter}`,
         type: 'infinite_loop',
         severity: 'high',
         detected_at: new Date(now).toISOString(),
@@ -110,7 +111,7 @@ export class AnomalyDetector {
     for (const [error, count] of errorCounts) {
       if (count >= this.config.failureBurstThreshold) {
         this.emitAnomaly({
-          id: `burst-${error}-${now}`,
+          id: `burst-${error}-${++this.anomalyCounter}`,
           type: 'failure_burst',
           severity: 'critical',
           detected_at: new Date(now).toISOString(),
@@ -145,7 +146,7 @@ export class AnomalyDetector {
 
       if (trulyMissing.length > 0) {
         this.emitAnomaly({
-          id: `hallucination-${taskId}-${Date.now()}`,
+          id: `hallucination-${taskId}-${++this.anomalyCounter}`,
           type: 'hallucinated_file',
           severity: 'medium',
           detected_at: new Date().toISOString(),
@@ -165,7 +166,7 @@ export class AnomalyDetector {
     this.buildFailures++;
     if (this.buildFailures >= this.config.buildFailureThreshold) {
       this.emitAnomaly({
-        id: `build-${Date.now()}`,
+        id: `build-${++this.anomalyCounter}`,
         type: 'broken_build',
         severity: 'critical',
         detected_at: new Date().toISOString(),
@@ -188,7 +189,7 @@ export class AnomalyDetector {
 
     if (now > deadlineMs + graceMs) {
       this.emitAnomaly({
-        id: `checkpoint-${Date.now()}`,
+        id: `checkpoint-${++this.anomalyCounter}`,
         type: 'stuck_checkpoint',
         severity: 'high',
         detected_at: new Date().toISOString(),
@@ -208,7 +209,7 @@ export class AnomalyDetector {
 
     if (ratio > this.config.contextThrashingRatio && compressedTokens > budget) {
       this.emitAnomaly({
-        id: `thrashing-${taskId}-${Date.now()}`,
+        id: `thrashing-${taskId}-${++this.anomalyCounter}`,
         type: 'context_thrashing',
         severity: 'medium',
         detected_at: new Date().toISOString(),

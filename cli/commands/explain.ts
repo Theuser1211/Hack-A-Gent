@@ -33,8 +33,12 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
 
   // Decision trace summary
   log('Decision Traces:');
-  log(`Total decisions: ${decisionLog.length}`);
-  if (decisionLog.length > 0) {
+  if (decisionLog.length === 0) {
+    const hasState = state !== null;
+    log(`  No execution data available${hasState ? ' (decision traces not persisted in state file)' : ''}.`);
+    log('  Run `hackagent run <input>` first to generate decision traces.\n');
+  } else {
+    log(`Total decisions: ${decisionLog.length}`);
     const byAgent = new Map<string, number>();
     for (const d of decisionLog) {
       byAgent.set(d.agentRole, (byAgent.get(d.agentRole) ?? 0) + 1);
@@ -49,7 +53,7 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
     log('Recent decisions:');
     for (const d of decisionLog.slice(-5)) {
       log(
-        `[${d.traceId.slice(0, 8)}] ${d.agentRole}: ${d.action} — confidence ${((d.confidence ?? 0) * 100).toFixed(0)}%`,
+        `[${d.traceId.slice(0, 8)}] ${d.agentRole}: ${d.action} — confidence N/A`,
       );
     }
     log('');

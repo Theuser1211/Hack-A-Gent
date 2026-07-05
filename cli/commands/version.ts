@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
+import { log } from '../output.js';
 
 export async function versionCommand(_ctx: CLIContext, _args: CLIArgs): Promise<CLIResult> {
   let version = '0.1.0';
@@ -14,6 +15,6 @@ export async function versionCommand(_ctx: CLIContext, _args: CLIArgs): Promise<
     // fallback to default
   }
 
-  console.log(`  Hack-A-Gent v${version}`);
+  log(`Hack-A-Gent v${version}`);
   return { success: true, message: `v${version}`, data: { version } };
 }

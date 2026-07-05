@@ -136,11 +136,12 @@ export class CustomEndpointProvider implements LLMProvider {
         }
 
         if (!res.ok) {
-          const text = await res.text().catch(() => '');
+          const text = await res.text().catch(() => '‹response body unavailable›');
           throw Object.assign(new Error(`${this.providerId} API error ${res.status}: ${text}`), { status: res.status });
         }
 
-        return (await res.json()) as Record<string, unknown>;
+        const data = await res.json();
+        return data as Record<string, unknown>;
       } finally {
         clearTimeout(timeout);
       }
@@ -219,7 +220,7 @@ export class CustomEndpointProvider implements LLMProvider {
       });
 
       if (!res.ok) {
-        const text = await res.text().catch(() => '');
+        const text = await res.text().catch(() => '‹response body unavailable›');
         throw Object.assign(new Error(`${this.providerId} API error ${res.status}: ${text}`), { status: res.status });
       }
 

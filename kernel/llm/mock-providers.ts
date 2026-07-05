@@ -66,7 +66,7 @@ class BaseMockProvider implements LLMProvider {
         total_tokens: request.messages.reduce((sum, m) => sum + m.content.length, 0) + content.length,
       },
       finish_reason: 'stop',
-      latency_ms: 50 + Math.floor(Math.random() * 100),
+      latency_ms: 75,
     };
   }
 
