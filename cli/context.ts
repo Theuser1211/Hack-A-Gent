@@ -27,7 +27,7 @@ export function createContext(seed?: number): CLIContext {
     config: {},
     orchestrator: null,
     phase12orchestrator: null,
-    memory: new OrganizationalMemoryBank(resolvedSeed + 1000),
+    memory: new OrganizationalMemoryBank(resolvedSeed + 1000, path.join(dataDir, 'memory-bank.json')),
     startTime: Date.now(),
     outputFormat: 'pretty',
     verbose: false,

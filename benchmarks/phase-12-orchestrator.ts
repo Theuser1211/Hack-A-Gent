@@ -45,18 +45,18 @@ export class Phase12Orchestrator {
   readonly competition: MultiAgentCompetition;
   readonly learningCycle: PostProjectLearningCycle;
 
-  constructor(seed = 42) {
+  constructor(seed = 42, memory?: OrganizationalMemoryBank) {
     this.seed = seed;
     this.orchestratorId = 'p12-' + createDeterministicUuid(seed, 0).slice(0, 8);
     this.decisionLogger = new DecisionLogger(seed + 9000);
 
-    this.memory = new OrganizationalMemoryBank(seed + 100);
+    this.memory = memory ?? new OrganizationalMemoryBank(seed + 100);
     this.rewardModel = new HackathonRewardModel(seed + 200);
     this.simulationEngine = new StrategySimulationEngine(seed + 300);
     this.policyOptimizer = new ExecutionPolicyOptimizer(seed + 400);
     this.skillGraph = new SkillGraph(seed + 500);
     this.competition = new MultiAgentCompetition(seed + 600);
-    this.learningCycle = new PostProjectLearningCycle(seed + 700);
+    this.learningCycle = new PostProjectLearningCycle(seed + 700, this.memory);
   }
 
   async runProject(input: {

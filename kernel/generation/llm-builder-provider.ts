@@ -309,6 +309,7 @@ Return a JSON object with the following structure:
 
     const latency = Date.now() - startTime;
     this.metricsTracker?.recordGeneration(false, 0, latency, true, true);
+    console.error(`LLM generation failed for ${filePath} after ${this.selfRepairConfig.max_attempts} attempts: ${lastError}`);
     return {
       file: null as unknown as StructuredCodeOutput,
       attempt: this.selfRepairConfig.max_attempts - 1,

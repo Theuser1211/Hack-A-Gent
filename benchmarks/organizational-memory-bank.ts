@@ -1,3 +1,6 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+
 import type { FailurePatternRecord, CapabilityMutation } from './capability-evolution-engine.js';
 import { DecisionLogger } from './decision-trace.js';
 import { createDeterministicUuid, deterministicNow, getSeededRandom } from './determinism-kernel.js';
@@ -46,12 +49,13 @@ export class OrganizationalMemoryBank {
   private readonly bankId: string;
   private readonly decisionLogger: DecisionLogger;
   private snapshots: ProjectSnapshot[] = [];
-  private readonly storageKey = 'hackagent-memory';
+  private readonly storagePath: string | null;
 
-  constructor(seed = 42) {
+  constructor(seed = 42, storagePath?: string) {
     this.seed = seed;
     this.bankId = 'mem-' + createDeterministicUuid(seed, 0).slice(0, 8);
     this.decisionLogger = new DecisionLogger(seed + 8000);
+    this.storagePath = storagePath ?? null;
     this.loadFromStorage();
   }
 
@@ -63,6 +67,11 @@ export class OrganizationalMemoryBank {
   }
   getAllSnapshots(): ProjectSnapshot[] {
     return [...this.snapshots];
+  }
+
+  clear(): void {
+    this.snapshots = [];
+    this.persistToStorage();
   }
 
   addProjectSnapshot(snapshot: ProjectSnapshot): void {
@@ -200,22 +209,22 @@ export class OrganizationalMemoryBank {
   }
 
   private persistToStorage(): void {
+    if (!this.storagePath) return;
     try {
-      const data = JSON.stringify({ snapshots: this.snapshots, updatedAt: deterministicNow(this.seed) });
-      if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-        (globalThis as any).localStorage.setItem(this.storageKey, data);
-      }
+      const dir = dirname(this.storagePath);
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+      const data = JSON.stringify({ snapshots: this.snapshots, updatedAt: deterministicNow(this.seed) }, null, 2);
+      writeFileSync(this.storagePath, data, 'utf-8');
     } catch {}
   }
 
   private loadFromStorage(): void {
+    if (!this.storagePath) return;
     try {
-      if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-        const raw = (globalThis as any).localStorage.getItem(this.storageKey);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed.snapshots)) this.snapshots = parsed.snapshots;
-        }
+      if (existsSync(this.storagePath)) {
+        const raw = readFileSync(this.storagePath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed.snapshots)) this.snapshots = parsed.snapshots;
       }
     } catch {}
   }

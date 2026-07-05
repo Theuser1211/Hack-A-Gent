@@ -55,12 +55,6 @@ export class ApiKeyManager {
       }
     }
 
-    if (provider === 'gemini') {
-      const fallback = 'mock-gemini-key';
-      this.keys.set(provider, { key: fallback, source: 'default' });
-      return fallback;
-    }
-
     throw new Error(
       `No API key found for provider "${provider}". Set ${ENV_KEY_MAP[provider] ?? `${provider.toUpperCase()}_API_KEY`} env var or pass via config.`,
     );
@@ -290,7 +284,9 @@ export async function withRetry<T>(
   } catch (err) {
     if (attempt >= config.maxRetries) throw err;
 
-    const isAbortError = err instanceof DOMException && err.name === 'AbortError';
+    const isAbortError =
+      (err instanceof DOMException && err.name === 'AbortError') ||
+      (err instanceof Error && err.name === 'AbortError');
     if (isAbortError) throw err;
 
     const status =
@@ -299,7 +295,7 @@ export async function withRetry<T>(
     if (status !== 0 && !isRetryable(status)) throw err;
 
     const delay = Math.min(config.baseDelayMs * Math.pow(2, attempt), config.maxDelayMs);
-    const jitter = config.useJitter ? delay * (0.5 + Math.random() * 0.5) : delay;
+    const jitter = config.useJitter ? delay * (0.5 + ((Date.now() % 1000) / 2000)) : delay;
 
     await sleep(jitter);
     return withRetry(fn, config, attempt + 1);

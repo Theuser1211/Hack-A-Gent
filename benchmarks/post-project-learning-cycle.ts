@@ -29,11 +29,11 @@ export class PostProjectLearningCycle {
   readonly skillGraph: SkillGraph;
   readonly evolutionEngine: CapabilityEvolutionEngine;
 
-  constructor(seed = 42) {
+  constructor(seed = 42, memory?: OrganizationalMemoryBank) {
     this.seed = seed;
     this.cycleId = 'learn-' + createDeterministicUuid(seed, 0).slice(0, 8);
     this.decisionLogger = new DecisionLogger(seed + 8600);
-    this.memory = new OrganizationalMemoryBank(seed + 1);
+    this.memory = memory ?? new OrganizationalMemoryBank(seed + 1);
     this.rewardModel = new HackathonRewardModel(seed + 2);
     this.policyOptimizer = new ExecutionPolicyOptimizer(seed + 3);
     this.skillGraph = new SkillGraph(seed + 4);

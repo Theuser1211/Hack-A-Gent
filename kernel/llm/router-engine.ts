@@ -112,45 +112,64 @@ export class RouterEngine {
   }
 
   async execute(taskType: string, request: LLMRequest): Promise<{ response: LLMResponse; decision: RoutingDecision }> {
-    // Estimate tokens
     const estimatedTokens = request.messages.reduce((s, m) => s + m.content.length, 0);
     const requiredCaps: ModelCapability[] = [];
     if (request.response_format === 'json_object') requiredCaps.push('json_output');
 
-    const decision = this.selectModel(taskType, estimatedTokens, requiredCaps);
+    const entry = this.routingTable[taskType];
+    const chain = entry
+      ? [entry.preferred, entry.fallback, entry.emergency]
+      : ['gemini-2.5-flash', 'mistral-small-2407', 'code-qwen-7b'];
 
-    if (decision.confidence < 0.3 || decision.model_id === 'none') {
-      throw new Error(`No suitable provider for task type "${taskType}": ${decision.reason}`);
-    }
+    const triedModels = new Set<string>();
+    let lastError: Error | null = null;
 
-    const provider = this.providers.get(decision.provider);
-    if (!provider) {
-      throw new Error(`Provider "${decision.provider}" not registered`);
-    }
+    for (let level = 0; level < chain.length + 1; level++) {
+      let decision: RoutingDecision;
 
-    const actualRequest: LLMRequest = { ...request, model_id: decision.model_id };
-    const startTime = Date.now();
-
-    try {
-      const response = await provider.execute(actualRequest);
-
-      const cost = this.estimateCost(decision.model_id, response.usage.prompt_tokens, response.usage.completion_tokens);
-      this.projectCost += cost;
-
-      return { response: { ...response, latency_ms: Date.now() - startTime }, decision };
-    } catch (err) {
-      const health = provider.getHealth();
-      if (health) {
-        health.consecutive_failures++;
-        health.failed_requests++;
-        if (health.consecutive_failures >= this.config.unhealthy_threshold) {
-          (health as any).status = 'unhealthy';
-        } else if (health.consecutive_failures >= this.config.degraded_threshold) {
-          (health as any).status = 'degraded';
+      if (level < chain.length) {
+        const modelId = chain[level]!;
+        if (triedModels.has(modelId)) continue;
+        decision = this.tryModel(modelId, taskType, estimatedTokens, requiredCaps, level);
+        if (decision.confidence < 0.3) continue;
+        triedModels.add(modelId);
+      } else {
+        decision = this.selectModel(taskType, estimatedTokens, requiredCaps);
+        if (decision.confidence < 0.3 || decision.model_id === 'none') {
+          throw new Error(`No suitable provider for task type "${taskType}": ${decision.reason}`);
         }
+        if (triedModels.has(decision.model_id)) continue;
+        triedModels.add(decision.model_id);
       }
-      throw err;
+
+      const provider = this.providers.get(decision.provider);
+      if (!provider) continue;
+
+      const actualRequest: LLMRequest = { ...request, model_id: decision.model_id };
+      const startTime = Date.now();
+
+      try {
+        const response = await provider.execute(actualRequest);
+        const cost = this.estimateCost(decision.model_id, response.usage.prompt_tokens, response.usage.completion_tokens);
+        this.projectCost += cost;
+        return { response: { ...response, latency_ms: Date.now() - startTime }, decision };
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        const health = provider.getHealth();
+        if (health) {
+          health.consecutive_failures++;
+          health.failed_requests++;
+          if (health.consecutive_failures >= this.config.unhealthy_threshold) {
+            (health as any).status = 'unhealthy';
+          } else if (health.consecutive_failures >= this.config.degraded_threshold) {
+            (health as any).status = 'degraded';
+          }
+        }
+        continue;
+      }
     }
+
+    throw lastError ?? new Error(`All models failed for task type "${taskType}"`);
   }
 
   getProjectCost(): number {

@@ -65,8 +65,8 @@ export async function memoryCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
     }
 
     case 'clear': {
-      warn('Memory cleared (session only — persistent storage not affected)');
-      return { success: true, message: 'Session memory cleared' };
+      ctx.memory.clear();
+      return { success: true, message: 'Memory cleared' };
     }
 
     default:

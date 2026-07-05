@@ -737,14 +737,12 @@ export class InternetHackathonOrchestrator {
 
     // Only attempt LLM once per fileType per pipeline run
     if (this.generationAttempted.has(fileType)) {
-      console.error(`[Generate] ${fileType} already attempted, using template`);
       if (fileType === 'scaffold') return this.generateScaffoldFiles(this.plan!);
       if (fileType === 'frontend') return this.generateFrontendFiles({ description: context.specificTask ?? '' } as TaskNode, this.plan!);
       if (fileType === 'backend') return this.generateBackendFiles({ description: context.specificTask ?? '' } as TaskNode, this.plan!);
       return [];
     }
     this.generationAttempted.add(fileType);
-    console.error(`[Generate] ${fileType} start`);
 
     const taskDescriptions: Record<string, string> = {
       scaffold: 'Generate the complete project scaffold including package.json, tsconfig.json, next.config.js, src/app/layout.tsx, src/app/page.tsx, .gitignore, and any other essential config files.',
@@ -797,7 +795,6 @@ ${fileType === 'backend' && context.specificTask ? `Focus on: ${context.specific
       const parsed = JSON.parse(response.content);
 
       if (parsed.files && Array.isArray(parsed.files)) {
-        console.error(`[Generate] ${fileType} end (LLM success)`);
         return parsed.files.map((f: { path: string; content: string; language?: string }) => ({
           path: f.path,
           content: f.content,
@@ -805,14 +802,14 @@ ${fileType === 'backend' && context.specificTask ? `Focus on: ${context.specific
       }
 
       if (parsed.path && parsed.content) {
-        console.error(`[Generate] ${fileType} end (LLM success)`);
         return [{ path: parsed.path, content: parsed.content }];
       }
-    } catch (err) {
-      console.error(`LLM generation failed for ${fileType}, falling back to templates:`, err instanceof Error ? err.message : String(err));
-    }
 
-    console.error(`[Generate] ${fileType} end (template fallback)`);
+      console.warn(`LLM response for ${fileType} had unexpected structure, falling back to templates`);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error(`LLM generation failed for ${fileType}, falling back to templates: ${errMsg}`);
+    }
 
     if (fileType === 'scaffold') return this.generateScaffoldFiles(this.plan);
     if (fileType === 'frontend') return this.generateFrontendFiles({ description: context.specificTask ?? '' } as TaskNode, this.plan);

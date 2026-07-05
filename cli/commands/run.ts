@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import * as path from 'node:path';
 
 import { ComplexityCollapseEngine } from '../../benchmarks/complexity-collapse-map.js';
@@ -180,7 +180,7 @@ async function runFullPipeline(
   dryRun: boolean,
 ): Promise<CLIResult> {
   const t0 = Date.now();
-  const phase12 = new Phase12Orchestrator(seed);
+  const phase12 = new Phase12Orchestrator(seed, ctx.memory);
   ctx.phase12orchestrator = phase12;
 
   stageStart('Initializing LLM providers');
@@ -370,22 +370,42 @@ async function runFullPipeline(
       },
       traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
     };
-  } catch (err) {
-    const elapsed = Date.now() - executionTime;
-    const msg = err instanceof Error ? err.message : String(err);
-    stageFail('Pipeline execution', msg);
-    pipelineFooter();
-    divider();
-    printError(formatError(err, 'Pipeline'));
-    info('Next: run `hag doctor` to check provider status.');
-    log('');
-    return {
-      success: false,
-      message: `Pipeline failed: ${msg}`,
-      data: { projectName, phase: internetOrch.getPhase(), errors: [msg] },
-      metrics: { durationMs: elapsed },
-      traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
-    };
+} catch (err) {
+     const elapsed = Date.now() - executionTime;
+     const msg = err instanceof Error ? err.message : String(err);
+
+     // Save execution snapshot for replay
+     const snapshotsDir = path.resolve(ctx.dataDir, 'snapshots');
+     if (!existsSync(snapshotsDir)) mkdirSync(snapshotsDir, { recursive: true });
+     const traceId = createDeterministicUuid(seed, Date.now()).slice(0, 12);
+     try {
+       writeFileSync(
+         path.resolve(snapshotsDir, `run-${traceId}.snapshot.json`),
+         JSON.stringify({
+           runId: traceId,
+           masterSeed: seed,
+           timestamp: new Date().toISOString(),
+           project: projectName,
+           status: 'failed',
+           error: msg,
+           elapsedMs: elapsed,
+         }, null, 2),
+       );
+     } catch {}
+
+     stageFail('Pipeline execution', msg);
+     pipelineFooter();
+     divider();
+     printError(formatError(err, 'Pipeline'));
+     info('Next: run `hag doctor` to check provider status.');
+     log('');
+     return {
+       success: false,
+       message: `Pipeline failed: ${msg}`,
+       data: { projectName, phase: internetOrch.getPhase(), errors: [msg] },
+       metrics: { durationMs: elapsed },
+       traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
+     };
   }
 }
 
