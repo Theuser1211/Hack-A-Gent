@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -315,12 +315,16 @@ export class InternetToolGateway {
     try {
       const repoConfig = this.gitHubRepoCache.get(repoName) ?? { repoName };
       const owner = repoConfig.owner ?? 'me';
+      if (!/^[a-zA-Z0-9_.-]+$/.test(owner) || !/^[a-zA-Z0-9_.-]+$/.test(repoName)) {
+        throw new Error(`Invalid owner or repoName: owner=${owner}, repoName=${repoName}`);
+      }
       const remoteUrl = `https://x-access-token:${token}@github.com/${owner}/${repoName}.git`;
+      const safeMessage = commitMessage.replace(/"/g, '\\"').replace(/`/g, '\\`').replace(/\$/g, '\\$');
 
       this.localGitInit(projectDir, repoName);
       execSync(`git remote add origin ${remoteUrl}`, { cwd: projectDir, stdio: 'pipe', timeout: 10000 });
       execSync('git add -A', { cwd: projectDir, stdio: 'pipe', timeout: 30000 });
-      execSync(`git commit -m "${commitMessage.replace(/"/g, '\\"')}" --allow-empty`, {
+      execSync(`git commit -m "${safeMessage}" --allow-empty`, {
         cwd: projectDir,
         stdio: 'pipe',
         timeout: 10000,
@@ -645,33 +649,26 @@ export class InternetToolGateway {
 
     const collectFiles = (dir: string, relativePath = '') => {
       if (!existsSync(dir)) return;
-      const entries = execSync(`dir /B /A-D "${dir}" 2>nul`, { stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf-8' })
-        .trim()
-        .split('\n')
-        .filter(Boolean);
+      const entries = readdirSync(dir).filter(Boolean);
       for (const entry of entries) {
         const trimmed = entry.trim();
         if (trimmed === '.git' || trimmed === 'node_modules') continue;
         const fullPath = path.join(dir, trimmed);
         if (existsSync(fullPath)) {
-          const stat = execSync(`if exist "${fullPath}" (echo file) else (echo dir)`, {
-            stdio: ['pipe', 'pipe', 'pipe'],
-            encoding: 'utf-8',
-          }).trim();
-          if (stat === 'file') {
+          if (statSync(fullPath).isFile()) {
             const content = readFileSync(fullPath, 'utf-8');
             files.push({ path: relativePath ? `${relativePath}/${trimmed}` : trimmed, content });
           }
         }
       }
-      const subdirs = execSync(`dir /B /AD "${dir}" 2>nul`, { stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf-8' })
-        .trim()
-        .split('\n')
-        .filter(Boolean);
+      const subdirs = readdirSync(dir).filter(e => e !== '.git' && e !== 'node_modules');
       for (const subdir of subdirs) {
         const trimmed = subdir.trim();
         if (trimmed === '.git' || trimmed === 'node_modules') continue;
-        collectFiles(path.join(dir, trimmed), relativePath ? `${relativePath}/${trimmed}` : trimmed);
+        const subPath = path.join(dir, trimmed);
+        if (statSync(subPath).isDirectory()) {
+          collectFiles(subPath, relativePath ? `${relativePath}/${trimmed}` : trimmed);
+        }
       }
     };
 
