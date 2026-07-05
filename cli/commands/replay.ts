@@ -58,6 +58,9 @@ export async function replayCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
   const tracesDir = path.resolve(ctx.dataDir, 'traces');
   let trace: PersistedTrace | null = null;
   if (existsSync(tracesDir)) {
+    if (runId.includes('..')) {
+      return { success: false, message: 'Invalid runId: ".." not allowed.' };
+    }
     const exactPath = path.resolve(tracesDir, `${runId}.trace.json`);
     if (existsSync(exactPath)) {
       try { trace = JSON.parse(readFileSync(exactPath, 'utf-8')) as PersistedTrace; } catch (e) { dim(`Trace parse error: ${e instanceof Error ? e.message : String(e)}`); }

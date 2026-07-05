@@ -32,7 +32,9 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
   let persistedTrace: PersistedTrace | null = null;
   const tracesDir = path.resolve(ctx.dataDir, 'traces');
   if (projectId && existsSync(tracesDir)) {
-    // Try exact match first, then search by project name prefix
+    if (projectId.includes('..')) {
+      return { success: false, message: 'Invalid projectId: ".." not allowed.' };
+    }
     const exactPath = path.resolve(tracesDir, `${projectId}.trace.json`);
     if (existsSync(exactPath)) {
       try { persistedTrace = JSON.parse(readFileSync(exactPath, 'utf-8')) as PersistedTrace; } catch (e) { dim(`Trace parse error: ${e instanceof Error ? e.message : String(e)}`); }
