@@ -169,7 +169,13 @@ export class RouterEngine {
       }
     }
 
-    throw lastError ?? new Error(`All models failed for task type "${taskType}"`);
+    const triedList = [...triedModels].join(', ');
+    const lastMsg = lastError?.message ?? 'unknown error';
+    throw new Error(
+      `All models failed for task "${taskType}". Tried: [${triedList}]. ` +
+      `Last error: ${lastMsg}. ` +
+      `Run \`hag doctor\` to check provider health, or \`hag models\` to see available models.`
+    );
   }
 
   getProjectCost(): number {

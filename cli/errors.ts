@@ -14,6 +14,22 @@ export function formatError(err: unknown, context?: string): FixSuggestion {
   const msg = err instanceof Error ? err.message : String(err);
   const lower = msg.toLowerCase();
 
+  if (lower.includes('abort') || lower.includes('aborted')) {
+    return fixSuggestion(
+      context ? `${context}: request timed out` : 'Request timed out',
+      'The LLM request exceeded the timeout limit (typically 30s per attempt).',
+      'The provider may be slow or overloaded. Try again, or switch to a faster model with `hag config --model <name>`.',
+    );
+  }
+
+  if (lower.includes('all models failed')) {
+    return fixSuggestion(
+      context ? `${context}: all models failed` : 'All models failed',
+      'Every model in the routing chain returned an error.',
+      'Run `hag doctor` to check provider health. Run `hag models` to see available models. Check if your API key is valid.',
+    );
+  }
+
   if (lower.includes('api key') || lower.includes('unauthorized') || lower.includes('401') || lower.includes('403')) {
     return fixSuggestion(
       context ? `${context}: authentication failed` : 'Authentication failed',
