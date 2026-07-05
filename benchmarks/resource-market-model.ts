@@ -259,7 +259,7 @@ export class ResourceMarketModel {
     const basePrice = 1.0;
     const usageMultiplier = (executionMetrics.toolCalls || 0) * 0.02;
     const stabilityFactor = 1 / (1 + Math.log10(this.getTotalComputeSupply() + 1));
-    const volatilityMultiplier = 1 + (Math.random() - 0.5) * pressure.computePressure * 0.2;
+    const volatilityMultiplier = 1 + (this.rng.next() - 0.5) * pressure.computePressure * 0.2;
 
     return basePrice * usageMultiplier * stabilityFactor * volatilityMultiplier;
   }

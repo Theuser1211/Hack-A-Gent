@@ -1,4 +1,4 @@
-import { createDeterministicUuid, deterministicNow } from './determinism-kernel.js';
+import { createDeterministicUuid, deterministicNow, getSeededRandom } from './determinism-kernel.js';
 
 export type EvolutionEventType = string;
 export type ResourceEventType = string;
@@ -94,10 +94,12 @@ export interface ConflictOutcome {
 
 export class CivilizationEvents {
   private readonly seed: number;
+  private readonly rng: ReturnType<typeof getSeededRandom>;
   private _counter = 0;
 
   constructor(seed = 42) {
     this.seed = seed;
+    this.rng = getSeededRandom(this.seed + 35000);
   }
 
   public generateNaturalEvent(
@@ -121,7 +123,7 @@ export class CivilizationEvents {
       cause: {
         primaryCause: this.getPrimaryCause(eventType),
         contributingFactors: this.getContributingFactors(eventType),
-        probabilityTrigger: 0.7 + Math.random() * 0.3,
+        probabilityTrigger: 0.7 + this.rng.next() * 0.3,
       },
       consequences: this.generateEventConsequences(eventType),
     };

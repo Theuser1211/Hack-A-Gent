@@ -115,7 +115,7 @@ export class RecursiveImprovementEngine {
       parametersChanged: parameters,
       impact: proposal.impactScore,
       timestamp: deterministicNow(this.seed + this._counter),
-      successRate: Math.random() * 0.5 + 0.5,
+      successRate: this.rng.next() * 0.5 + 0.5,
     };
 
     const history = this.improvementHistory.get(systemId) || {

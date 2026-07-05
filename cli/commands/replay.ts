@@ -60,7 +60,7 @@ export async function replayCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
   if (existsSync(tracesDir)) {
     const exactPath = path.resolve(tracesDir, `${runId}.trace.json`);
     if (existsSync(exactPath)) {
-      try { trace = JSON.parse(readFileSync(exactPath, 'utf-8')) as PersistedTrace; } catch {}
+      try { trace = JSON.parse(readFileSync(exactPath, 'utf-8')) as PersistedTrace; } catch (e) { dim(`Trace parse error: ${e instanceof Error ? e.message : String(e)}`); }
     } else {
       const traceFiles = fsReaddirSync(tracesDir).filter(f => f.endsWith('.trace.json'));
       for (const f of traceFiles) {
@@ -70,7 +70,7 @@ export async function replayCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
             trace = data;
             break;
           }
-        } catch {}
+        } catch { /* skip malformed trace files */ }
       }
     }
   }
@@ -79,7 +79,7 @@ export async function replayCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
   const snapshotPath = path.resolve(ctx.dataDir, 'snapshots', `${runId}.snapshot.json`);
   let snapshot: Record<string, unknown> | null = null;
   if (existsSync(snapshotPath)) {
-    try { snapshot = JSON.parse(readFileSync(snapshotPath, 'utf-8')); } catch {}
+    try { snapshot = JSON.parse(readFileSync(snapshotPath, 'utf-8')); } catch (e) { dim(`Snapshot parse error: ${e instanceof Error ? e.message : String(e)}`); }
   }
 
   if (!trace && !snapshot) {

@@ -517,7 +517,7 @@ export class HackathonOrchestrator {
       default:
         await this.toolExecutor.execute('file', 'write', {
           path: 'tasks/' + node.id + '.md',
-          content: '# Task: ' + node.description + '\n\nStatus: placeholder\n',
+          content: '# Task: ' + node.description + '\n\nStatus: pending\n',
         });
     }
   }

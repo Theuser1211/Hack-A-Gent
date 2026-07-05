@@ -1,4 +1,4 @@
-import { createDeterministicUuid, deterministicNow } from './determinism-kernel.js';
+import { createDeterministicUuid, deterministicNow, getSeededRandom } from './determinism-kernel.js';
 import { Judge } from './judge-identity.js';
 export interface CalibrationComparison {
   judgeId: string;
@@ -156,7 +156,7 @@ export class JudgeCalibrationEngine {
             refineCalibration(adjustment.targetJudgeId, adjustment.adjustmentAmount);
             break;
           case 'trend_alignment':
-            alignTrend(adjustment.targetJudgeId, adjustment.adjustmentAmount);
+            alignTrend(adjustment.targetJudgeId, adjustment.adjustmentAmount, this.seed);
             break;
         }
       }
@@ -354,7 +354,7 @@ function refineCalibration(judgeId: string, adjustment: number): void {
   judge.calibration.calibrationAccuracy = Math.min(1, (judge.calibration.calibrationAccuracy || 0) + adjustment * 0.05);
 }
 
-function alignTrend(judgeId: string, adjustment: number): void {
+function alignTrend(judgeId: string, adjustment: number, seed: number): void {
   const judge = getJudgeById(judgeId);
   if (!judge) return;
 
@@ -374,7 +374,7 @@ function alignTrend(judgeId: string, adjustment: number): void {
   const targetScore = 50 + (recentScores.reduce((a: number, b: number) => a + b, 0) / recentScores.length - 50) * 0.1;
 
   for (const [key, value] of Object.entries(judge.biasVector)) {
-    const biasAdjustment = (targetScore - 50) * 0.02 * (Math.random() - 0.5);
+    const biasAdjustment = (targetScore - 50) * 0.02 * (getSeededRandom(seed + judgeId.length).next() - 0.5);
     judge.biasVector[key as keyof typeof judge.biasVector] = Math.max(
       -1,
       Math.min(1, ((value as number) || 0) + biasAdjustment),

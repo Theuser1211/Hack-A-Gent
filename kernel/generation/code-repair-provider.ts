@@ -194,7 +194,6 @@ export class CodeRepairProvider {
 
     const latency = Date.now() - startTime;
     this.config.metricsTracker?.recordRepair(false, latency);
-    console.error(`Code repair failed for ${params.file_path} after ${this.config.max_attempts} attempts: ${lastError}`);
     return {
       file_path: params.file_path,
       original_content: params.content,

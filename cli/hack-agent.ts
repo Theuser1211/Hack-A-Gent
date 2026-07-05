@@ -617,7 +617,7 @@ async function runSwarmMode(session: CLISession): Promise<boolean> {
           },
           coreArchetypes: memoryState.coreArchetypes,
           deprecated: memoryState.deprecatedStrategies,
-          durationMs: Date.now() - Date.now() + 1,
+          durationMs: 0,
         },
         null,
         2,
@@ -792,7 +792,7 @@ async function runCompanyMode(session: CLISession): Promise<boolean> {
               }
             : null,
           prunedCompanies: result.prunedCompanies.length,
-          durationMs: Date.now() - Date.now() + 1,
+          durationMs: 0,
         },
         null,
         2,
@@ -893,7 +893,8 @@ async function main(): Promise<void> {
     console.error(
       '       npx hack-agent run-company <devpost-url> [--swarm-size=5] [--fast-mode] [--simulate-only] [--json]',
     );
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   const session: CLISession = {
@@ -918,7 +919,8 @@ async function main(): Promise<void> {
   session.parsedSpec = await parseInput(input, seed);
   if (!session.parsedSpec) {
     console.error('  ✗ Failed to parse input.');
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
   console.log(`    title: "${session.parsedSpec.title}"`);
 
@@ -980,7 +982,7 @@ async function main(): Promise<void> {
     }
   }
 
-  process.exit(success ? 0 : 1);
+  process.exitCode = success ? 0 : 1;
 }
 
 main().catch((err) => {

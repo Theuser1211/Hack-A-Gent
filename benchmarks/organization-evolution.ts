@@ -318,7 +318,7 @@ export class OrganizationEvolutionEngine { private readonly seed: number;
 
     return cost; }
 
-  private calculateImpactScore(current: CompanyGenome, target: CompanyGenome): number { const fitnessImprovement = this.calculateOrganizationFitness('placeholder');
+  private calculateImpactScore(current: CompanyGenome, target: CompanyGenome): number { const fitnessImprovement = this.calculateOrganizationFitness(current.companyId);
     return Math.min(1, fitnessImprovement * 0.5 + 0.5); }
 
   private updateCommunicationNetworks(companyId: string, genome: CompanyGenome): void { const networks: Map<string, CommunicationLink> = new Map();
@@ -356,14 +356,14 @@ export class OrganizationEvolutionEngine { private readonly seed: number;
         level: Math.floor(i / 2) + 1,
         parentDepartmentId: parentId,
         subDepartments: [],
-        budget: 100000 + Math.random() * 200000,
+        budget: 100000 + this.rng.next() * 200000,
         teamSize: 3 + Math.floor(this.rng.next() * 8),
-        autonomyLevel: 0.3 + Math.random() * 0.7,
-        efficiency: 0.5 + Math.random() * 0.5,
-        effectiveness: 0.5 + Math.random() * 0.5,
-        latency: Math.random() * 50,
-        redundancy: Math.random() * 0.3,
-        complexity: Math.random() * 2 };
+        autonomyLevel: 0.3 + this.rng.next() * 0.7,
+        efficiency: 0.5 + this.rng.next() * 0.5,
+        effectiveness: 0.5 + this.rng.next() * 0.5,
+        latency: this.rng.next() * 50,
+        redundancy: this.rng.next() * 0.3,
+        complexity: this.rng.next() * 2 };
 
       if (parentId) { const parentDept = departments.find(d => d.departmentId === parentId);
         if (parentDept) { parentDept.subDepartments.push(department.departmentId); }
@@ -384,8 +384,8 @@ export class OrganizationEvolutionEngine { private readonly seed: number;
           targetDepartmentId: target.departmentId,
           primaryPath: [],
           backupPaths: [],
-          efficiency: 0.6 + Math.random() * 0.4,
-          redundancy: Math.random() * 0.5 };
+          efficiency: 0.6 + this.rng.next() * 0.4,
+          redundancy: this.rng.next() * 0.5 };
 
         flows.push(flow); }
     }
@@ -439,7 +439,7 @@ export class OrganizationEvolutionEngine { private readonly seed: number;
   private calculateCultureFitness(genome: CompanyGenome): number { const cultureImpact = ((genome.culture?.innovation ?? 0.5) + (genome.culture?.riskTaking ?? 0.5)) / 2;
     return Math.min(1, cultureImpact); }
 
-  private calculateEconomicFitness(companyId: string): number { return Math.random(); }
+  private calculateEconomicFitness(companyId: string): number { return this.rng.next(); }
 
   private applyRestructureStrategy(departments: Department[], strategy: RestructureStrategy): Department[] { switch (strategy.type) { case 'CONSOLIDATION':
         return this.consolidateSimilarFunctions(departments);

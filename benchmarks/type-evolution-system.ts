@@ -266,9 +266,9 @@ export class TypeEvolutionSystem {
         primaryType,
         specializationLevel: 1,
         experiencePoints: 0,
-        skillLevel: 5 + Math.random() * 5,
+        skillLevel: 5 + this.rng.next() * 5,
         lastPractice: deterministicNow(this.seed),
-        adaptationRate: 1.0 + (Math.random() - 0.5) * 0.2,
+        adaptationRate: 1.0 + (this.rng.next() - 0.5) * 0.2,
       };
 
       this.typeSpecializations.set(agentId, specialization);

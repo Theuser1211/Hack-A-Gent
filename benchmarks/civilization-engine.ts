@@ -518,7 +518,7 @@ export class CivilizationEngine {
   }
 
   private calculateEntropyScore(): void {
-    const entropy = Math.random() * 0.5 + 0.3;
+    const entropy = this.rng.next() * 0.5 + 0.3;
     this.civilizationStats.entropyScore = entropy;
   }
 
@@ -546,7 +546,7 @@ export class CivilizationEngine {
     if (innovationGoals.length > 0) {
       const randomGoal = innovationGoals[Math.floor(this.rng.next() * innovationGoals.length)];
       if (randomGoal) {
-        randomGoal.progress = Math.min(100, randomGoal.progress + Math.random() * 20);
+        randomGoal.progress = Math.min(100, randomGoal.progress + this.rng.next() * 20);
         randomGoal.achieved = randomGoal.progress >= 100;
       }
     }
@@ -678,7 +678,7 @@ export class CivilizationEngine {
 
   private initializeJudges(): void {
     for (let i = 0; i < 5; i++) {
-      (this.hackathonOrchestrator as any).createJudgePanel(`judge-panel-${i}`, Math.random() > 0.5);
+      (this.hackathonOrchestrator as any).createJudgePanel(`judge-panel-${i}`, this.rng.next() > 0.5);
     }
   }
 

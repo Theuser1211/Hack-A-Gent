@@ -35,7 +35,7 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
     // Try exact match first, then search by project name prefix
     const exactPath = path.resolve(tracesDir, `${projectId}.trace.json`);
     if (existsSync(exactPath)) {
-      try { persistedTrace = JSON.parse(readFileSync(exactPath, 'utf-8')) as PersistedTrace; } catch {}
+      try { persistedTrace = JSON.parse(readFileSync(exactPath, 'utf-8')) as PersistedTrace; } catch (e) { dim(`Trace parse error: ${e instanceof Error ? e.message : String(e)}`); }
     } else {
       // Search for trace files matching the project name
       const traceFiles = readdirSync(tracesDir).filter(f => f.endsWith('.trace.json'));
@@ -46,7 +46,7 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
             persistedTrace = data;
             break;
           }
-        } catch {}
+        } catch { /* skip malformed trace files */ }
       }
     }
   }
@@ -63,7 +63,7 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
     if (existsSync(statePath)) {
       try {
         state = JSON.parse(readFileSync(statePath, 'utf-8')) as Record<string, unknown>;
-      } catch {}
+      } catch { /* state file may be corrupt — continue without it */ }
     }
   }
 

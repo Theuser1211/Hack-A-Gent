@@ -213,7 +213,7 @@ export class CompetitionIntelligence {
     const theme = this.inferTheme(text, input.title);
 
     const analysis: CompetitionAnalysis = {
-      analysisId: 'ca-' + createDeterministicUuid(Date.now(), this.analyses.length).slice(0, 8),
+      analysisId: 'ca-' + createDeterministicUuid(this.analyses.length, this.analyses.length).slice(0, 8),
       challenge: {
         title: input.title,
         problemStatement: input.problemStatement,

@@ -359,7 +359,7 @@ async function runFullPipeline(
           },
         }, null, 2),
       );
-    } catch {}
+    } catch (e) { dim(`Trace save error: ${e instanceof Error ? e.message : String(e)}`); }
 
     return {
       success: true,
@@ -423,7 +423,7 @@ async function runFullPipeline(
            elapsedMs: elapsed,
          }, null, 2),
        );
-     } catch {}
+    } catch (e) { dim(`Trace save error: ${e instanceof Error ? e.message : String(e)}`); }
 
      stageFail('Pipeline execution', msg);
      pipelineFooter();
