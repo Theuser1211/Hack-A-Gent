@@ -396,11 +396,9 @@ export class HackathonBenchmarkRunner {
         survived_mutation: loopResult.verificationPassed && mutationMetrics.mutations_applied > 0,
       };
       mutationMetrics.repair_success_rate =
-        mutationMetrics.mutations_detected > 0
-          ? mutationMetrics.mutations_repaired / mutationMetrics.mutations_detected
-          : mutationMetrics.mutations_applied > 0
-            ? 0
-            : 1;
+        mutationMetrics.mutations_applied > 0
+          ? mutationMetrics.mutations_repaired / mutationMetrics.mutations_applied
+          : 0;
     }
 
     // Compute robustness score using EvaluationOrchestrator (single source of truth)

@@ -318,9 +318,11 @@ export class BenchmarkTester {
 
   private resolveImportPath(filePath: string, importPath: string): string | null {
     if (!importPath.startsWith('.')) return null;
-    const parts = filePath.split('/');
+    const normalizedFilePath = filePath.replace(/\\/g, '/');
+    const normalizedImportPath = importPath.replace(/\\/g, '/');
+    const parts = normalizedFilePath.split('/');
     parts.pop();
-    const importParts = importPath.split('/');
+    const importParts = normalizedImportPath.split('/');
     for (const part of importParts) {
       if (part === '.') continue;
       if (part === '..') {

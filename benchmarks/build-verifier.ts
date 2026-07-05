@@ -1,3 +1,5 @@
+import * as path from 'node:path';
+
 import type { GeneratedRepository, GeneratedModule } from '../kernel/builders/builder-types.js';
 import type { ArchitectureBlueprint } from '../kernel/planning/architect-types.js';
 
@@ -171,12 +173,14 @@ export class BuildVerifier {
 
     for (const deliverable of benchmark.expected_deliverables) {
       if (!deliverable.required) continue;
+      const normalizedDeliverablePath = deliverable.path.replace(/\\/g, '/').replace(/\/$/, '');
       const matches = [...allPaths].filter((p) => {
+        const normalizedP = p.replace(/\\/g, '/');
         if (deliverable.type === 'directory') {
-          return p.startsWith(deliverable.path.replace(/\/$/, '') + '/');
+          return normalizedP.startsWith(normalizedDeliverablePath + '/');
         }
         if (deliverable.type === 'file' || deliverable.type === 'code') {
-          return p === deliverable.path || p.endsWith('/' + deliverable.path);
+          return normalizedP === normalizedDeliverablePath || normalizedP.endsWith('/' + normalizedDeliverablePath);
         }
         return false;
       });

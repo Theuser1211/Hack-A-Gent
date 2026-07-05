@@ -1,3 +1,5 @@
+import * as path from 'node:path';
+
 import { CapabilityEvolutionEngine, type FailurePatternRecord } from './capability-evolution-engine.js';
 import { DecisionLogger, type AgentRole, type DecisionTrace } from './decision-trace.js';
 import { DeploymentRepairController } from './deployment-repair-controller.js';
@@ -74,7 +76,7 @@ export class Phase11Orchestrator {
 
     this.taskGraph = new TaskGraph('phase11-hackathon', seed);
     this.toolGateway = new InternetToolGateway({ workingDir: workspaceRoot }, seed + 1);
-    this.projectState = new RemoteProjectState(stateDir ?? workspaceRoot + '/.hackagent-state', seed + 2);
+    this.projectState = new RemoteProjectState(stateDir ?? path.join(workspaceRoot, '.hackagent-state'), seed + 2);
     this.humanControl = new HumanControlLayer(seed + 3);
     this.browserAgent = new LiveBrowserTestAgent(this.toolGateway, seed + 4);
     this.deployRepair = new DeploymentRepairController(
