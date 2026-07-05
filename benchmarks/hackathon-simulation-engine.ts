@@ -78,7 +78,7 @@ export class HackathonSimulationEngine {
     this.judgeSim = new JudgeSimulator({ seed: seed + 100 });
   }
 
-  // ---- Phase 1: Idea ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Strategy ----
+  // ---- Phase 1: Idea ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Strategy ----
 
   generateStrategies(spec: ParsedHackathonSpec): Strategy[] {
     const title = spec.title;

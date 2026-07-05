@@ -584,7 +584,7 @@ function mutateSwapDependency(
   if (!pkgFile) return mutateCorruptContent(repo, candidates, rng, intensity);
 
   let content = pkgFile.content;
-  const depMatch = content.match(/"dependencies"\s*:\s*\{ ([^ }]*)\ }/);
+  const depMatch = content.match(/"dependencies"\s*:\s*\{ ([^ }]*) }/);
   if (!depMatch) return mutateCorruptContent(repo, candidates, rng, intensity);
 
   const deps = depMatch[0]!;
@@ -779,8 +779,8 @@ function mutateDeleteFunctionBody(
   const targetFile = mod.files[fileIdx]!;
 
   let content = targetFile.content;
-  const functionPattern = /(async\s+)?function\s+\w+\s*\([^)]*\)\s*\{ [^ }]*\ }/g;
-  const arrowPattern = /(\w+\s*=\s*(async\s+)?\([^)]*\)\s*=>\s*)\{ [^ }]*\ }/g;
+  const functionPattern = /(async\s+)?function\s+\w+\s*\([^)]*\)\s*\{ [^ }]* }/g;
+  const arrowPattern = /(\w+\s*=\s*(async\s+)?\([^)]*\)\s*=>\s*)\{ [^ }]* }/g;
 
   if (intensity > 0.5) {
     content = content.replace(functionPattern, (match) => {

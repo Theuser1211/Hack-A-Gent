@@ -367,7 +367,7 @@ export class BuildVerifier {
       }
 
       const openBraces = (content.match(/\{ /g) ?? []).length;
-      const closeBraces = content.match(/\ }/g) ?? [];
+      const closeBraces = content.match(/ }/g) ?? [];
       const unmatchedBraces = closeBraces.filter((b) => !content.includes(' } // BROKEN')).length;
       if (openBraces > 0 && closeBraces.length !== openBraces && content.includes(' }}')) {
         errors.push({

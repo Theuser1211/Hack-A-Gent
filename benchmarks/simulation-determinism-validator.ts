@@ -190,7 +190,7 @@ export function rngUsageAuditor(): RNGViolationReport {
 
 const ENGINE_CHECK_RATES: Record<string, number> = { build: 0.1, criticalCrash: 0.05 };
 
-// Map engine check keys Ã¢â€ â€™ failure event phases emitted
+// Map engine check keys Ã¢â€ â€™ failure event phases emitted
 const CHECK_TO_EVENT_PHASE: Record<string, string> = { build: 'build', criticalCrash: 'runtime' };
 
 const TOLERANCE = 0.02; // Ã‚Â±2%
@@ -205,7 +205,7 @@ export function failureInjectionValidator(iterations: number = 1000, seed: numbe
     const result = engine.simulate({ devpost: TEST_SPEC, strategyMode: 'fast-win', seed: seed + i });
 
     // Count each failure, type from ALL strategies
-    // Map engine check keys Ã¢â€ â€™ event phases: buildÃ¢â€ â€™build, criticalCrashÃ¢â€ â€™runtime
+    // Map engine check keys Ã¢â€ â€™ event phases: buildÃ¢â€ â€™build, criticalCrashÃ¢â€ â€™runtime
     for (const failure of result.failureTimeline) {
       const phase = failure.phase;
       if (phase in observed) {
@@ -235,7 +235,7 @@ export function failureInjectionValidator(iterations: number = 1000, seed: numbe
     }
   }
 
-  // Calculate observed rates Ã¢â‚¬â€ map from event phase to check key
+  // Calculate observed rates Ã¢â‚¬â€  map from event phase to check key
   const expected: Record<string, number> = {};
   const observedRates: Record<string, number> = {};
   const violations: string[] = [];
@@ -251,7 +251,7 @@ export function failureInjectionValidator(iterations: number = 1000, seed: numbe
     const diff = Math.abs(observedRate - expectedRate);
     if (diff > TOLERANCE) {
       violations.push(
-        `${checkKey} (Ã¢â€ â€™ event '${eventPhase}'): expected ${(expectedRate * 100).toFixed(1)}% Ã‚Â±${(TOLERANCE * 100).toFixed(1)}%, observed ${(observedRate * 100).toFixed(1)}% (diff=${(diff * 100).toFixed(1)}%)`,
+        `${checkKey} (Ã¢â€ â€™ event '${eventPhase}'): expected ${(expectedRate * 100).toFixed(1)}% Ã‚Â±${(TOLERANCE * 100).toFixed(1)}%, observed ${(observedRate * 100).toFixed(1)}% (diff=${(diff * 100).toFixed(1)}%)`,
       );
     }
   }
@@ -367,7 +367,7 @@ export function judgeStabilityTest(runs: number = 5, seed: number = 42): JudgeSt
     details.push(`Score variance within acceptable range: ${variance.toFixed(2)}`);
   }
 
-  // Check bias model consistency Ã¢â‚¬â€ same seed must produce identical results
+  // Check bias model consistency Ã¢â‚¬â€  same seed must produce identical results
   let biasModelStable = true;
   const biasCheckResults: JudgeVerdict[] = [];
   const biasConfig = {
@@ -397,7 +397,7 @@ export function judgeStabilityTest(runs: number = 5, seed: number = 42): JudgeSt
 }
 
 // ================================================================
-// 5. Simulation Ã¢â€ â€ Execution Consistency Check
+// 5. Simulation Ã¢â€ â€  Execution Consistency Check
 // ================================================================
 
 export function simulationExecutionConsistency(

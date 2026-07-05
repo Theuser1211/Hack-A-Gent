@@ -21,8 +21,10 @@ export function color(text: string, c: string): string {
   return `${COLORS[c] ?? ''}${text}${RESET}`;
 }
 
+const ANSI_PATTERN = String.fromCharCode(0x1B) + '\\[[0-9;]*m';
+
 function stripAnsi(text: string): string {
-  return text.replace(/\x1b\[[0-9;]*m/g, '');
+  return text.replace(new RegExp(ANSI_PATTERN, 'g'), '');
 }
 
 function center(text: string): string {

@@ -34,16 +34,16 @@ export class SimulationDecisionEngine {
    * Evaluate simulation result and return execution decision.
    *
    * Rules:
-   *   score ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥ 80  ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ FULL EXECUTION
-   *   score 60ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“79 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ SAFE MODE (limited tools, reduced repair cycles)
-   *   score 40ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“59 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ DEMO ONLY MODE
-   *   score < 40  ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ABORT EXECUTION
+   *   score ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥ 80  ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ FULL EXECUTION
+   *   score 60ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“79 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ SAFE MODE (limited tools, reduced repair cycles)
+   *   score 40ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“59 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ DEMO ONLY MODE
+   *   score < 40  ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ABORT EXECUTION
    *
    * Risk factors adjust the mode downward:
-   *   high failure variance     ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ downgrade one level
-   *   unstable judge score      ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ downgrade one level
-   *   high repair dependency    ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ downgrade one level
-   *   tool execution overload   ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ downgrade one level
+   *   high failure variance     ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ downgrade one level
+   *   unstable judge score      ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ downgrade one level
+   *   high repair dependency    ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ downgrade one level
+   *   tool execution overload   ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ downgrade one level
    */
   evaluate(simulationResult: SimulationResult): ExecutionDecision {
     const score = simulationResult.finalJudgeVerdict.total;
@@ -72,7 +72,7 @@ export class SimulationDecisionEngine {
     const proceed = finalMode !== 'abort';
 
     // Build reason
-    let reason = `Score ${score}/100 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ${finalMode.toUpperCase()} mode`;
+    let reason = `Score ${score}/100 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ${finalMode.toUpperCase()} mode`;
     if (downgrades > 0) {
       reason += ` (downgraded ${Math.floor(downgrades)} level(s) by ${riskFactors.length} risk factor(s))`;
     }
@@ -103,7 +103,7 @@ export class SimulationDecisionEngine {
     const failures = simResult.failureTimeline;
     const repairs = simResult.repairTimeline;
 
-    // 1. Failure variance ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â check if failure count is highly variable across strategies
+    // 1. Failure variance ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â  check if failure count is highly variable across strategies
     if (scores.length >= 2) {
       const failureCounts = scores.map((s) => s.failureCount);
       const avg = failureCounts.reduce((a, b) => a + b, 0) / failureCounts.length;
@@ -118,7 +118,7 @@ export class SimulationDecisionEngine {
       }
     }
 
-    // 2. Judge score instability ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â check spread between predicted and judged
+    // 2. Judge score instability ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â  check spread between predicted and judged
     if (scores.length >= 2) {
       const judgedScores = scores.map((s) => s.judgeVerdict.total);
       const predictedScores = scores.map((s) => s.predictedScore);
@@ -149,7 +149,7 @@ export class SimulationDecisionEngine {
       }
     }
 
-    // 4. Tool execution overload risk ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â based on total task count + failure density
+    // 4. Tool execution overload risk ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â  based on total task count + failure density
     const totalFailures = failures.length;
     const totalStrategies = scores.length;
     const failureDensity = totalStrategies > 0 ? totalFailures / totalStrategies : 0;
