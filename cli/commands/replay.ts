@@ -63,10 +63,13 @@ export async function replayCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
       try { trace = JSON.parse(readFileSync(exactPath, 'utf-8')) as PersistedTrace; } catch (e) { dim(`Trace parse error: ${e instanceof Error ? e.message : String(e)}`); }
     } else {
       const traceFiles = fsReaddirSync(tracesDir).filter(f => f.endsWith('.trace.json'));
+      const searchLower = runId.toLowerCase();
+      const searchKebab = runId.toLowerCase().replace(/\s+/g, '-');
       for (const f of traceFiles) {
         try {
           const data = JSON.parse(readFileSync(path.resolve(tracesDir, f), 'utf-8')) as PersistedTrace;
-          if (data.runId === runId || data.projectName === runId || f.startsWith(runId)) {
+          const fname = f.replace('.trace.json', '').toLowerCase();
+          if (data.runId === runId || data.projectName?.toLowerCase() === searchLower || fname === searchKebab || fname.startsWith(searchKebab)) {
             trace = data;
             break;
           }

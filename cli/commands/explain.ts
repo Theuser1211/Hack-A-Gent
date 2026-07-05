@@ -37,12 +37,16 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
     if (existsSync(exactPath)) {
       try { persistedTrace = JSON.parse(readFileSync(exactPath, 'utf-8')) as PersistedTrace; } catch (e) { dim(`Trace parse error: ${e instanceof Error ? e.message : String(e)}`); }
     } else {
-      // Search for trace files matching the project name
-      const traceFiles = readdirSync(tracesDir).filter(f => f.endsWith('.trace.json'));
+      // Search for trace files matching the project name (case-insensitive, kebab-case normalized)
+      let traceFiles: string[];
+      try { traceFiles = readdirSync(tracesDir).filter(f => f.endsWith('.trace.json')); } catch { traceFiles = []; }
+      const searchLower = projectId.toLowerCase();
+      const searchKebab = projectId.toLowerCase().replace(/\s+/g, '-');
       for (const f of traceFiles) {
         try {
           const data = JSON.parse(readFileSync(path.resolve(tracesDir, f), 'utf-8')) as PersistedTrace;
-          if (data.projectName === projectId || f.startsWith(projectId)) {
+          const fname = f.replace('.trace.json', '').toLowerCase();
+          if (data.projectName?.toLowerCase() === searchLower || fname === searchKebab || fname.startsWith(searchKebab)) {
             persistedTrace = data;
             break;
           }
