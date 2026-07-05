@@ -329,6 +329,38 @@ async function runFullPipeline(
     }
     log('');
 
+    // Persist decision traces + pipeline summary for explain/replay
+    const tracesDir = path.resolve(ctx.dataDir, 'traces');
+    if (!existsSync(tracesDir)) mkdirSync(tracesDir, { recursive: true });
+    const traceId = createDeterministicUuid(seed, Date.now()).slice(0, 12);
+    try {
+      writeFileSync(
+        path.resolve(tracesDir, `${projectName}.trace.json`),
+        JSON.stringify({
+          runId: traceId,
+          projectName,
+          masterSeed: seed,
+          timestamp: new Date().toISOString(),
+          strategy: strategyReport.strategyCompetition.winner.name,
+          phase: result.phase,
+          deployUrl: result.deployUrl,
+          errors: result.errors,
+          taskCount,
+          durationMs: elapsed,
+          decisionTraces: strategyReport.decisionTraces,
+          reviewScores: {
+            innovation: finalReport.innovationScore,
+            technicalDepth: finalReport.technicalDepthScore,
+            feasibility: finalReport.feasibilityScore,
+            presentation: finalReport.presentationScore,
+            completeness: finalReport.completenessScore,
+            maintainability: finalReport.maintainabilityScore,
+            judgeAlignment: finalReport.judgeAlignmentScore,
+          },
+        }, null, 2),
+      );
+    } catch {}
+
     return {
       success: true,
       message: `Pipeline completed for "${parsed.title}" — ${formatDuration(elapsed)}, ${taskCount} tasks`,

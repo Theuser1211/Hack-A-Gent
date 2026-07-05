@@ -1,10 +1,25 @@
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import * as path from 'node:path';
 
 import { DecisionLogger } from '../../benchmarks/decision-trace.js';
 import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
-import { log, dim } from '../output.js';
+import { log, dim, labeled } from '../output.js';
+
+interface PersistedTrace {
+  runId: string;
+  projectName: string;
+  masterSeed: number;
+  timestamp: string;
+  strategy: string;
+  phase: string;
+  deployUrl: string | null;
+  errors: string[];
+  taskCount: number;
+  durationMs: number;
+  decisionTraces: unknown[];
+  reviewScores: Record<string, number>;
+}
 
 export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const projectId = args.positional[0];
@@ -13,8 +28,33 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
     return { success: false, message: 'Usage: hackagent explain <projectId>' };
   }
 
+  // Try to load persisted trace from disk
+  let persistedTrace: PersistedTrace | null = null;
+  const tracesDir = path.resolve(ctx.dataDir, 'traces');
+  if (projectId && existsSync(tracesDir)) {
+    // Try exact match first, then search by project name prefix
+    const exactPath = path.resolve(tracesDir, `${projectId}.trace.json`);
+    if (existsSync(exactPath)) {
+      try { persistedTrace = JSON.parse(readFileSync(exactPath, 'utf-8')) as PersistedTrace; } catch {}
+    } else {
+      // Search for trace files matching the project name
+      const traceFiles = readdirSync(tracesDir).filter(f => f.endsWith('.trace.json'));
+      for (const f of traceFiles) {
+        try {
+          const data = JSON.parse(readFileSync(path.resolve(tracesDir, f), 'utf-8')) as PersistedTrace;
+          if (data.projectName === projectId || f.startsWith(projectId)) {
+            persistedTrace = data;
+            break;
+          }
+        } catch {}
+      }
+    }
+  }
+
   const report = ctx.phase12orchestrator?.getLastReport();
-  const decisionLog = ctx.phase12orchestrator?.getLastReport()?.decisionTraces ?? [];
+  const inSessionDecisions = report?.decisionTraces ?? [];
+  const persistedDecisions = (persistedTrace?.decisionTraces ?? []) as import('../../benchmarks/decision-trace.js').DecisionTrace[];
+  const decisionLog = inSessionDecisions.length > 0 ? inSessionDecisions : persistedDecisions;
 
   // Try loading state for more context
   let state: Record<string, unknown> | null = null;
@@ -84,6 +124,38 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
       log(`  [${fp.category}] ${fp.description.slice(0, 80)} (x${fp.frequency})`);
     }
     log('');
+  }
+
+  // Persisted trace summary (from disk)
+  if (persistedTrace) {
+    log('Pipeline Run Summary:');
+    labeled('Strategy', persistedTrace.strategy);
+    labeled('Phase', persistedTrace.phase);
+    labeled('Deploy', persistedTrace.deployUrl ?? 'not deployed');
+    labeled('Tasks', String(persistedTrace.taskCount));
+    labeled('Errors', String(persistedTrace.errors.length));
+    labeled('Duration', `${(persistedTrace.durationMs / 1000).toFixed(1)}s`);
+    labeled('Timestamp', persistedTrace.timestamp);
+    log('');
+    if (persistedTrace.errors.length > 0) {
+      log('Errors:');
+      for (const e of persistedTrace.errors.slice(0, 5)) {
+        log(`  - ${e.slice(0, 100)}`);
+      }
+      log('');
+    }
+    const scores = persistedTrace.reviewScores;
+    if (scores) {
+      log('Review Scores:');
+      labeled('Innovation', `${scores.innovation}/25`);
+      labeled('Technical Depth', `${scores.technicalDepth}/20`);
+      labeled('Feasibility', `${scores.feasibility}/15`);
+      labeled('Presentation', `${scores.presentation}/15`);
+      labeled('Completeness', `${scores.completeness}/15`);
+      labeled('Maintainability', `${scores.maintainability}/10`);
+      labeled('Judge Alignment', `${scores.judgeAlignment}/5`);
+      log('');
+    }
   }
 
   // Project state summary
