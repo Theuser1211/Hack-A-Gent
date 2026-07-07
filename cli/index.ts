@@ -97,14 +97,19 @@ function parseArgs(argv: string[]): CLIArgs {
 }
 
 function getVersion(): string {
-  try {
-    const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    const pkgPath = path.resolve(__dirname, '../package.json');
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-    return pkg.version ?? '0.1.0';
-  } catch {
-    return '0.1.0';
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidates: string[] = [
+    '../../package.json',
+    '../package.json',
+  ];
+  for (const rel of candidates) {
+    try {
+      const pkgPath = path.resolve(moduleDir, rel);
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+      if (pkg.version) return pkg.version;
+    } catch { /* try next */ }
   }
+  return '0.1.0';
 }
 
 function showHelp(): void {

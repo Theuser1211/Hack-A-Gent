@@ -294,7 +294,14 @@ export async function withRetry<T>(
 
     if (status !== 0 && !isRetryable(status)) throw err;
 
-    const delay = Math.min(config.baseDelayMs * Math.pow(2, attempt), config.maxDelayMs);
+    const retryAfter = (err as any)?.retryAfter;
+    let delay: number;
+    if (retryAfter) {
+      delay = parseInt(retryAfter) * 1000;
+      delay = Math.min(delay, config.maxDelayMs);
+    } else {
+      delay = Math.min(config.baseDelayMs * Math.pow(2, attempt), config.maxDelayMs);
+    }
     const jitter = config.useJitter ? delay * (0.5 + ((Date.now() % 1000) / 2000)) : delay;
 
     await sleep(jitter);

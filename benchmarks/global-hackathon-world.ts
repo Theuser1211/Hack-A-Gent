@@ -304,6 +304,37 @@ export class GlobalHackathonWorld {
     this.events.push(event);
     this.persistToStorage();
 
+    this.memoryIndex.store({
+      snapshotId: `snap-${eventId}`,
+      projectName: eventName,
+      projectDescription: `Hackathon event: ${theme}`,
+      strategy: {
+        id: `strat-${eventId}`,
+        projectName: eventName,
+        winningStrategy: winnerPersistent?.strategyType ?? 'balanced',
+        mvpScope: ['core'],
+        wowFactors: [],
+        risks: [],
+        scoringAlignment: {},
+        competitionAnalysis: { judgePriorities: [], differentiators: [], commonPitfalls: [] },
+        estimatedSuccessProbability: topScore,
+        recommendedTimeAllocation: {},
+        createdAt: deterministicNow(this.seed),
+      },
+      techStack: ['TypeScript', 'React', 'Node.js'],
+      judgeCriteria: ['innovation', 'execution', 'usability', 'impact', 'technical_complexity'],
+      constraints: ['time_limit', 'resource_limit', 'scope_limit'],
+      uxResults: [],
+      deploySuccess: true,
+      overallScore: topScore,
+      errors: [],
+      failurePatterns: [],
+      mutations: [],
+      startedAt: deterministicNow(this.seed),
+      completedAt: deterministicNow(this.seed + 1),
+      tags: [theme, eventName],
+    });
+
     return event;
   }
 

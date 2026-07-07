@@ -12,3 +12,5 @@ hackathon-project/
 tmp/
 
 *.tgz
+build-*/
+create-*/

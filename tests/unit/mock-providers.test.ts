@@ -72,12 +72,13 @@ describe('BaseMockProvider', () => {
   });
 
   describe('allMockProviders', () => {
-    it('contains all 4 providers', () => {
-      expect(allMockProviders).toHaveLength(4);
+    it('contains all 5 providers', () => {
+      expect(allMockProviders).toHaveLength(5);
       const ids = allMockProviders.map((p) => p.providerId);
       expect(ids).toContain('gemini');
       expect(ids).toContain('nvidia');
       expect(ids).toContain('mistral');
+      expect(ids).toContain('openai');
       expect(ids).toContain('local');
     });
   });

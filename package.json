@@ -1,7 +1,7 @@
 {
   "name": "hag-cli",
-  "version": "0.1.0",
-  "description": "Autonomous hackathon agent runtime",
+  "version": "1.0.2",
+  "description": "Autonomous hackathon engineering CLI — generate complete projects from Devpost URLs",
   "keywords": [
     "ai",
     "agent",
@@ -11,6 +11,7 @@
     "automation",
     "typescript"
   ],
+  "author": "Hack-A-Gent Contributors",
   "license": "MIT",
   "homepage": "https://github.com/Theuser1211/Hack-A-Gent",
   "repository": {

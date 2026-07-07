@@ -287,6 +287,9 @@ export class CognitiveInjectionLayer {
   ): number {
     let bias = 0.5;
 
+    const defaultBias = judgeBias.default ?? 0;
+    bias += defaultBias * 0.1;
+
     context.memory.forEach((snap) => {
       if (snap.deploySuccess) {
         bias += 0.1;

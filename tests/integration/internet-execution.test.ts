@@ -581,8 +581,8 @@ describe('InternetHackathonOrchestrator', () => {
   });
 
   it('parses Devpost URL', async () => {
-    const data = await orch.parseDevpost('https://devpost.com/software/ai-assistant');
-    expect(data.title).toBeTruthy();
+    const data = await orch.parseDevpost('Project: Ai Assistant\nProblem: Build an AI assistant\nJudging Criteria: Quality, Speed, Innovation\nTech Stack: React, Python\nRequirements: Web UI');
+    expect(data.title).toBe('Ai Assistant');
     expect(data.judgingCriteria.length).toBeGreaterThanOrEqual(1);
   });
 

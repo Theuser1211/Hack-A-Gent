@@ -1,65 +1,63 @@
 # Changelog
 
-## v1.0.0 (2026-06-28)
+## v1.0.0 (2026-07-07)
 
 ### Added
-- Unified Runtime OS with Phase 13.5 subsystems (goal monitor, convergence engine, resilience layer, sandbox execution mode, feedback injection loop, multi-strategy execution engine)
-- Taste & Simplicity Governor for demo-quality enforcement
-- Demo Surface Compiler with execution path collapse
-- Determinism kernel with seeded RNG, UUID, and timestamps
-- Replay engine for exact mutation sequence reproduction
-- 5 winning hackathon strategy templates
-- 13 CLI commands with full help documentation
+- 6 LLM provider integrations (NVIDIA NIMs, OpenAI, Anthropic, Gemini, OpenRouter, Custom)
+- Devpost URL parsing with competition intelligence
+- Winning strategy generator (judge-optimized recommendations)
+- Full pipeline orchestrator (CompetitionIntel → StrategyGen → SelfReview → Report)
+- Project scaffolder with quality checks (README, LICENSE, .gitignore, .env.example, Docker, CI/CD)
+- Self-review scorer (7 dimensions: Innovation, Technical Depth, Feasibility, Presentation, Completeness, Maintainability, Judge Alignment)
+- Hackathon optimizer with targeted improvement actions
+- Pipeline benchmarker (old vs improved comparison)
+- Pipeline report generator (comprehensive end-of-generation markdown report)
+- Post-generation typecheck and auto-repair
+- Runtime smoke test (starts dev server, verifies HTTP 200)
 - Organizational memory bank with query/stats/clear
-- Adversarial system (intent engine, interference, deception, judge drift, conflict resolution)
-- Civilization evolution engine
-- Resource economy with ledger, enforcement hooks, market model
-- Judge calibration engine with drift analysis
-- Agent evolution engine with capability mutations
-- Organization evolution with department specialization
-- Swarm evolution engine
-- Strategy genome database with win-rate tracking
-- 78 test files with 1138 tests total
+- Deterministic execution (same seed = same output)
+- Template fallback (works without any LLM)
+- 15+ CLI commands with colored terminal output
+- Interactive setup wizard
+- `.env` file support
+- Zod config schema validation
+- Provider health checks
+- Contribution guidelines, code of conduct, security policy
+- GitHub Actions CI workflow
+- Issue and PR templates
+- 1168 tests across 80 files — 0 failures
 
 ### Changed
 - TypeScript errors: 775 → 0 (100% reduction)
-- `computeReward()` now returns `RewardSignal` object instead of `number`
-- `StrategyPlan.techStack` is now optional
-- `CivilizationDashboard` renamed to `DashboardGenerator` (class) / `DashboardData` (interface)
-- `require()` calls converted to ESM `import`
-- Lint script updated from `src/` to `benchmarks/` and `kernel/` directories
-- ESLint config: disabled `no-empty` and `no-constant-condition` rules
+- `process.exit()` → `process.exitCode` for Windows compatibility
+- All console.log/console.error → structured output utility
+- Package version: 0.1.0 → 1.0.0
+- README rewritten for production readiness
 
 ### Fixed
-- Duplicate class/symbol declarations in 11 barrel files
-- RNG type mismatch across 14 files (typed as `RNG` instead of `() => number`)
-- Missing `devpostUrl` on `ParsedHackathonSpec` interface
-- 86 undefined type/interface/enum references (TS2304)
-- 44 wrong argument count errors (TS2554)
-- Interface/class naming collision in `civilization-dashboard.ts`
-- Missing `INNOVATION` in `DepartmentType` enum
-- 17 test assertion mismatches in `resource-economy.test.ts`
-- Index out of bounds in `strategy-genome-database.test.ts`
-- Missing `getDecisionLogger()` on `HackathonRewardModel`
-- Incorrect expected value in `phase13.test.ts` submission readiness test
-- Entity ID mismatches in `adversarial-system.test.ts`
-- Detection threshold too high in `deception-layer.ts`
-
-### Removed
-- `src/` directory (moved to `benchmarks/`, `cli/`, `kernel/`)
-- Duplicate re-exports from barrel files
+- LLM timeout handling (moved res.json() inside AbortController)
+- Retry logic (AbortError skips retries — was causing 40-min delays)
+- CustomEndpointProvider API key lookup (`this.apiKeyEnvVar` → `this.providerId`)
+- `require is not defined` in runtime smoke test (switched to ESM imports)
+- Version display showing 0.1.0 after npm install (path resolution in dist/)
 
 ### Security
-- All `require()` imports converted to ESM `import`
-- No secrets or credentials in source code
+- Removed `githubToken → ANTHROPIC_API_KEY` and `vercelToken → OPENAI_API_KEY` mappings
+- Added command allowlist to `handleShell()`
+- Added package name regex validation to `handlePackage()`
+- Switched git remote token auth to credential helper pattern
+- RouterEngine provider-aware execution
+- Path traversal in explain/replay commands
+- Git command injection (repo name validation)
+- Config file dependency detection (auto-adds tailwindcss/postcss/autoprefixer)
+- Post-write package.json merge (scans all project files for imports)
+- LLM output validation (filters malformed code with brace/paren mismatch)
+- Pages Router cleanup (removes _app.tsx when App Router exists)
+- Auto-add @types/* packages for detected dependencies
+- Integration test timeouts (typecheckAndRepair moved out of executeFullPipeline)
 
-## v0.1.0 (Initial Release)
-
-- Initial project scaffolding
-- CLI framework
-- Core agent runtime with event bus
-- Builder/planner/architect agents
-- Basic LLM provider support
-- Task lifecycle management
-- Build execution and verification
-- Initial test suite
+### Security
+- Git command injection blocked with regex validation
+- Path traversal blocked on file read/write operations
+- API keys stored in local config only (never sent to third parties)
+- All secrets removed from source code

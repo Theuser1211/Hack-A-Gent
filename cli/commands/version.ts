@@ -4,17 +4,24 @@ import { fileURLToPath } from 'node:url';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { log } from '../output.js';
 
-export async function versionCommand(_ctx: CLIContext, _args: CLIArgs): Promise<CLIResult> {
-  let version = '0.1.0';
-  try {
-    const __dirname = dirname(fileURLToPath(import.meta.url));
-    const pkgPath = resolve(__dirname, '../../package.json');
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-    if (pkg.version) version = pkg.version;
-  } catch {
-    // fallback to default
+function readVersion(): string {
+  const moduleDir = dirname(fileURLToPath(import.meta.url));
+  const candidates: string[] = [
+    '../../../package.json',
+    '../../package.json',
+  ];
+  for (const rel of candidates) {
+    try {
+      const pkgPath = resolve(moduleDir, rel);
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+      if (pkg.version) return pkg.version;
+    } catch { /* try next */ }
   }
+  return '0.1.0';
+}
 
+export async function versionCommand(_ctx: CLIContext, _args: CLIArgs): Promise<CLIResult> {
+  const version = readVersion();
   log(`Hack-A-Gent v${version}`);
   return { success: true, message: `v${version}`, data: { version } };
 }

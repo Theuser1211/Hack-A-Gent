@@ -147,6 +147,42 @@ const mistralModels: ModelSpec[] = [
     cost_per_1k_output: 0.003,
   },
 ];
+const openAiModels: ModelSpec[] = [
+  {
+    model_id: 'gpt-4o-2024-05-13',
+    provider: 'openai',
+    capabilities: ['reasoning', 'code_generation', 'long_context', 'json_output', 'function_calling', 'vision'],
+    context_window: 128000,
+    supports_json_mode: true,
+    supports_tool_calling: true,
+    typical_latency_ms: 1500,
+    cost_per_1k_input: 0.005,
+    cost_per_1k_output: 0.015,
+  },
+  {
+    model_id: 'gpt-4o-mini-2024-07-18',
+    provider: 'openai',
+    capabilities: ['reasoning', 'code_generation', 'long_context', 'json_output', 'function_calling', 'vision'],
+    context_window: 128000,
+    supports_json_mode: true,
+    supports_tool_calling: true,
+    typical_latency_ms: 500,
+    cost_per_1k_input: 0.00015,
+    cost_per_1k_output: 0.0006,
+  },
+  {
+    model_id: 'gpt-4-turbo-2024-04-09',
+    provider: 'openai',
+    capabilities: ['reasoning', 'code_generation', 'long_context', 'json_output', 'function_calling', 'vision'],
+    context_window: 128000,
+    supports_json_mode: true,
+    supports_tool_calling: true,
+    typical_latency_ms: 2000,
+    cost_per_1k_input: 0.01,
+    cost_per_1k_output: 0.03,
+  },
+];
+
 const localModels: ModelSpec[] = [
   {
     model_id: 'code-qwen-7b',
@@ -164,11 +200,13 @@ const localModels: ModelSpec[] = [
 export const mockGeminiProvider = new BaseMockProvider('gemini', geminiModels);
 export const mockNvidiaProvider = new BaseMockProvider('nvidia', nvidiaModels);
 export const mockMistralProvider = new BaseMockProvider('mistral', mistralModels);
+export const mockOpenAIProvider = new BaseMockProvider('openai', openAiModels);
 export const mockLocalProvider = new BaseMockProvider('local', localModels);
 
 export const allMockProviders: LLMProvider[] = [
   mockGeminiProvider,
   mockNvidiaProvider,
   mockMistralProvider,
+  mockOpenAIProvider,
   mockLocalProvider,
 ];

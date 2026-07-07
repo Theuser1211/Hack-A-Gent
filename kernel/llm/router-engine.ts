@@ -16,6 +16,8 @@ export interface RouterConfig {
   max_cost_per_task: Record<string, number>;
   max_cost_per_project: number;
   warn_at_pct: number;
+  configuredProvider?: string;
+  configuredModel?: string;
 }
 
 const DEFAULT_CONFIG: RouterConfig = {
@@ -36,13 +38,13 @@ const DEFAULT_CONFIG: RouterConfig = {
 };
 
 export const DEFAULT_ROUTING_TABLE: Record<string, { preferred: string; fallback: string; emergency: string }> = {
-  planning: { preferred: 'gemini-2.5-pro', fallback: 'mistral-large-2407', emergency: 'llama-3.1-70b' },
-  architecture: { preferred: 'gemini-2.5-pro', fallback: 'mistral-large-2407', emergency: 'llama-3.1-70b' },
-  coding: { preferred: 'mistral-large-2407', fallback: 'gemini-2.5-flash', emergency: 'code-qwen-7b' },
-  implementation: { preferred: 'mistral-large-2407', fallback: 'gemini-2.5-flash', emergency: 'code-qwen-7b' },
-  testing: { preferred: 'mistral-large-2407', fallback: 'gemini-2.5-flash', emergency: 'code-qwen-7b' },
-  judging: { preferred: 'gemini-2.5-pro', fallback: 'mistral-large-2407', emergency: 'llama-3.1-70b' },
-  documentation: { preferred: 'gemini-2.5-flash', fallback: 'mistral-large-2407', emergency: 'code-qwen-7b' },
+  planning: { preferred: 'gemini-2.5-pro', fallback: 'claude-sonnet-4-20250514', emergency: 'gpt-4o-mini-2024-07-18' },
+  architecture: { preferred: 'gemini-2.5-pro', fallback: 'claude-sonnet-4-20250514', emergency: 'gpt-4o-mini-2024-07-18' },
+  coding: { preferred: 'gpt-4o-mini-2024-07-18', fallback: 'gemini-2.5-flash', emergency: 'claude-haiku-3-5-20241022' },
+  implementation: { preferred: 'gpt-4o-mini-2024-07-18', fallback: 'gemini-2.5-flash', emergency: 'claude-haiku-3-5-20241022' },
+  testing: { preferred: 'gpt-4o-mini-2024-07-18', fallback: 'gemini-2.5-flash', emergency: 'claude-haiku-3-5-20241022' },
+  judging: { preferred: 'gemini-2.5-pro', fallback: 'claude-sonnet-4-20250514', emergency: 'gpt-4o-mini-2024-07-18' },
+  documentation: { preferred: 'gemini-2.5-flash', fallback: 'claude-haiku-3-5-20241022', emergency: 'gpt-4o-mini-2024-07-18' },
 };
 
 export class RouterEngine {
@@ -71,15 +73,65 @@ export class RouterEngine {
     return this.providers.get(providerId)?.getHealth() ?? null;
   }
 
+  getConfiguredProvider(): string | undefined {
+    return this.config.configuredProvider;
+  }
+
+  getConfiguredModel(): string | undefined {
+    return this.config.configuredModel;
+  }
+
   selectModel(
     taskType: string,
     estimatedTokens: number,
     requiredCapabilities: ModelCapability[] = [],
   ): RoutingDecision {
+    const configuredProvider = this.config.configuredProvider;
+    const configuredModel = this.config.configuredModel;
+
+    if (configuredProvider && configuredModel) {
+      const provider = this.providers.get(configuredProvider);
+      if (provider) {
+        const model = provider.getModels().find(m => m.model_id === configuredModel);
+        if (model) {
+          const health = provider.getHealth();
+          if (health.status !== 'unhealthy') {
+            return {
+              model_id: configuredModel,
+              provider: configuredProvider as ProviderId,
+              confidence: 1.0,
+              fallback_level: 0,
+              reason: `Using configured model "${configuredModel}" from provider "${configuredProvider}"`,
+            };
+          }
+        }
+      }
+    }
+
+    if (configuredProvider) {
+      const provider = this.providers.get(configuredProvider);
+      if (provider) {
+        const models = provider.getModels();
+        const health = provider.getHealth();
+        if (health.status !== 'unhealthy') {
+          const bestModel = models[0];
+          if (bestModel) {
+            return {
+              model_id: bestModel.model_id,
+              provider: configuredProvider as ProviderId,
+              confidence: 0.9,
+              fallback_level: 0,
+              reason: `Using configured provider "${configuredProvider}" with model "${bestModel.model_id}"`,
+            };
+          }
+        }
+      }
+    }
+
     const entry = this.routingTable[taskType];
     const chain = entry
       ? [entry.preferred, entry.fallback, entry.emergency]
-      : ['gemini-2.5-flash', 'mistral-small-2407', 'code-qwen-7b'];
+      : ['gemini-2.5-flash', 'gpt-4o-mini-2024-07-18', 'claude-haiku-3-5-20241022'];
 
     for (let level = 0; level < chain.length; level++) {
       const modelId = chain[level]!;
@@ -87,7 +139,6 @@ export class RouterEngine {
       if (decision.confidence >= 0.3) return decision;
     }
 
-    // Fallback: iterate providers by priority
     for (const [, provider] of this.providers) {
       for (const model of provider.getModels()) {
         if (provider.getHealth().status === 'healthy' || provider.getHealth().status === 'degraded') {
@@ -116,56 +167,92 @@ export class RouterEngine {
     const requiredCaps: ModelCapability[] = [];
     if (request.response_format === 'json_object') requiredCaps.push('json_output');
 
-    const entry = this.routingTable[taskType];
-    const chain = entry
-      ? [entry.preferred, entry.fallback, entry.emergency]
-      : ['gemini-2.5-flash', 'mistral-small-2407', 'code-qwen-7b'];
+    const configuredProvider = this.config.configuredProvider;
+    const configuredModel = this.config.configuredModel;
 
     const triedModels = new Set<string>();
     let lastError: Error | null = null;
 
-    for (let level = 0; level < chain.length + 1; level++) {
-      let decision: RoutingDecision;
+    const candidateProviders: string[] = [];
+    if (configuredProvider && this.providers.has(configuredProvider)) {
+      candidateProviders.push(configuredProvider);
+    }
+    for (const [pid] of this.providers) {
+      if (!candidateProviders.includes(pid)) candidateProviders.push(pid);
+    }
 
-      if (level < chain.length) {
-        const modelId = chain[level]!;
-        if (triedModels.has(modelId)) continue;
-        decision = this.tryModel(modelId, taskType, estimatedTokens, requiredCaps, level);
-        if (decision.confidence < 0.3) continue;
-        triedModels.add(modelId);
-      } else {
-        decision = this.selectModel(taskType, estimatedTokens, requiredCaps);
-        if (decision.confidence < 0.3 || decision.model_id === 'none') {
-          throw new Error(`No suitable provider for task type "${taskType}": ${decision.reason}`);
-        }
-        if (triedModels.has(decision.model_id)) continue;
-        triedModels.add(decision.model_id);
+    if (candidateProviders.length === 0) {
+      throw new Error(
+        `No suitable provider for task type "${taskType}": No provider available. ` +
+        `Run \`hag doctor\` to check provider health, or \`hag models\` to see available models.`
+      );
+    }
+
+    for (const providerId of candidateProviders) {
+      const provider = this.providers.get(providerId);
+      if (!provider) continue;
+      const health = provider.getHealth();
+      if (health.status === 'unhealthy') continue;
+
+      const models = provider.getModels();
+      let modelsToTry: string[];
+
+      if (configuredProvider && providerId !== configuredProvider) {
+        continue;
       }
 
-      const provider = this.providers.get(decision.provider);
-      if (!provider) continue;
+      if (configuredModel) {
+        const configuredModelExists = models.some(m => m.model_id === configuredModel);
+        modelsToTry = configuredModelExists
+          ? [configuredModel, ...models.filter(m => m.model_id !== configuredModel).map(m => m.model_id)]
+          : models.map(m => m.model_id);
+      } else {
+        const entry = this.routingTable[taskType];
+        const chain = entry
+          ? [entry.preferred, entry.fallback, entry.emergency]
+          : ['gemini-2.5-flash', 'gpt-4o-mini-2024-07-18', 'claude-haiku-3-5-20241022'];
+        const chainModels = chain.filter(id => models.some(m => m.model_id === id));
+        modelsToTry = chainModels.length > 0 ? chainModels : models.map(m => m.model_id);
+      }
 
-      const actualRequest: LLMRequest = { ...request, model_id: decision.model_id };
-      const startTime = Date.now();
+      for (const modelId of modelsToTry) {
+        if (triedModels.has(modelId)) continue;
+        triedModels.add(modelId);
 
-      try {
-        const response = await provider.execute(actualRequest);
-        const cost = this.estimateCost(decision.model_id, response.usage.prompt_tokens, response.usage.completion_tokens);
-        this.projectCost += cost;
-        return { response: { ...response, latency_ms: Date.now() - startTime }, decision };
-      } catch (err) {
-        lastError = err instanceof Error ? err : new Error(String(err));
-        const health = provider.getHealth();
-        if (health) {
-          health.consecutive_failures++;
-          health.failed_requests++;
-          if (health.consecutive_failures >= this.config.unhealthy_threshold) {
-            (health as any).status = 'unhealthy';
-          } else if (health.consecutive_failures >= this.config.degraded_threshold) {
-            (health as any).status = 'degraded';
+        const model = models.find(m => m.model_id === modelId);
+        if (!model) continue;
+
+        const actualRequest: LLMRequest = { ...request, model_id: modelId };
+        const startTime = Date.now();
+
+        try {
+          const response = await provider.execute(actualRequest);
+          const cost = this.estimateCost(modelId, response.usage.prompt_tokens, response.usage.completion_tokens);
+          this.projectCost += cost;
+          return {
+            response: { ...response, latency_ms: Date.now() - startTime },
+            decision: {
+              model_id: modelId,
+              provider: providerId as ProviderId,
+              confidence: 1.0,
+              fallback_level: 0,
+              reason: configuredModel && modelId === configuredModel
+                ? `Using configured model "${modelId}"`
+                : `Model "${modelId}" from provider "${providerId}"`,
+            },
+          };
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+          if (health) {
+            health.consecutive_failures++;
+            health.failed_requests++;
+            if (health.consecutive_failures >= this.config.unhealthy_threshold) {
+              (health as any).status = 'unhealthy';
+            } else if (health.consecutive_failures >= this.config.degraded_threshold) {
+              (health as any).status = 'degraded';
+            }
           }
         }
-        continue;
       }
     }
 
@@ -233,23 +320,18 @@ export class RouterEngine {
     let score = 0;
     const weights = { capability: 0.35, context: 0.25, history: 0.2, latency: 0.1, cost: 0.1 };
 
-    // Capability match
     const matched = requiredCapabilities.filter((c) => model.capabilities.includes(c)).length;
     const total = requiredCapabilities.length || 1;
-    score += weights.capability * (matched / total);
+    score += weights.capability * (total === 0 ? 1 : matched / total);
 
-    // Context window fit
     score += weights.context * Math.min(1, model.context_window / Math.max(estimatedTokens, 1));
 
-    // Historical success
     const successRate =
       health.total_requests > 0 ? (health.total_requests - health.failed_requests) / health.total_requests : 0.95;
     score += weights.history * successRate;
 
-    // Latency score
     score += weights.latency * (1 - Math.min(1, model.typical_latency_ms / 60000));
 
-    // Cost efficiency
     const maxCost = this.config.max_cost_per_task[taskType] ?? 0.1;
     const estCost = this.estimateCost(model.model_id, estimatedTokens, Math.round(estimatedTokens * 0.3));
     const budgetRemaining = Math.max(0, this.config.max_cost_per_project - this.projectCost);

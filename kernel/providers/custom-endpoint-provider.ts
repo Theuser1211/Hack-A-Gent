@@ -1,7 +1,7 @@
 import type { LLMProvider } from '../llm/llm-provider.js';
 import type { LLMRequest, LLMResponse, ProviderHealth, ModelSpec } from '../llm/llm-types.js';
 import type { LLMProviderConfig, StreamCallback } from './provider-types.js';
-import { withRetry, DEFAULT_RETRY_CONFIG } from './provider-types.js';
+import { withRetry, DEFAULT_RETRY_CONFIG, sleep } from './provider-types.js';
 
 const DEFAULT_MODELS: ModelSpec[] = [
   {
@@ -39,6 +39,10 @@ export class CustomEndpointProvider implements LLMProvider {
   private maxRetries: number;
   private timeoutMs: number;
   private models: ModelSpec[];
+  private modelsDiscovered: boolean = false;
+  private requestTimestamps: number[] = [];
+  private maxRpm: number = 40;
+  private throttleWindowMs: number = 60000;
 
   constructor(config: LLMProviderConfig) {
     this.providerId = config.providerId;
@@ -48,7 +52,7 @@ export class CustomEndpointProvider implements LLMProvider {
     this.baseUrl = config.config?.baseUrls?.custom ?? config.config?.baseUrls?.nvidia ?? 'https://integrate.api.nvidia.com/v1';
     this.apiKeyEnvVar = config.providerId === 'nvidia' ? 'NVIDIA_API_KEY' : 'CUSTOM_LLM_API_KEY';
     this.maxRetries = config.config?.maxRetries ?? DEFAULT_RETRY_CONFIG.maxRetries;
-    this.timeoutMs = config.config?.timeoutMs ?? 30000;
+    this.timeoutMs = config.config?.timeoutMs ?? 120000;
     this.models = config.providerId === 'nvidia' ? DEFAULT_MODELS : DEFAULT_MODELS.map(m => ({ ...m, provider: 'custom' as const }));
     this.health = {
       provider_id: config.providerId as 'nvidia' | 'custom',
@@ -59,10 +63,46 @@ export class CustomEndpointProvider implements LLMProvider {
       failed_requests: 0,
       avg_latency_ms: 0,
     };
+
+    this.discoverModels();
   }
 
   getModels(): ModelSpec[] {
     return this.models;
+  }
+
+  private async discoverModels(): Promise<void> {
+    if (this.modelsDiscovered) return;
+    try {
+      const apiKey = this.apiKeyManager.getKey(this.providerId);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(`${this.baseUrl}/models`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const data = (await res.json()) as { data?: Array<{ id: string }> };
+        if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
+          const discovered = data.data.map(m => ({
+            model_id: m.id,
+            provider: this.providerId as 'nvidia' | 'custom',
+            capabilities: ['code_generation', 'reasoning'] as string[],
+            context_window: 128000,
+            supports_json_mode: true,
+            supports_tool_calling: false,
+            typical_latency_ms: 3000,
+            cost_per_1k_input: 0,
+            cost_per_1k_output: 0,
+          } as ModelSpec));
+          this.models = discovered;
+          this.modelsDiscovered = true;
+        }
+      }
+    } catch {
+      // Discovery failed — keep default models
+    }
   }
 
   getHealth(): ProviderHealth {
@@ -97,6 +137,18 @@ export class CustomEndpointProvider implements LLMProvider {
     return { ...this.health };
   }
 
+  private async waitIfThrottled(): Promise<void> {
+    const now = Date.now();
+    const windowStart = now - this.throttleWindowMs;
+    this.requestTimestamps = this.requestTimestamps.filter(t => t > windowStart);
+    if (this.requestTimestamps.length >= this.maxRpm) {
+      const oldest = this.requestTimestamps[0]!;
+      const waitMs = oldest + this.throttleWindowMs - now + 100;
+      if (waitMs > 0) await sleep(waitMs);
+      this.requestTimestamps = this.requestTimestamps.filter(t => t > (Date.now() - this.throttleWindowMs));
+    }
+  }
+
   async execute(request: LLMRequest): Promise<LLMResponse> {
     const apiKey = this.apiKeyManager.getKey(this.providerId);
     const startTime = Date.now();
@@ -104,6 +156,8 @@ export class CustomEndpointProvider implements LLMProvider {
     if (this.rateLimitTracker.isRateLimited(this.providerId)) {
       throw new Error(`${this.providerId} rate limit exceeded`);
     }
+
+    await this.waitIfThrottled();
 
     const body: Record<string, unknown> = {
       model: request.model_id,
@@ -137,7 +191,7 @@ export class CustomEndpointProvider implements LLMProvider {
 
         if (!res.ok) {
           const text = await res.text().catch(() => '‹response body unavailable›');
-          throw Object.assign(new Error(`${this.providerId} API error ${res.status}: ${text}`), { status: res.status });
+          throw Object.assign(new Error(`${this.providerId} API error ${res.status}: ${text}`), { status: res.status, retryAfter: res.headers.get('Retry-After') });
         }
 
         const data = await res.json();
@@ -152,6 +206,7 @@ export class CustomEndpointProvider implements LLMProvider {
 
     const latency = Date.now() - startTime;
 
+    this.requestTimestamps.push(Date.now());
     this.health.total_requests++;
     this.health.consecutive_failures = 0;
     this.health.avg_latency_ms =
@@ -192,6 +247,12 @@ export class CustomEndpointProvider implements LLMProvider {
   async executeStream(request: LLMRequest, onChunk: StreamCallback): Promise<LLMResponse> {
     const apiKey = this.apiKeyManager.getKey(this.providerId);
     const startTime = Date.now();
+
+    if (this.rateLimitTracker.isRateLimited(this.providerId)) {
+      throw new Error(`${this.providerId} rate limit exceeded`);
+    }
+
+    await this.waitIfThrottled();
 
     const body: Record<string, unknown> = {
       model: request.model_id,
@@ -262,6 +323,7 @@ export class CustomEndpointProvider implements LLMProvider {
       }
 
       const latency = Date.now() - startTime;
+      this.requestTimestamps.push(Date.now());
       this.health.total_requests++;
       this.health.avg_latency_ms =
         this.health.total_requests === 1
@@ -285,6 +347,11 @@ export class CustomEndpointProvider implements LLMProvider {
       };
 
       return response;
+    } catch (err) {
+      this.health.failed_requests++;
+      this.health.consecutive_failures++;
+      if (this.health.consecutive_failures >= 5) this.health.status = 'degraded';
+      throw err;
     } finally {
       clearTimeout(timeout);
     }

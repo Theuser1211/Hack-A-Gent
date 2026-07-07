@@ -71,7 +71,7 @@ describe('StrategyGenomeDatabase', () => {
 
   it('multiple runs calculate average correctly', () => {
     const db = new StrategyGenomeDatabase(TEST_SEED + 6);
-    const t = WINNING_STRATEGIES[5]!;
+    const t = WINNING_STRATEGIES[4]!;
     const r = db.getOrCreateGenome(t, 'innovation');
     db.recordRun(r.genomeId, 80, 2, false, 'a');
     db.recordRun(r.genomeId, 90, 1, true, 'b');

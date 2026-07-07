@@ -13,8 +13,6 @@ export function initializeProviders(config?: LLMConfig): ProviderInitializationR
   const llmConfig = config ?? getLLMConfig();
   const deployConfig = getDeployConfig();
 
-  process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY ?? (deployConfig as Record<string, string>).githubToken ?? '';
-  process.env.OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? (deployConfig as Record<string, string>).vercelToken ?? '';
   process.env.GITHUB_TOKEN = process.env.GITHUB_TOKEN ?? deployConfig.githubToken ?? '';
   process.env.VERCEL_TOKEN = process.env.VERCEL_TOKEN ?? deployConfig.vercelToken ?? '';
   process.env.NETLIFY_AUTH_TOKEN = process.env.NETLIFY_AUTH_TOKEN ?? deployConfig.netlifyToken ?? '';
@@ -70,7 +68,10 @@ export function initializeProviders(config?: LLMConfig): ProviderInitializationR
     throw new Error(`No LLM providers available. Errors: ${providerErrors.join('; ')}`);
   }
 
-  const router = new RouterEngine(providers);
+  const router = new RouterEngine(providers, {
+    configuredProvider: llmConfig.provider,
+    configuredModel: llmConfig.model,
+  });
 
   return { router, providers, config: llmConfig };
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import type { LLMRequest } from '../../kernel/llm/llm-types.js';
-import { allMockProviders, mockGeminiProvider, mockLocalProvider } from '../../kernel/llm/mock-providers.js';
+import { allMockProviders, mockGeminiProvider, mockLocalProvider, mockOpenAIProvider } from '../../kernel/llm/mock-providers.js';
 import { RouterEngine } from '../../kernel/llm/router-engine.js';
 
 describe('RouterEngine', () => {
@@ -21,7 +21,7 @@ describe('RouterEngine', () => {
 
     it('selects preferred model for coding task', () => {
       const decision = engine.selectModel('coding', 1000);
-      expect(decision.model_id).toBe('mistral-large-2407');
+      expect(decision.model_id).toBe('gpt-4o-mini-2024-07-18');
     });
 
     it('falls back when preferred fails', () => {
@@ -138,6 +138,74 @@ describe('RouterEngine', () => {
     it('accepts custom config', () => {
       const customEngine = new RouterEngine(allMockProviders, { max_cost_per_project: 0.01, warn_at_pct: 0.5 });
       expect(customEngine).toBeDefined();
+    });
+  });
+
+  describe('BLOCKER 1: Provider Routing', () => {
+    const codingRequest: LLMRequest = {
+      model_id: '',
+      provider: 'gemini',
+      messages: [{ role: 'user', content: 'Write code' }],
+      temperature: 0.3,
+      max_tokens: 4096,
+      response_format: 'text',
+    };
+
+    it('uses only the configured provider when provider is explicitly set', async () => {
+      const engine = new RouterEngine(allMockProviders, { configuredProvider: 'gemini' });
+      const result = await engine.execute('coding', codingRequest);
+      expect(result.decision.provider).toBe('gemini');
+    });
+
+    it('uses the configured model when both provider and model are set', async () => {
+      const engine = new RouterEngine(allMockProviders, {
+        configuredProvider: 'gemini',
+        configuredModel: 'gemini-2.5-pro',
+      });
+      const result = await engine.execute('coding', codingRequest);
+      expect(result.decision.model_id).toBe('gemini-2.5-pro');
+      expect(result.decision.provider).toBe('gemini');
+    });
+
+    it('falls back to other models from same provider if configured model unavailable', async () => {
+      const engine = new RouterEngine(allMockProviders, {
+        configuredProvider: 'gemini',
+        configuredModel: 'nonexistent-model',
+      });
+      const result = await engine.execute('coding', codingRequest);
+      expect(result.decision.provider).toBe('gemini');
+    });
+
+    it('does not route to other providers when provider is configured', async () => {
+      const engine = new RouterEngine(allMockProviders, { configuredProvider: 'gemini' });
+      const result = await engine.execute('coding', codingRequest);
+      expect(result.decision.provider).toBe('gemini');
+    });
+
+    it('selectModel respects configured provider', () => {
+      const engine = new RouterEngine(allMockProviders, { configuredProvider: 'gemini' });
+      const decision = engine.selectModel('coding', 1000);
+      expect(decision.provider).toBe('gemini');
+    });
+
+    it('selectModel respects configured model', () => {
+      const engine = new RouterEngine(allMockProviders, {
+        configuredProvider: 'gemini',
+        configuredModel: 'gemini-2.5-pro',
+      });
+      const decision = engine.selectModel('coding', 1000);
+      expect(decision.model_id).toBe('gemini-2.5-pro');
+      expect(decision.confidence).toBe(1.0);
+    });
+
+    it('getConfiguredProvider returns configured provider', () => {
+      const engine = new RouterEngine(allMockProviders, { configuredProvider: 'gemini' });
+      expect(engine.getConfiguredProvider()).toBe('gemini');
+    });
+
+    it('getConfiguredModel returns configured model', () => {
+      const engine = new RouterEngine(allMockProviders, { configuredModel: 'gemini-2.5-pro' });
+      expect(engine.getConfiguredModel()).toBe('gemini-2.5-pro');
     });
   });
 });

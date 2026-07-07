@@ -318,11 +318,14 @@ export class InternetToolGateway {
       if (!/^[a-zA-Z0-9_.-]+$/.test(owner) || !/^[a-zA-Z0-9_.-]+$/.test(repoName)) {
         throw new Error(`Invalid owner or repoName: owner=${owner}, repoName=${repoName}`);
       }
-      const remoteUrl = `https://x-access-token:${token}@github.com/${owner}/${repoName}.git`;
+      const cleanUrl = `https://github.com/${owner}/${repoName}.git`;
       const safeMessage = commitMessage.replace(/"/g, '\\"').replace(/`/g, '\\`').replace(/\$/g, '\\$');
 
       this.localGitInit(projectDir, repoName);
-      execSync(`git remote add origin ${remoteUrl}`, { cwd: projectDir, stdio: 'pipe', timeout: 10000 });
+      execSync(`git remote add origin ${cleanUrl}`, { cwd: projectDir, stdio: 'pipe', timeout: 10000 });
+      execSync(`git config credential.helper "!f() { echo username=x-access-token; echo password=${token}; }; f"`, {
+        cwd: projectDir, stdio: 'pipe', timeout: 5000,
+      });
       execSync('git add -A', { cwd: projectDir, stdio: 'pipe', timeout: 30000 });
       execSync(`git commit -m "${safeMessage}" --allow-empty`, {
         cwd: projectDir,
@@ -330,6 +333,7 @@ export class InternetToolGateway {
         timeout: 10000,
       });
       execSync('git push -u origin main --force', { cwd: projectDir, stdio: 'pipe', timeout: 60000 });
+      execSync('git config --unset credential.helper', { cwd: projectDir, stdio: 'pipe', timeout: 5000 });
 
       this.log('sync', 'local_to_remote', true);
       return {

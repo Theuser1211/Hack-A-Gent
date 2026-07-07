@@ -258,6 +258,19 @@ async function runFullPipeline(
     stageDone('Executing pipeline', Date.now() - t0);
     divider();
 
+    const projectDir = path.resolve(ctx.workspaceRoot, projectName);
+    stageStart('Type-checking generated project');
+    const typecheckOk = internetOrch.typecheckAndRepair(projectDir);
+    stageDone('Type-checking', Date.now() - t0);
+    labeled('passed', typecheckOk ? 'yes' : 'no (errors remain)');
+
+    stageStart('Starting runtime smoke test');
+    const smokeResult = await internetOrch.runtimeSmokeTest(projectDir);
+    stageDone('Smoke test', Date.now() - t0);
+    labeled('http200', smokeResult.http200 ? 'yes' : 'no');
+
+    divider();
+
     stageStart('Running competition intelligence analysis');
     const intelligence = new CompetitionIntelligence();
     const competitionAnalysis = intelligence.analyze(parsed);
@@ -311,6 +324,26 @@ async function runFullPipeline(
     labeled('review scores', `${finalReport.innovationScore}/${finalReport.technicalDepthScore}/${finalReport.feasibilityScore}/${finalReport.presentationScore}/${finalReport.completenessScore}/${finalReport.maintainabilityScore}/${finalReport.judgeAlignmentScore}`);
     labeled('improvements', String(finalReport.futureImprovements.length));
 
+    const qualityPassed = finalReport.qualityChecks.filter(c => c.passed).length;
+    const qualityFailed = finalReport.qualityChecks.filter(c => !c.passed).length;
+    const failedRequired = finalReport.qualityChecks.filter(c => !c.passed && c.severity === 'required').length;
+    labeled('quality checks', `${qualityPassed} passed, ${qualityFailed} failed (${failedRequired} required)`);
+
+    stageStart('Generating missing scaffolding');
+    const generatedFiles = orchestrator.generateScaffolding(projectDir);
+    stageDone('Generating missing scaffolding', Date.now() - t0);
+    labeled('files generated', generatedFiles.length > 0 ? generatedFiles.map(g => g.file).join(', ') : 'none needed');
+
+    stageStart('Running pipeline benchmarks');
+    const benchmarkComparisons = orchestrator.benchmark(ctx.dataDir);
+    stageDone('Running pipeline benchmarks', Date.now() - t0);
+    if (benchmarkComparisons.length > 0) {
+      const improved = benchmarkComparisons.filter(c => !c.improvement.startsWith('-') && c.improvement !== 'N/A').length;
+      labeled('metrics improved', `${improved}/${benchmarkComparisons.length}`);
+    } else {
+      labeled('benchmark', 'baseline recorded (first run)');
+    }
+
     pipelineFooter();
 
     const deployStatus = result.deployUrl ? result.deployUrl : 'not deployed';
@@ -357,6 +390,17 @@ async function runFullPipeline(
             maintainability: finalReport.maintainabilityScore,
             judgeAlignment: finalReport.judgeAlignmentScore,
           },
+          qualityChecks: finalReport.qualityChecks.map(c => ({
+            check: c.check,
+            passed: c.passed,
+            severity: c.severity,
+          })),
+          benchmarks: benchmarkComparisons.map(c => ({
+            metric: c.metric,
+            oldValue: c.oldValue,
+            newValue: c.newValue,
+            improvement: c.improvement,
+          })),
         }, null, 2),
       );
     } catch (e) { dim(`Trace save error: ${e instanceof Error ? e.message : String(e)}`); }
@@ -393,6 +437,15 @@ async function runFullPipeline(
           overall: finalReport.judgeScorePrediction,
         },
         futureImprovements: finalReport.futureImprovements,
+        qualityChecks: finalReport.qualityChecks.map(c => ({
+          check: c.check,
+          passed: c.passed,
+          severity: c.severity,
+        })),
+        benchmarks: benchmarkComparisons.map(c => ({
+          metric: c.metric,
+          improvement: c.improvement,
+        })),
       },
       metrics: {
         durationMs: elapsed,
@@ -472,9 +525,10 @@ export async function parseInput(input: string): Promise<ParsedInput | null> {
     };
   }
 
-  if (existsSync(input)) {
+  const resolvedInput = path.resolve(input);
+  if (resolvedInput.startsWith(path.resolve(process.cwd())) && existsSync(resolvedInput)) {
     try {
-      const content = readFileSync(input, 'utf-8');
+      const content = readFileSync(resolvedInput, 'utf-8');
       return {
         title: path.basename(input, path.extname(input)),
         problemStatement: content.slice(0, 2000),

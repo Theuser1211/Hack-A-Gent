@@ -88,6 +88,32 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   async checkHealth(): Promise<ProviderHealth> {
+    const apiKey = this.apiKeyManager.getKey('anthropic');
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(`${this.baseUrl}/models`, {
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      this.health = {
+        ...this.health,
+        status: res.ok ? 'healthy' : 'degraded',
+        last_check: new Date().toISOString(),
+        total_requests: this.health.total_requests + 1,
+      };
+    } catch {
+      this.health = {
+        ...this.health,
+        status: 'unhealthy',
+        last_check: new Date().toISOString(),
+        consecutive_failures: this.health.consecutive_failures + 1,
+      };
+    }
     return { ...this.health };
   }
 
@@ -121,7 +147,7 @@ export class AnthropicProvider implements LLMProvider {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
       try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
+        const res = await fetch(`${this.baseUrl}/messages`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -133,7 +159,10 @@ export class AnthropicProvider implements LLMProvider {
         });
 
         if (res.status === 429) {
-          const resetAt = new Date(Date.now() + 60000);
+          const resetAfter = res.headers.get('Retry-After');
+          const resetAt = resetAfter
+            ? new Date(Date.now() + parseInt(resetAfter) * 1000)
+            : new Date(Date.now() + 60000);
           this.rateLimitTracker.recordRateLimit('anthropic', resetAt);
         }
 
@@ -145,7 +174,7 @@ export class AnthropicProvider implements LLMProvider {
 
         if (!res.ok) {
           const text = await res.text().catch(() => '‹response body unavailable›');
-          throw Object.assign(new Error(`Anthropic API error ${res.status}: ${text}`), { status: res.status });
+          throw Object.assign(new Error(`Anthropic API error ${res.status}: ${text}`), { status: res.status, retryAfter: res.headers.get('Retry-After') });
         }
 
         return (await res.json()) as Record<string, unknown>;
@@ -278,6 +307,11 @@ export class AnthropicProvider implements LLMProvider {
           }
         }
       }
+    } catch (err) {
+      this.health.failed_requests++;
+      this.health.consecutive_failures++;
+      if (this.health.consecutive_failures >= 5) this.health.status = 'degraded';
+      throw err;
     } finally {
       clearTimeout(timeout);
     }

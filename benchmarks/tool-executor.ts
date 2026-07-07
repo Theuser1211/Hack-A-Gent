@@ -523,6 +523,19 @@ export class ToolExecutor {
     const command = call.params.command as string;
     const cwd = path.resolve(this.workspaceRoot, (call.params.cwd as string) ?? '.');
 
+    const allowedCommands = ['npm', 'git', 'node', 'npx', 'ls', 'cat', 'echo', 'pwd', 'mkdir', 'cp', 'mv', 'rm', 'touch', 'dir', 'type'];
+    const cmdName = (command ?? '').trim().split(/\s+/)[0];
+    if (!cmdName || !allowedCommands.includes(cmdName)) {
+      return {
+        callId: call.id,
+        success: false,
+        output: null,
+        error: `Command not allowed: ${cmdName}`,
+        durationMs: 0,
+        artifacts: [],
+      };
+    }
+
     try {
       const output = execSync(command, { cwd, encoding: 'utf-8', timeout: 30000, stdio: ['pipe', 'pipe', 'pipe'] });
       return { callId: call.id, success: true, output: output.trim(), error: null, durationMs: 0, artifacts: [] };
@@ -555,9 +568,15 @@ export class ToolExecutor {
           cmd = `npm install`;
           break;
         case 'add':
+          if (!/^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(?:\/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$/.test(pkg)) {
+            return { callId: call.id, success: false, output: null, error: `Invalid package name: ${pkg}`, durationMs: 0, artifacts: [] };
+          }
           cmd = `npm install ${pkg}`;
           break;
         case 'add-dev':
+          if (!/^@?[a-zA-Z0-9][a-zA-Z0-9._-]*(?:\/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$/.test(pkg)) {
+            return { callId: call.id, success: false, output: null, error: `Invalid package name: ${pkg}`, durationMs: 0, artifacts: [] };
+          }
           cmd = `npm install --save-dev ${pkg}`;
           break;
         case 'build':
