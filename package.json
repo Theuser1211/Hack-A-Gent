@@ -1,6 +1,6 @@
 {
   "name": "hag-cli",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Autonomous hackathon engineering CLI — generate complete projects from Devpost URLs",
   "keywords": [
     "ai",
@@ -38,7 +38,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepack": "npm run build && node --eval \"import{rmSync,readdirSync,existsSync}from'fs';import{join}from'path';if(existsSync('dist/tests'))rmSync('dist/tests',{recursive:true});function rmFiles(dir){if(!existsSync(dir))return;for(const e of readdirSync(dir,{withFileTypes:true})){const p=join(dir,e.name);if(e.isDirectory())rmFiles(p);else if(e.name.endsWith('.d.ts')||e.name.endsWith('.d.ts.map')||e.name.endsWith('.js.map')||e.name.endsWith('.map'))rmSync(p);}}rmFiles('dist');\"",
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch cli/index.ts",
     "hackagent": "tsx cli/index.ts",
     "hag": "tsx cli/index.ts",
     "test": "vitest run",
@@ -52,8 +52,7 @@
   "dependencies": {
     "xstate": "^5.19.2",
     "zod": "^3.24.2",
-    "uuid": "^11.1.0",
-    "pino": "^9.6.0"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",

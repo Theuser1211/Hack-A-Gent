@@ -12,15 +12,46 @@ import { Phase12Orchestrator } from '../../benchmarks/phase-12-orchestrator.js';
 import { formatDuration } from '../context.js';
 import { parseDevpostUrl, CompetitionIntelligence, WinningStrategyGenerator, HackathonPipelineOrchestrator } from '../devpost-parser.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
-import { initializeProviders, getProviderInfo } from '../provider-init.js';
+import { initializeProviders } from '../provider-init.js';
 import { RouterEngine } from '../../kernel/llm/router-engine.js';
 import {
-  header, log, success, error, warn, info, dim, labeled, step, divider, Spinner,
+  log, success, error, warn, info, dim, labeled, divider,
   pipelineHeader, pipelineFooter, stageStart, stageDone, stageFail,
 } from '../output.js';
 import { formatError, printError } from '../errors.js';
+import { qualifyHackathon } from '../../kernel/qualification/hackathon-qualifier.js';
+import { evaluateProject, formatEvaluationResult } from '../../kernel/evaluation/real-evaluator.js';
+import { validateWithBrowser, formatBrowserResult } from '../../kernel/validation/browser-validator.js';
+import { recordFailure, updateRunStats, getPreventionStrategies } from '../../kernel/learning/failure-tracker.js';
 
 export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
+  if (args.flags.help === true) {
+    return {
+      success: true,
+      message: `Usage: hackagent run <input> [options]
+
+  Run the full hackathon pipeline.
+
+  Arguments:
+    <input>              Devpost URL, file path, or text spec
+
+  Options:
+    --seed <N>           Set deterministic seed (default: 42)
+    --demo               Demo mode: compilation + simulation only
+    --simulate-only      Simulation only: no execution/deploy
+    --resume             Resume from saved snapshot
+    --json               Output raw JSON
+    --quiet              Minimal output
+    --verbose            Verbose logging
+    --dry-run            Simulate without executing
+
+  Examples:
+    hackagent run https://devpost.com/software/example
+    hackagent run spec.txt
+    hackagent run "Build a chatbot"`,
+    };
+  }
+
   const input = args.positional[0];
   if (!input) {
     printError(formatError(new Error('Usage: hackagent run <input> (devpost URL, file path, or text spec)')));
@@ -52,6 +83,42 @@ export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIRes
   }
   stageDone('Parsing input', Date.now() - t0);
   labeled('title', `"${parsed.title}"`);
+
+  // Qualification gate — check if this hackathon is viable before committing resources
+  stageStart('Qualifying hackathon');
+  const qualResult = qualifyHackathon({
+    title: parsed.title,
+    description: parsed.problemStatement,
+    techStack: parsed.recommendedStack,
+    judgingCriteria: parsed.judgingCriteria,
+    constraints: parsed.constraints,
+    sponsorAPIs: [], // Will be populated from Devpost if available
+    deliverables: parsed.submissionRequirements,
+  });
+  stageDone('Qualifying hackathon', Date.now() - t0);
+
+  const qualIcon = qualResult.status === 'SUPPORTED' ? '✅' :
+                   qualResult.status === 'PARTIALLY_SUPPORTED' ? '⚠️' : '❌';
+  labeled('qualification', `${qualIcon} ${qualResult.status} (${Math.round(qualResult.confidence * 100)}%)`);
+
+  if (qualResult.status === 'UNSUPPORTED') {
+    divider();
+    warn('Hackathon rejected — incompatible requirements:');
+    for (const reason of qualResult.unsupportedReasons) {
+      warn(`  • ${reason}`);
+    }
+    info(qualResult.recommendedAction);
+    log('');
+    return {
+      success: false,
+      message: `Hackathon "${parsed.title}" is unsupported: ${qualResult.unsupportedRequirements.join(', ')}`,
+      data: { qualification: qualResult },
+    };
+  }
+
+  if (qualResult.partialRequirements.length > 0) {
+    info(`Partial support: ${qualResult.partialRequirements.join(', ')} — will fall back to templates`);
+  }
 
   if (demoMode) {
     return runDemoSurfacePipeline(ctx, parsed, seed, dryRun);
@@ -190,7 +257,7 @@ async function runFullPipeline(
     routerEngine = providerResult.router;
     stageDone('Initializing LLM providers', Date.now() - t0);
   } catch (err) {
-    stageDone('Initializing LLM providers', Date.now() - t0);
+    stageFail('Initializing LLM providers', `${Date.now() - t0}ms`);
     printError(formatError(err, 'LLM provider'));
     warn('Falling back to template-based generation (no LLM).\n');
   }
@@ -259,15 +326,62 @@ async function runFullPipeline(
     divider();
 
     const projectDir = path.resolve(ctx.workspaceRoot, projectName);
-    stageStart('Type-checking generated project');
-    const typecheckOk = internetOrch.typecheckAndRepair(projectDir);
-    stageDone('Type-checking', Date.now() - t0);
-    labeled('passed', typecheckOk ? 'yes' : 'no (errors remain)');
 
-    stageStart('Starting runtime smoke test');
-    const smokeResult = await internetOrch.runtimeSmokeTest(projectDir);
-    stageDone('Smoke test', Date.now() - t0);
-    labeled('http200', smokeResult.http200 ? 'yes' : 'no');
+    stageStart('Running full validation');
+    const validation = await internetOrch.validateGeneratedProject(projectDir);
+    stageDone('Full validation', Date.now() - t0);
+    divider();
+
+    const validationSummary = validation.checks.map(c => `${c.name}: ${c.passed ? 'pass' : 'fail'}`).join(', ');
+    labeled('validation', validation.valid ? 'all checks passed' : 'FAILED');
+    labeled('errors', String(validation.errors.length));
+
+    if (!validation.valid) {
+      stageStart('Attempting repair');
+      const typecheckOk = internetOrch.typecheckAndRepair(projectDir);
+      stageDone('Attempting repair', Date.now() - t0);
+      labeled('repair', typecheckOk ? 'succeeded' : 'failed');
+
+      if (typecheckOk) {
+        const revalidation = await internetOrch.validateGeneratedProject(projectDir);
+        if (revalidation.valid) {
+          validation.valid = true;
+          validation.errors = [];
+        } else {
+          validation.errors.push(...revalidation.errors);
+        }
+      }
+
+      if (!validation.valid) {
+        divider();
+        error('Pipeline FAILED');
+        labeled('Project', `"${parsed.title}"`);
+        labeled('Duration', formatDuration(Date.now() - t0));
+        labeled('Errors', String(validation.errors.length));
+        log('');
+        for (const err of validation.errors.slice(0, 10)) {
+          warn(err);
+        }
+        if (validation.errors.length > 10) {
+          info(`${validation.errors.length - 10} more errors not shown`);
+        }
+        log('');
+        info('Next: run `hag explain <project-id>` to review errors, or fix manually and re-run.');
+        return {
+          success: false,
+          message: `Pipeline failed: ${validation.errors.length} validation errors`,
+          data: { errors: validation.errors, validationChecks: validation.checks, projectName },
+        };
+      }
+    }
+
+    stageStart('Starting browser validation');
+    const browserResult = await validateWithBrowser(projectDir, {
+      port: 3099,
+      timeout: 30000,
+    });
+    stageDone('Browser validation', Date.now() - t0);
+    log(formatBrowserResult(browserResult));
 
     divider();
 
@@ -282,7 +396,7 @@ async function runFullPipeline(
     const strategyGenerator = new WinningStrategyGenerator();
     const winningStrategy = strategyGenerator.generate(competitionAnalysis);
     stageDone('Winning strategy', Date.now() - t0);
-    labeled('estimated score', 'N/A (not computed)');
+    labeled('estimated score', String(winningStrategy.estimatedJudgeScore));
     labeled('differentiators', String(winningStrategy.differentiators.length));
 
     // Initialize the full pipeline orchestrator with pre-computed analysis and strategy
@@ -315,7 +429,7 @@ async function runFullPipeline(
       errors: result.errors,
       deployUrl: result.deployUrl,
       taskCount,
-      buildSuccess: result.errors.length === 0,
+      buildSuccess: validation.valid,
       testPassRate: result.completionRate ?? 0.8,
       durationMs: elapsed,
     });
@@ -346,16 +460,66 @@ async function runFullPipeline(
 
     pipelineFooter();
 
+    // Real evaluation — analyze actual generated code
+    stageStart('Evaluating generated project');
+    const evalProjectDir = path.resolve(process.cwd(), projectName);
+    let realEval = null;
+    try {
+      if (existsSync(evalProjectDir)) {
+        realEval = evaluateProject(evalProjectDir);
+        stageDone('Evaluating generated project');
+        log(formatEvaluationResult(realEval));
+      } else {
+        stageDone('Evaluating generated project');
+        info('Project directory not found — skipping real evaluation');
+      }
+    } catch (evalErr) {
+      stageFail('Evaluating generated project');
+      info(`Evaluation error: ${evalErr instanceof Error ? evalErr.message : String(evalErr)}`);
+    }
+
+    // Record run results for learning
+    const pipelineSuccess = realEval?.buildPasses ?? validation.valid;
+    const pipelineScore = realEval?.totalScore ?? 0;
+    updateRunStats(ctx.dataDir, pipelineSuccess, pipelineScore);
+    for (const err of result.errors) {
+      recordFailure(ctx.dataDir, {
+        projectName,
+        phase: result.phase,
+        errorType: 'unknown',
+        errorMessage: err,
+      });
+    }
+    for (const err of validation.errors) {
+      recordFailure(ctx.dataDir, {
+        projectName,
+        phase: 'validation',
+        errorType: 'typescript',
+        errorMessage: err,
+      });
+    }
+
+    // Show prevention strategies for next run
+    const strategies = getPreventionStrategies(ctx.dataDir);
+    if (strategies.length > 0) {
+      info(`💡 Prevention for next run: ${strategies[0]}`);
+    }
+
     const deployStatus = result.deployUrl ? result.deployUrl : 'not deployed';
     divider();
-    success('Pipeline Complete');
+    if (validation.valid) {
+      success('Pipeline Complete');
+    } else {
+      error('Pipeline FAILED - see validation errors above');
+    }
     labeled('Project', `"${parsed.title}"`);
     labeled('Strategy', strategyReport.strategyCompetition.winner.name);
     labeled('Duration', formatDuration(elapsed));
     labeled('Tasks', String(taskCount));
-    labeled('Errors', String(result.errors.length));
+    labeled('Validation', validation.valid ? 'PASSED' : 'FAILED');
+    labeled('Errors', String(validation.errors.length));
     labeled('Deploy', deployStatus);
-    if (result.errors.length === 0) {
+    if (validation.valid) {
       info('Next: run `hag test <project-id>` to run browser tests');
     } else {
       info('Next: run `hag explain <project-id>` to review errors');
@@ -406,13 +570,17 @@ async function runFullPipeline(
     } catch (e) { dim(`Trace save error: ${e instanceof Error ? e.message : String(e)}`); }
 
     return {
-      success: true,
-      message: `Pipeline completed for "${parsed.title}" — ${formatDuration(elapsed)}, ${taskCount} tasks`,
+      success: validation.valid,
+      message: validation.valid
+        ? `Pipeline completed for "${parsed.title}" — ${formatDuration(elapsed)}, ${taskCount} tasks`
+        : `Pipeline failed for "${parsed.title}" — ${validation.errors.length} validation errors`,
       data: {
         projectName,
         phase: result.phase,
         deployUrl: result.deployUrl,
-        errors: result.errors.length,
+        errors: result.errors,
+        validationErrors: validation.errors,
+        validationChecks: validation.checks,
         strategy: strategyReport.strategyCompetition.winner.name,
         predictedReward: strategyReport.rewardPrediction.predicted,
         memoryUpdated: learningOutput.memorySummary.totalProjects,
@@ -436,6 +604,19 @@ async function runFullPipeline(
           judgeAlignment: finalReport.judgeAlignmentScore,
           overall: finalReport.judgeScorePrediction,
         },
+        realEvaluation: realEval ? {
+          score: realEval.totalScore,
+          maxScore: realEval.maxScore,
+          buildPasses: realEval.buildPasses,
+          hasTests: realEval.hasTests,
+          typescriptFiles: realEval.typescriptFiles,
+          componentCount: realEval.componentCount,
+          dimensions: realEval.dimensions.map(d => ({
+            name: d.name,
+            score: d.score,
+            maxScore: d.maxScore,
+          })),
+        } : null,
         futureImprovements: finalReport.futureImprovements,
         qualityChecks: finalReport.qualityChecks.map(c => ({
           check: c.check,
@@ -446,6 +627,10 @@ async function runFullPipeline(
           metric: c.metric,
           improvement: c.improvement,
         })),
+        learning: {
+          preventionStrategies: strategies.length,
+          commonFailures: result.errors.length,
+        },
       },
       metrics: {
         durationMs: elapsed,

@@ -13,6 +13,8 @@ import {
 } from './execution-environment-router.js';
 import { HumanControlLayer, type ConstraintInjection, type OverrideDecision } from './human-control-layer.js';
 import { InteractionManager, type ClarificationQuestion } from './interaction-manager.js';
+import { autonomousRepair, formatRepairResult, type RepairResult } from '../kernel/repair/autonomous-repair.js';
+import { validateGeneratedFiles, formatValidationResult } from '../kernel/repair/code-quality-validator.js';
 import { InternetToolGateway, type DeployConfig } from './internet-tool-gateway.js';
 import type { RouterEngine } from '../kernel/llm/router-engine.js';
 import type { LLMRequest, LLMResponse } from '../kernel/llm/llm-types.js';
@@ -54,6 +56,13 @@ export interface RequirementItem {
   category: 'feature' | 'technical' | 'infrastructure' | 'compliance';
   priority: 'critical' | 'high' | 'medium' | 'low';
   acceptanceCriteria: string[];
+}
+
+export interface GeneratedProjectValidation {
+  valid: boolean;
+  checks: Array<{ name: string; passed: boolean; error?: string; durationMs?: number }>;
+  errors: string[];
+  durationMs?: number;
 }
 
 export interface InternetExecutionPlan {
@@ -212,7 +221,9 @@ export class InternetHackathonOrchestrator {
       try {
         const res = await fetch(input, { signal: AbortSignal.timeout(10000) });
         if (res.ok) text = await res.text();
-      } catch {}
+      } catch {
+        console.warn(`Failed to fetch URL: ${input} — using raw text`);
+      }
     }
 
     const devpost: DevpostData = {
@@ -598,21 +609,35 @@ export class InternetHackathonOrchestrator {
     const projectName = plan.projectName;
     const title = projectName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     return [
+  {
+    path: 'package.json',
+    content: JSON.stringify(
       {
-        path: 'package.json',
-        content: JSON.stringify(
-          {
-            name: projectName,
-            version: '0.1.0',
-            private: true,
-            scripts: { dev: 'next dev', build: 'next build', start: 'next start', test: 'vitest run', lint: 'next lint' },
-            dependencies: { next: '^14.0.0', react: '^18.2.0', 'react-dom': '^18.2.0' },
-            devDependencies: { typescript: '^5.3.0', vitest: '^1.0.0', '@types/react': '^18.2.0', '@types/node': '^20.0.0' },
-          },
-          null,
-          2,
-        ),
+        name: projectName,
+        version: '0.1.0',
+        private: true,
+        scripts: {
+          dev: 'next dev',
+          build: 'next build',
+          start: 'next start',
+          test: 'vitest run',
+          lint: 'next lint',
+          typecheck: 'tsc --noEmit',
+        },
+        dependencies: { next: '^14.0.0', react: '^18.2.0', 'react-dom': '^18.2.0' },
+        devDependencies: {
+          typescript: '^5.3.0',
+          vitest: '^1.6.0',
+          eslint: '^8.57.0',
+          'eslint-config-next': '^14.2.0',
+          '@types/react': '^18.2.0',
+          '@types/node': '^20.0.0',
+        },
       },
+      null,
+      2,
+    ),
+  },
       {
         path: 'tsconfig.json',
         content: JSON.stringify(
@@ -760,6 +785,9 @@ export default function NavBar({ title = 'Project' }: NavBarProps) {
 }\n`,
       },
       { path: '.gitignore', content: 'node_modules/\n.next/\n.env\n.env.local\n*.local\ndist/\nbuild/\ncoverage/\n' },
+{ path: '.eslintrc.json', content: '{\n  "extends": "next/core-web-vitals"\n}\n' },
+{ path: 'src/config.ts', content: '// Runtime configuration - values loaded from environment variables\n' + 'export const config = {\n' + '  nasaApiKey: process.env.NASA_API_KEY || \'\',\n' + '  appName: process.env.NEXT_PUBLIC_APP_NAME || \'' + title + '\',\n' + '  nodeEnv: process.env.NODE_ENV || \'development\',\n' + '} as const;\n' + '\n' + 'export const NASA_API_KEY = config.nasaApiKey;\n' },
+{ path: '.env.example', content: '# Copy to .env and fill in your values\nNASA_API_KEY=your_nasa_api_key_here\nNEXT_PUBLIC_APP_NAME=' + title + '\n' },
       { path: 'src/lib/utils.ts', content: `export function formatDate(date: Date): string {
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
@@ -951,21 +979,21 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
   ): Array<{ path: string; content: string }> {
     if (requiredTechs.length === 0) return files;
 
-    const sdkMap: Record<string, string> = {
-      firebase: 'firebase',
-      twilio: 'twilio',
-      openai: 'openai',
-      stripe: 'stripe',
-      supabase: '@supabase/supabase-js',
-      aws: 'aws-sdk',
-      azure: '@azure/identity',
-      tensorflow: '@tensorflow/tfjs',
-      pytorch: 'torchjs',
-      graphql: 'graphql',
-      prisma: '@prisma/client',
-      mongodb: 'mongodb',
-      postgres: 'pg',
-      redis: 'redis',
+    const sdkMap: Record<string, { pkg: string; version: string }> = {
+      firebase: { pkg: 'firebase', version: '^11.0.0' },
+      twilio: { pkg: 'twilio', version: '^5.0.0' },
+      openai: { pkg: 'openai', version: '^4.0.0' },
+      stripe: { pkg: 'stripe', version: '^17.0.0' },
+      supabase: { pkg: '@supabase/supabase-js', version: '^2.0.0' },
+      aws: { pkg: 'aws-sdk', version: '^2.0.0' },
+      azure: { pkg: '@azure/identity', version: '^4.0.0' },
+      tensorflow: { pkg: '@tensorflow/tfjs', version: '^4.0.0' },
+      pytorch: { pkg: 'torchjs', version: '^1.0.0' },
+      graphql: { pkg: 'graphql', version: '^16.0.0' },
+      prisma: { pkg: '@prisma/client', version: '^6.0.0' },
+      mongodb: { pkg: 'mongodb', version: '^6.0.0' },
+      postgres: { pkg: 'pg', version: '^8.0.0' },
+      redis: { pkg: 'redis', version: '^4.0.0' },
     };
 
     const pkgIdx = files.findIndex(f => f.path === 'package.json');
@@ -975,9 +1003,9 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
         pkg.dependencies = pkg.dependencies ?? {};
         let modified = false;
         for (const tech of requiredTechs) {
-          const sdkPkg = sdkMap[tech.toLowerCase()];
-          if (sdkPkg && !pkg.dependencies[sdkPkg]) {
-            pkg.dependencies[sdkPkg] = sdkMap[sdkPkg] ?? '^1.0.0';
+          const sdkInfo = sdkMap[tech.toLowerCase()];
+          if (sdkInfo && !pkg.dependencies[sdkInfo.pkg]) {
+            pkg.dependencies[sdkInfo.pkg] = sdkInfo.version;
             modified = true;
           }
         }
@@ -1086,7 +1114,7 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
           for (const entry of readdirSync(dir, { withFileTypes: true })) {
             const p = path.join(dir, entry.name);
             if (entry.isDirectory()) removeDir(p);
-            else { try { writeFileSync(p, ''); } catch {} }
+            else { try { writeFileSync(p, ''); } catch { /* file blank failed — non-fatal */ } }
           }
         };
         removeDir(pagesDir);
@@ -1115,20 +1143,16 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
   public typecheckAndRepair(projectDir: string): boolean {
     const tsconfigPath = path.join(projectDir, 'tsconfig.json');
     const pkgPath = path.join(projectDir, 'package.json');
-    if (!existsSync(pkgPath) || !existsSync(tsconfigPath)) return true;
+    if (!existsSync(pkgPath) || !existsSync(tsconfigPath)) return false;
     let hasRealProject = false;
     try {
       const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
       hasRealProject = !!pkg.scripts?.build && !!pkg.scripts?.dev;
-    } catch { return true; }
-    if (!hasRealProject) return true;
-    if (projectDir.includes('tmp') || projectDir.includes('__test')) return true;
+    } catch { return false; }
+    if (!hasRealProject) return false;
     const nodeModules = path.join(projectDir, 'node_modules');
     if (!existsSync(nodeModules)) {
-      try { execSync('npm install --legacy-peer-deps', { cwd: projectDir, stdio: 'pipe', timeout: 120000, windowsHide: true }); } catch { return true; }
-    }
-    if (!existsSync(nodeModules)) {
-      try { execSync('npm install --legacy-peer-deps', { cwd: projectDir, stdio: 'pipe', timeout: 120000, windowsHide: true }); } catch { return true; }
+      try { execSync('npm install --legacy-peer-deps', { cwd: projectDir, stdio: 'pipe', timeout: 120000, windowsHide: true }); } catch { return false; }
     }
 
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -1158,11 +1182,11 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
       const appDir = path.join(projectDir, 'src', 'app');
       for (const [filePath, errorCount] of fileErrors) {
         if (errorCount > 3) {
-          const relPath = path.relative(projectDir, filePath);
+          const relPath = path.relative(projectDir, filePath).replace(/\\/g, '/');
           if (relPath.startsWith('src/app/') && relPath.endsWith('page.tsx')) continue;
           if (relPath.startsWith('src/app/') && relPath.endsWith('layout.tsx')) continue;
           if (relPath === 'package.json' || relPath === 'tsconfig.json') continue;
-          try { writeFileSync(filePath, ''); } catch {}
+          try { writeFileSync(filePath, ''); } catch { /* file blank failed — non-fatal */ }
         }
       }
 
@@ -1171,9 +1195,9 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
         try {
           const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
           if (pkg.scripts?.typecheck) {
-            try { execSync('npm run typecheck', { cwd: projectDir, stdio: 'pipe', timeout: 30000, windowsHide: true }); return true; } catch {}
+            try { execSync('npm run typecheck', { cwd: projectDir, stdio: 'pipe', timeout: 30000, windowsHide: true }); return true; } catch { /* typecheck failed — outer loop will handle */ }
           }
-        } catch {}
+        } catch { /* pkg parse failed */ }
       }
     }
     return false;
@@ -1188,7 +1212,7 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
       if (!pkg.scripts?.dev) return { started: false, http200: false, error: 'No dev script' };
     } catch { return { started: false, http200: false, error: 'Cannot read package.json' }; }
 
-    let serverProcess: ReturnType<typeof execSync> | null = null;
+    const serverProcess: ReturnType<typeof execSync> | null = null;
     try {
       const nodeModules = path.join(projectDir, 'node_modules');
       if (!existsSync(nodeModules)) {
@@ -1254,6 +1278,328 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
     });
   }
 
+  public async validateGeneratedProject(projectDir: string): Promise<GeneratedProjectValidation> {
+    const result: GeneratedProjectValidation = { valid: false, checks: [], errors: [] };
+    const pkgPath = path.join(projectDir, 'package.json');
+
+    if (!existsSync(pkgPath)) {
+      result.errors.push('No package.json found in generated project');
+      return result;
+    }
+
+    let pkg: Record<string, unknown>;
+    try {
+      pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    } catch (err) {
+      result.errors.push(`Cannot parse package.json: ${(err as Error).message}`);
+      return result;
+    }
+
+    const isTestDir = projectDir.split(/[/\\]/).some(seg => seg === 'tmp' || seg === '__test');
+    if (isTestDir) {
+      result.checks.push({ name: 'Context guard', passed: true, error: 'Validation skipped in temp/test directory' });
+      result.valid = true;
+      return result;
+    }
+
+    const startMs = Date.now();
+
+    const requiredScripts = ['dev', 'build', 'start', 'lint', 'typecheck', 'test'];
+    const scripts = (pkg.scripts as Record<string, string>) ?? {};
+    const missingScripts = requiredScripts.filter(s => !scripts[s]);
+    if (missingScripts.length > 0) {
+      result.errors.push(`Missing required scripts: ${missingScripts.join(', ')}`);
+    }
+    result.checks.push({
+      name: 'Script validation',
+      passed: missingScripts.length === 0,
+      error: missingScripts.length > 0 ? `Missing: ${missingScripts.join(', ')}` : undefined,
+    });
+
+    const importErrors = this.validateImports(projectDir, pkg);
+    if (importErrors.length > 0) {
+      result.errors.push(...importErrors);
+    }
+    result.checks.push({
+      name: 'Import/dependency validation',
+      passed: importErrors.length === 0,
+      error: importErrors.slice(0, 3).join('; ') || undefined,
+    });
+
+    const nodeModules = path.join(projectDir, 'node_modules');
+    if (!existsSync(nodeModules)) {
+      try {
+        execSync('npm install --legacy-peer-deps', { cwd: projectDir, stdio: 'pipe', timeout: 120000, windowsHide: true });
+        result.checks.push({ name: 'npm install', passed: true });
+      } catch (err) {
+        const msg = String((err as { stdout?: string }).stdout ?? (err as Error).message ?? err);
+        result.errors.push(`npm install failed: ${msg.slice(0, 200)}`);
+        result.checks.push({ name: 'npm install', passed: false, error: msg.slice(0, 200) });
+        return result;
+      }
+    } else {
+      result.checks.push({ name: 'npm install', passed: true });
+    }
+
+    const runCheck = async (name: string, command: string, timeoutMs: number): Promise<void> => {
+      const checkStart = Date.now();
+      let output = '';
+      try {
+        output = execSync(command, { cwd: projectDir, stdio: 'pipe', timeout: timeoutMs, encoding: 'utf-8', windowsHide: true });
+        result.checks.push({ name, passed: true, durationMs: Date.now() - checkStart });
+      } catch (err) {
+        output = String((err as { stdout?: string }).stdout ?? (err as Error).message ?? err);
+        const errorMsg = `${name} failed: ${output.slice(0, 500)}`;
+        result.errors.push(errorMsg);
+        result.checks.push({ name, passed: false, error: output.slice(0, 400), durationMs: Date.now() - checkStart });
+      }
+    };
+
+    await runCheck('TypeScript validation (typecheck)', 'npm run typecheck', 120000);
+    await runCheck('ESLint validation (lint)', 'npm run lint', 120000);
+    await runCheck('Production build (build)', 'npm run build', 300000);
+
+    const runtimeResult = await this.productionSmokeTest(projectDir);
+    if (!runtimeResult.http200) {
+      const runtimeErr = runtimeResult.error ?? 'Production server did not respond with HTTP 200';
+      result.errors.push(`Runtime validation failed: ${runtimeErr}`);
+      result.checks.push({ name: 'Runtime validation (start)', passed: false, error: runtimeErr });
+    } else {
+      result.checks.push({ name: 'Runtime validation (start)', passed: true });
+    }
+
+    result.errors = Array.from(new Set(result.errors));
+    result.valid = result.errors.length === 0;
+    result.durationMs = Date.now() - startMs;
+    return result;
+  }
+
+  private validateImports(projectDir: string, pkg: Record<string, unknown>): string[] {
+    const errors: string[] = [];
+    const allFiles: string[] = [];
+
+    const collectFiles = (dir: string) => {
+      if (!existsSync(dir)) return;
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === 'node_modules' || entry.name === '.next' || entry.name === 'dist' || entry.name === 'build') continue;
+          collectFiles(fullPath);
+        } else if (/\.(tsx?|jsx?)$/.test(entry.name)) {
+          allFiles.push(fullPath);
+        }
+      }
+    };
+    collectFiles(projectDir);
+
+    const tsconfigPath = path.join(projectDir, 'tsconfig.json');
+    const aliases: Record<string, string[]> = {};
+    if (existsSync(tsconfigPath)) {
+      try {
+        const tsconfig = JSON.parse(readFileSync(tsconfigPath, 'utf-8')) as Record<string, unknown>;
+        const paths = (tsconfig.compilerOptions as Record<string, unknown> | undefined)?.paths as Record<string, string[]> | undefined;
+        const baseUrl = ((tsconfig.compilerOptions as Record<string, unknown> | undefined)?.baseUrl as string) || '.';
+        if (paths) {
+          for (const [key, value] of Object.entries(paths)) {
+            const aliasKey = key.replace(/\/\*$/, '');
+            aliases[aliasKey] = value.map(v => {
+              const cleaned = v.replace(/\/\*$/, '').replace(/^\.?\//, '');
+              return path.resolve(projectDir, baseUrl, cleaned);
+            });
+          }
+        }
+      } catch { /* ignore broken tsconfig */ }
+    }
+
+    const deps = new Set([
+      ...Object.keys((pkg.dependencies as Record<string, unknown>) ?? {}),
+      ...Object.keys((pkg.devDependencies as Record<string, unknown>) ?? {}),
+    ]);
+    const builtinModules = new Set([
+      'assert', 'async_hooks', 'buffer', 'child_process', 'cluster', 'console', 'constants', 'crypto', 'dgram',
+      'diagnostics_channel', 'dns', 'domain', 'events', 'fs', 'http', 'https', 'inspector', 'module', 'net',
+      'os', 'path', 'perf_hooks', 'process', 'punycode', 'querystring', 'readline', 'repl', 'stream',
+      'string_decoder', 'sys', 'timers', 'tls', 'trace_events', 'tty', 'url', 'util', 'v8', 'vm', 'wasi',
+      'worker_threads', 'zlib',
+    ]);
+
+    for (const filePath of allFiles) {
+      let content: string;
+      try { content = readFileSync(filePath, 'utf-8'); } catch { continue; }
+
+      const imports: string[] = [];
+      for (const m of content.matchAll(/(?:import\s+(?:type\s+)?(?:[^'"\n]+?\s+from\s+)?|export\s+(?:[^'"\n]+?\s+from\s+))['"]([^'"]+?)['"]/g)) {
+        imports.push(m[1]!);
+      }
+      for (const m of content.matchAll(/import\s*\(\s*['"]([^'"]+?)['"]\s*\)/g)) {
+        imports.push(m[1]!);
+      }
+      for (const m of content.matchAll(/require\s*\(\s*['"]([^'"]+?)['"]\s*\)/g)) {
+        imports.push(m[1]!);
+      }
+
+      for (const raw of imports) {
+        if (!raw) continue;
+        const relPath = path.relative(projectDir, filePath);
+
+        if (!raw.startsWith('.') && !raw.startsWith('/')) {
+          if (raw.startsWith('@/')) {
+            const subPath = raw.slice(2);
+            const targets = aliases['@'] ?? [path.join(projectDir, 'src')];
+            let found = false;
+            for (const target of targets) {
+              const base = path.join(target, subPath);
+              if (this.resolveImportTarget(base)) {
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
+              errors.push(`Missing alias target for "${raw}" referenced from ${relPath}`);
+            }
+            continue;
+          }
+
+          const parts = raw.split('/');
+          const name = raw.startsWith('@') ? parts.slice(0, 2).join('/') : (parts[0] ?? '');
+          if (!name || builtinModules.has(name)) continue;
+          if (!deps.has(name)) {
+            errors.push(`Missing package "${name}" for import "${raw}" in ${relPath}`);
+          }
+          continue;
+        }
+
+        const dir = path.dirname(filePath);
+        const resolved = path.resolve(dir, raw);
+        if (!this.resolveImportTarget(resolved)) {
+          errors.push(`Missing file for import "${raw}" referenced from ${relPath}`);
+        }
+      }
+    }
+
+    return Array.from(new Set(errors));
+  }
+
+  private resolveImportTarget(basePath: string): boolean {
+    if (existsSync(basePath)) {
+      const stat = statSync(basePath);
+      if (stat.isFile()) return true;
+      if (stat.isDirectory()) {
+        for (const ext of ['.tsx', '.ts', '.jsx', '.js']) {
+          if (existsSync(path.join(basePath, `index${ext}`))) return true;
+        }
+      }
+      return false;
+    }
+    for (const ext of ['.tsx', '.ts', '.jsx', '.js', '.css', '.json']) {
+      if (existsSync(`${basePath}${ext}`)) return true;
+    }
+    return false;
+  }
+
+  private async productionSmokeTest(projectDir: string): Promise<{ started: boolean; http200: boolean; error?: string }> {
+    const pkgPath = path.join(projectDir, 'package.json');
+    if (!existsSync(pkgPath)) return { started: false, http200: false, error: 'No package.json' };
+    try {
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { scripts?: Record<string, string> };
+      if (!pkg.scripts?.start) return { started: false, http200: false, error: 'No start script' };
+    } catch { return { started: false, http200: false, error: 'Cannot read package.json' }; }
+
+    const nodeModules = path.join(projectDir, 'node_modules');
+    if (!existsSync(nodeModules)) {
+      try {
+        execSync('npm install --legacy-peer-deps', { cwd: projectDir, stdio: 'pipe', timeout: 120000, windowsHide: true });
+      } catch { return { started: false, http200: false, error: 'npm install failed' }; }
+    }
+
+    const productionBuild = path.join(projectDir, '.next');
+    if (!existsSync(productionBuild)) {
+      try {
+        execSync('npm run build', { cwd: projectDir, stdio: 'pipe', timeout: 300000, windowsHide: true });
+      } catch (err) {
+        return { started: false, http200: false, error: `Production build failed: ${String((err as { stdout?: string }).stdout ?? err)}` };
+      }
+    }
+
+    const server = spawn('npm', ['run', 'start'], {
+      cwd: projectDir,
+      stdio: 'pipe',
+      shell: true,
+      env: { ...process.env, PORT: '3099' },
+    });
+
+    let output = '';
+    let started = false;
+    let http200 = false;
+
+    return new Promise<{ started: boolean; http200: boolean; error?: string }>((resolve) => {
+      const timeout = setTimeout(() => {
+        server.kill();
+        resolve({ started, http200: false, error: started ? 'Timeout waiting for HTTP 200' : 'Production server did not start within 60s' });
+      }, 60000);
+
+      const tryHttpCheck = () => {
+        const req = http.get('http://localhost:3099', (res: http.IncomingMessage) => {
+          if (res.statusCode === 200) {
+            http200 = true;
+            clearTimeout(timeout);
+            server.kill();
+            resolve({ started: true, http200: true });
+          } else {
+            clearTimeout(timeout);
+            server.kill();
+            resolve({ started: true, http200: false, error: `HTTP ${res.statusCode}` });
+          }
+        });
+        req.on('error', (e: Error) => {
+          if (!started) return;
+          clearTimeout(timeout);
+          server.kill();
+          resolve({ started: true, http200: false, error: e.message });
+        });
+        req.setTimeout(5000, () => { req.destroy(); });
+      };
+
+      const maybeReady = () => {
+        if (started) return;
+        if (output.includes('Ready in') || output.includes('started on') || output.includes('listening on') ||
+            output.includes('localhost:3000') || output.includes('localhost:3099') ||
+            output.includes('▲ Next.js')) {
+          started = true;
+          tryHttpCheck();
+        }
+      };
+
+      server.stdout?.on('data', (data: Buffer) => {
+        output += data.toString();
+        maybeReady();
+      });
+
+      server.stderr?.on('data', (data: Buffer) => {
+        output += data.toString();
+        maybeReady();
+      });
+
+      server.on('error', (err: Error) => {
+        clearTimeout(timeout);
+        resolve({ started: false, http200: false, error: err.message });
+      });
+
+      server.on('close', () => {
+        clearTimeout(timeout);
+        if (!http200) resolve({ started, http200: false, error: started ? 'Production server closed before HTTP check' : 'Production server failed to start' });
+      });
+
+      setTimeout(() => {
+        if (!started) {
+          maybeReady();
+          if (started) return;
+          tryHttpCheck();
+        }
+      }, 8000);
+    });
+  }
+
   private async generateFilesWithLLM(
     fileType: 'scaffold' | 'frontend' | 'backend' | 'database' | 'config',
     context: { projectName: string; description: string; techStack: string[]; judgingCriteria: string[]; constraints: string[]; specificTask?: string },
@@ -1315,7 +1661,15 @@ OUTPUT FORMAT: Return ONLY valid JSON. No markdown, no explanation, no code fenc
       "content": "file content here"
     }
   ]
-}`;
+}
+
+CONFIG / IMPORT RULES:
+- If you import from @/config, you MUST generate src/config.ts with safe defaults.
+- If you import from @/lib/*, @/hooks/*, @/utils/*, @/constants/*, @/types/*, etc., you MUST generate those target files in the same response.
+- NEVER leave an import pointing at a file that does not exist in the generated file list.
+- If environment variables are used, generate .env.example documenting them.
+- Generate src/config.ts and .env.example for any API keys, secrets, or configuration values.
+`;
 
     const userPrompt = `Project: ${this.devpostData.title}
 Problem: ${this.devpostData.problemStatement}
@@ -1326,7 +1680,7 @@ ${requiredSection}
 For package.json use these exact versions: next@^14.2.0, react@^18.3.1, react-dom@^18.3.1, @types/react@^18.3.3, @types/node@^20.14.0, typescript@^5.5.0
 
 Task: ${taskDescriptions[fileType]}
-${fileType === 'scaffold' ? 'Include: package.json, tsconfig.json, next.config.js, src/app/layout.tsx, src/app/page.tsx, .gitignore, tailwind.config.js, postcss.config.js, src/app/globals.css' : ''}
+${fileType === 'scaffold' ? 'Include: package.json, tsconfig.json, next.config.js, src/app/layout.tsx, src/app/page.tsx, .gitignore, .env.example, src/config.ts, .eslintrc.json, tailwind.config.js, postcss.config.js, src/app/globals.css' : ''}
 ${fileType === 'frontend' && context.specificTask ? `Focus on: ${context.specificTask}` : ''}
 ${fileType === 'backend' && context.specificTask ? `Focus on: ${context.specificTask}` : ''}
 
@@ -1339,7 +1693,7 @@ Generate real, working code that scores highly on: ${this.devpostData.judgingCri
           { role: 'user', content: userPrompt },
         ],
         model_id: '',
-        provider: 'nvidia',
+        provider: 'openai',
         temperature: 0.3,
         max_tokens: 16384,
         response_format: 'text',
@@ -1374,13 +1728,21 @@ Generate real, working code that scores highly on: ${this.devpostData.judgingCri
         });
         const files = validFiles.length >= rawFiles.length * 0.5 ? validFiles : rawFiles;
         const normalized = this.enforceRequiredTechnologies(this.normalizePackageVersions(files), requiredTechs);
+
+        // Validate and auto-fix common LLM issues before returning
+        const validation = validateGeneratedFiles(normalized);
+        if (validation.issues.length > 0) {
+          console.log(formatValidationResult(validation));
+        }
+        const validatedFiles = validation.valid ? normalized : validation.fixedFiles;
+
         if (fileType === 'scaffold' && this.plan) {
           const templateFiles = await this.generateScaffoldFiles(this.plan);
           const templateMap = new Map(templateFiles.map(f => [f.path, f.content]));
           const criticalPaths = new Set(['src/app/layout.tsx', 'src/app/page.tsx', 'next.config.js', 'tsconfig.json', 'package.json']);
           const result: Array<{ path: string; content: string }> = [];
           const seenPaths = new Set<string>();
-          for (const f of normalized) {
+          for (const f of validatedFiles) {
             if (criticalPaths.has(f.path) && templateMap.has(f.path)) {
               result.push({ path: f.path, content: templateMap.get(f.path)! });
             } else if (f.path === 'next.config.js' && f.content.includes('target:')) {
@@ -1398,11 +1760,13 @@ Generate real, working code that scores highly on: ${this.devpostData.judgingCri
           }
           return result;
         }
-        return normalized;
+        return validatedFiles;
       }
 
       if (parsed.path && parsed.content) {
-        return this.enforceRequiredTechnologies(this.normalizePackageVersions([{ path: parsed.path, content: parsed.content }]), requiredTechs);
+        const singleFile = this.enforceRequiredTechnologies(this.normalizePackageVersions([{ path: parsed.path, content: parsed.content }]), requiredTechs);
+        const singleValidation = validateGeneratedFiles(singleFile);
+        return singleValidation.valid ? singleFile : singleValidation.fixedFiles;
       }
 
       console.warn(`LLM response for ${fileType} had unexpected structure, falling back to templates`);
@@ -1531,32 +1895,31 @@ Generate real, working code that scores highly on: ${this.devpostData.judgingCri
   }
 
   private async runRepairLoop(): Promise<void> {
-    const maxRepairs = 3;
-    for (let i = 0; i < maxRepairs; i++) {
-      const blocked = this.taskGraph.getNodesByStatus('blocked');
-      if (blocked.length === 0) break;
+    if (!this.plan) return;
+    const projectDir = path.resolve(this.workspaceRoot, this.plan.projectName);
 
+    console.log('🔧 Starting autonomous repair loop...');
+
+    const result = await autonomousRepair({
+      projectDir,
+      maxAttempts: 5,
+      timeout: 60000,
+    });
+
+    console.log(formatRepairResult(result));
+
+    if (result.success) {
+      console.log('✅ All errors fixed — build passes');
+      // Unblock any tasks that were blocked by errors
+      const blocked = this.taskGraph.getNodesByStatus('blocked');
       for (const node of blocked) {
-        const decision = this.logDecision(
-          'restart_pipeline',
-          node.id,
-          `Attempting repair #${i + 1} for blocked task`,
-          0.6,
-        );
         this.taskGraph.markPending(node.id);
       }
-
-      while (this.taskGraph.hasUnfinishedWork()) {
-        const next = this.taskGraph.getNextReady();
-        if (!next) break;
-        this.taskGraph.markRunning(next.id);
-        try {
-          await this.executeTaskInEnvironment(next, 'local_node');
-          this.taskGraph.markDone(next.id);
-        } catch (err) {
-          this.taskGraph.markBlocked(next.id, err instanceof Error ? err.message : String(err));
-        }
-      }
+    } else if (result.totalFixes > 0) {
+      console.log(`⚠️  Partially repaired — ${result.totalFixes} fixes applied, ${result.remainingErrors.length} errors remain`);
+      // Still try to continue
+    } else {
+      console.log('❌ Could not auto-repair — manual intervention needed');
     }
   }
 

@@ -126,6 +126,7 @@ export class InternetToolGateway {
     const token = this.getGitHubToken();
     if (!token) {
       this.log('github', 'create_mock', true);
+      console.warn('No GITHUB_TOKEN — using mock data (not real)');
       return {
         success: true,
         repoUrl: `https://github.com/mock/${config.repoName}`,
@@ -185,6 +186,7 @@ export class InternetToolGateway {
     const token = this.getGitHubToken();
     if (!token) {
       this.log('github', 'push_mock', true);
+      console.warn('No GITHUB_TOKEN — using mock data (not real)');
       return {
         success: true,
         repoUrl: `https://github.com/mock/${repoName}`,
@@ -291,7 +293,7 @@ export class InternetToolGateway {
         stdio: 'pipe',
         timeout: 10000,
       });
-    } catch {}
+    } catch { /* git init failed — will continue without version control */ }
   }
 
   async syncLocalToRemote(
@@ -302,6 +304,7 @@ export class InternetToolGateway {
     const token = this.getGitHubToken();
     if (!token) {
       this.log('sync', 'local_to_remote_mock', true);
+      console.warn('No GITHUB_TOKEN — using mock data (not real)');
       return {
         success: true,
         repoUrl: `https://github.com/mock/${repoName}`,
@@ -319,10 +322,16 @@ export class InternetToolGateway {
         throw new Error(`Invalid owner or repoName: owner=${owner}, repoName=${repoName}`);
       }
       const cleanUrl = `https://github.com/${owner}/${repoName}.git`;
-      const safeMessage = commitMessage.replace(/"/g, '\\"').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+      const safeMessage = commitMessage
+        .replace(/[\r\n]/g, ' ')
+        .replace(/"/g, '\\"')
+        .replace(/`/g, '\\`')
+        .replace(/\$/g, '\\$')
+        .replace(/\(/g, '\\(')
+        .replace(/\)/g, '\\)');
 
       this.localGitInit(projectDir, repoName);
-      execSync(`git remote add origin ${cleanUrl}`, { cwd: projectDir, stdio: 'pipe', timeout: 10000 });
+      execSync(`git remote add origin "${cleanUrl}"`, { cwd: projectDir, stdio: 'pipe', timeout: 10000 });
       execSync(`git config credential.helper "!f() { echo username=x-access-token; echo password=${token}; }; f"`, {
         cwd: projectDir, stdio: 'pipe', timeout: 5000,
       });
@@ -555,6 +564,10 @@ export class InternetToolGateway {
       const fullRoot = path.resolve(this.config.workingDir, rootDir);
       for (const f of files) {
         const fullPath = path.resolve(fullRoot, f.path);
+        if (!fullPath.startsWith(fullRoot)) {
+          this.log('file', 'write_block', false);
+          continue;
+        }
         mkdirSync(path.dirname(fullPath), { recursive: true });
         writeFileSync(fullPath, f.content, 'utf-8');
       }

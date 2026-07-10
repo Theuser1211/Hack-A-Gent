@@ -82,6 +82,15 @@ export interface FinalReport {
 }
 
 export async function parseDevpostUrl(url: string): Promise<DevpostParseResult> {
+  const parsed = new URL(url);
+  const allowedHosts = ['devpost.com', 'www.devpost.com'];
+  if (!allowedHosts.includes(parsed.hostname)) {
+    throw new Error(`URL must be a Devpost URL (devpost.com). Got: ${parsed.hostname}`);
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new Error(`URL must use http or https protocol. Got: ${parsed.protocol}`);
+  }
+
   const response = await fetch(url, {
     headers: { 'User-Agent': 'Hack-A-Gent/1.0 (devpost parser)' },
     signal: AbortSignal.timeout(15000),

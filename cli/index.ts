@@ -47,7 +47,15 @@ function parseArgs(argv: string[]): CLIArgs {
 
   const aliasKeys = Object.keys(COMMAND_ALIASES) as CommandName[];
   const allValid = [...VALID_COMMANDS, ...aliasKeys];
+
+  if (rawCommand === 'version' || rawCommand === '--version' || rawCommand === '-v') {
+    return { command: 'version' as CommandName, subcommand: undefined, positional: [], flags: {} };
+  }
+  if (rawCommand === 'help' || rawCommand === '--help' || rawCommand === '-h') {
+    return { command: 'help' as CommandName, subcommand: undefined, positional: [], flags: {} };
+  }
   if (!allValid.includes(command)) {
+    console.error(`  Unknown command: '${rawCommand}'. Run 'hag help' to see available commands.`);
     return { command: 'help' as CommandName, subcommand: undefined, positional: [], flags: {} };
   }
 

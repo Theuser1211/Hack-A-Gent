@@ -44,6 +44,7 @@ import { ToolExecutionGateway } from '../benchmarks/tool-execution-gateway.js';
 import { UnifiedRuntimeOS } from '../benchmarks/unified-runtime-os.js';
 
 import { formatDuration as fmtDuration } from './context.js';
+import { log, error, success, info, labeled, divider, stageStart, stageDone, stageFail } from './output.js';
 
 export type CLIMode = 'run' | 'demo' | 'simulate-only' | 'resume' | 'swarm' | 'run-company';
 
@@ -840,15 +841,15 @@ export async function runHackAgentFromArgs(
     flags: args.flags,
   };
 
-  console.log(`\n  Hack-Agent — Mode: ${mode.toUpperCase()} (seed ${seed})`);
-  console.log(`  ${'='.repeat(50)}\n`);
+  log(`\n  Hack-Agent — Mode: ${mode.toUpperCase()} (seed ${seed})`);
+  log(`  ${'='.repeat(50)}\n`);
 
-  console.log('  • Parsing input...');
+  log('  • Parsing input...');
   session.parsedSpec = await parseInput(input, seed);
   if (!session.parsedSpec) {
     return { success: false, message: 'Failed to parse input.' };
   }
-  console.log(`    title: "${session.parsedSpec.title}"`);
+  log(`    title: "${session.parsedSpec.title}"`);
 
   let success = false;
   switch (mode) {
@@ -875,7 +876,7 @@ export async function runHackAgentFromArgs(
 
   if (mode !== 'swarm' && mode !== 'run-company') {
     const report = formatReport(session, success, startTime);
-    console.log(report);
+    log(report);
   }
 
   return { success, message: success ? 'Execution completed successfully.' : 'Execution did not complete.' };
@@ -888,9 +889,9 @@ async function main(): Promise<void> {
   const startTime = Date.now();
 
   if (!input && mode !== 'resume') {
-    console.error('Usage: npx hack-agent run <devpost-url> [--demo] [--simulate-only] [--resume] [--json]');
-    console.error('       npx hack-agent swarm <devpost-url> [--agents=N] [--mode=balanced] [--json]');
-    console.error(
+    error('Usage: npx hack-agent run <devpost-url> [--demo] [--simulate-only] [--resume] [--json]');
+    error('       npx hack-agent swarm <devpost-url> [--agents=N] [--mode=balanced] [--json]');
+    error(
       '       npx hack-agent run-company <devpost-url> [--swarm-size=5] [--fast-mode] [--simulate-only] [--json]',
     );
     process.exitCode = 1;
@@ -912,17 +913,17 @@ async function main(): Promise<void> {
     flags,
   };
 
-  console.log(`\n  Hack-Agent — Mode: ${mode.toUpperCase()} (seed ${seed})`);
-  console.log(`  ${'='.repeat(50)}\n`);
+  log(`\n  Hack-Agent — Mode: ${mode.toUpperCase()} (seed ${seed})`);
+  log(`  ${'='.repeat(50)}\n`);
 
-  console.log('  • Parsing input...');
+  log('  • Parsing input...');
   session.parsedSpec = await parseInput(input, seed);
   if (!session.parsedSpec) {
-    console.error('  ✗ Failed to parse input.');
+    error('  ✗ Failed to parse input.');
     process.exitCode = 1;
     return;
   }
-  console.log(`    title: "${session.parsedSpec.title}"`);
+  log(`    title: "${session.parsedSpec.title}"`);
 
   let success = false;
   switch (mode) {
@@ -949,10 +950,10 @@ async function main(): Promise<void> {
 
   if (mode !== 'swarm' && mode !== 'run-company') {
     const report = formatReport(session, success, startTime);
-    console.log(report);
+    log(report);
 
     if (flags.json === true) {
-      console.log(
+      log(
         JSON.stringify(
           {
             mode: session.mode,
@@ -987,5 +988,5 @@ async function main(): Promise<void> {
 
 main().catch((err) => {
   console.error('Fatal error:', err instanceof Error ? err.message : String(err));
-  process.exit(1);
+  process.exitCode = 1;
 });

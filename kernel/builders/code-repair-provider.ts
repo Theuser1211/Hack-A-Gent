@@ -146,7 +146,7 @@ export class DefaultCodeRepairProvider implements CodeRepairProvider {
       try {
         JSON.parse(repaired);
         return repaired;
-      } catch {}
+      } catch { /* repaired JSON still invalid — try next strategy */ }
       const lines = repaired.split('\n');
       const validLines = lines.filter((l) => {
         try {
@@ -165,7 +165,7 @@ export class DefaultCodeRepairProvider implements CodeRepairProvider {
         try {
           JSON.parse(attempt);
           return attempt;
-        } catch {}
+        } catch { /* filtered JSON still invalid — return fallback */ }
       }
       return JSON.stringify({ repaired: true, note: 'Content was corrupted and repaired' });
     }

@@ -383,7 +383,7 @@ class GlobalStrategyGenome {
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
         (globalThis as UnknownGlobal).localStorage.setItem(this.storageKey, data);
       }
-    } catch {}
+    } catch { /* localStorage unavailable or full — non-fatal */ }
   }
 
   private loadFromStorage(): void {
@@ -409,7 +409,7 @@ class GlobalStrategyGenome {
           }
         }
       }
-    } catch {}
+    } catch { /* localStorage unavailable — using defaults */ }
   }
 }
 
