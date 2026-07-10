@@ -84,9 +84,9 @@ export interface FinalReport {
 
 export async function parseDevpostUrl(url: string): Promise<DevpostParseResult> {
   const parsed = new URL(url);
-  const allowedHosts = ['devpost.com', 'www.devpost.com'];
-  if (!allowedHosts.includes(parsed.hostname)) {
-    throw new Error(`URL must be a Devpost URL (devpost.com). Got: ${parsed.hostname}`);
+  const hostname = parsed.hostname;
+  if (hostname !== 'devpost.com' && !hostname.endsWith('.devpost.com')) {
+    throw new Error(`URL must be a Devpost URL (devpost.com). Got: ${hostname}`);
   }
   if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
     throw new Error(`URL must use http or https protocol. Got: ${parsed.protocol}`);

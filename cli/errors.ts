@@ -126,8 +126,9 @@ export function formatError(err: unknown, context?: string): FixSuggestion {
     );
   }
 
+  const truncated = msg.length > 200 ? msg.slice(0, 200).replace(/\s+\S*$/, '') + '...' : msg;
   return fixSuggestion(
-    context ? `${context}: ${msg.slice(0, 100)}` : msg.slice(0, 100),
+    context ? `${context}: ${truncated}` : truncated,
     'An unexpected error occurred.',
     'If the issue persists, run with `--debug` for more details and report the output.',
   );
