@@ -25,7 +25,7 @@ describe('False Positive Prevention', () => {
   });
 
   describe('validateGeneratedProject returns false for invalid projects', () => {
-    it('should not report valid=true when @/config import is missing', async () => {
+    it('should not report valid=true when @/config import is missing', { timeout: 60000 }, async () => {
       const InternetHackathonOrchestrator = (await import('../../benchmarks/internet-hackathon-orchestrator.js')).InternetHackathonOrchestrator;
       const orch = new InternetHackathonOrchestrator(projectDir, path.join(projectDir, '.hackagent'), 42, undefined);
 

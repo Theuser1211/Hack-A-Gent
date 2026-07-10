@@ -22,6 +22,12 @@ Autonomous hackathon engineering CLI. Give it a Devpost URL, and it generates a 
 - **Deterministic** — Same seed + same input = same output every time
 - **Organizational Memory** — Learns from past projects to improve future results
 - **15+ CLI Commands** — run, setup, config, doctor, simulate, explain, replay, and more
+- **Hackathon Qualification** — Pre-run capability check: determines if a hackathon is compatible before committing resources
+- **Real Evaluation** — Scores 6 dimensions with verifiable code analysis (build, tests, docs, deployment)
+- **Browser Validation** — Starts dev server, analyzes HTML content, checks for titles/headings/interactive elements
+- **Autonomous Repair** — Parses TypeScript errors, applies pattern-based fixes automatically
+- **Failure Tracking** — Records failures, provides prevention strategies for future runs
+- **Real Benchmarks** — 5 self-contained test scenarios evaluating actual code generation quality
 
 ## Screenshots
 
@@ -209,10 +215,16 @@ Hack-A-Gent/
 ├── benchmarks/       # Hackathon generation engines
 │   ├── internet-hackathon-orchestrator.ts
 │   ├── devpost-parser.ts
-│   └── cognitive-injection-layer.ts
+│   ├── real-benchmark-suite.ts
+│   └── real-benchmark-runner.ts
 ├── kernel/           # Core runtime
 │   ├── llm/          # Provider implementations
-│   └── prompts/      # Prompt templates
+│   ├── prompts/      # Prompt templates
+│   ├── qualification/ # Hackathon capability checking
+│   ├── evaluation/   # Real project evaluation
+│   ├── validation/   # Browser validation
+│   ├── repair/       # Autonomous repair loop
+│   └── learning/     # Failure tracking
 ├── agents/           # Agent implementations
 │   ├── architect-v1.ts
 │   ├── builder-v1.ts
@@ -243,17 +255,20 @@ All execution is deterministic — the same seed produces the same output every 
 When you run `hag run`, the pipeline executes:
 
 1. **Parsing input** — Devpost URL, file, or text specification
-2. **Initializing LLM providers** — Connects to configured provider
-3. **Running strategy competition** — Multiple agents propose approaches
-4. **Extracting requirements** — Structured requirements from parsed input
-5. **Building TaskGraph** — Execution plan with task dependencies
-6. **Executing pipeline** — Code generation, builds, deployment
-7. **Competition intelligence** — Judging criteria, sponsor APIs, deadlines
-8. **Winning strategy** — Judge-optimized architecture recommendations
-9. **Post-project learning** — Memory update for future runs
-10. **Self-review & optimization** — Quality scoring and improvement suggestions
-11. **Type-checking** — TypeScript compilation check
-12. **Smoke test** — Starts dev server, verifies HTTP 200
+2. **Qualifying hackathon** — Pre-run capability check (SUPPORTED / PARTIALLY_SUPPORTED / UNSUPPORTED)
+3. **Initializing LLM providers** — Connects to configured provider
+4. **Running strategy competition** — Multiple agents propose approaches
+5. **Extracting requirements** — Structured requirements from parsed input
+6. **Building TaskGraph** — Execution plan with task dependencies
+7. **Executing pipeline** — Code generation, builds, deployment
+8. **Competition intelligence** — Judging criteria, sponsor APIs, deadlines
+9. **Winning strategy** — Judge-optimized architecture recommendations
+10. **Post-project learning** — Memory update for future runs
+11. **Self-review & optimization** — Quality scoring and improvement suggestions
+12. **Type-checking** — TypeScript compilation check
+13. **Browser validation** — Starts dev server, analyzes HTML content, checks titles/headings/interactive elements
+14. **Real evaluation** — Scores 6 dimensions: Organization, Code Quality, Completeness, Testing, Deployment, Documentation
+15. **Failure tracking** — Records failures and provides prevention strategies for next run
 
 ## Development
 
@@ -279,7 +294,7 @@ npm run format
 
 ## Testing
 
-The project has 1168+ tests across 80 test files:
+The project has 1200+ tests across 80+ test files:
 
 - **Unit tests** — Individual module/class tests
 - **Integration tests** — Pipeline, orchestration, and workflow tests
@@ -329,8 +344,8 @@ Windows, macOS, and Linux. Requires Node.js 20+.
 
 ## Known Limitations
 
-- **LLM generation quality varies** — ~40% of generated projects compile on first try with LLM-assisted generation. Template fallback (no LLM) always produces working code. Improvements to the generator are ongoing.
-- **No browser smoke test** — The smoke test starts the dev server and checks HTTP 200 but does not run headless browser tests.
+- **LLM generation quality varies** — ~40% of generated projects compile on first try with LLM-assisted generation. Template fallback (no LLM) always produces working code. Autonomous repair loop mitigates remaining failures.
+- **Browser validation is basic** — Checks HTTP 200, HTML content, titles, and headings. Does not test interactive features or run end-to-end tests.
 - **Single framework** — Currently generates Next.js projects only. Python/Go/Rust support is on the roadmap.
 - **Validation projects** — 2 of 6 validation projects pass build when using LLM generation; template fallback passes 6/6.
 

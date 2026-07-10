@@ -1,10 +1,12 @@
 import { getSeededRandom, createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
 import { HackathonBenchmarkRunner, type BenchmarkRunnerConfig } from '../../benchmarks/hackathon-benchmark-runner.js';
 import { ALL_BENCHMARKS } from '../../benchmarks/hackathon-benchmarks.js';
+import { REAL_BENCHMARKS, getBenchmark, getAllBenchmarkIds } from '../../benchmarks/real-benchmark-suite.js';
+import { runBenchmark, runAllBenchmarks, formatBenchmarkResult, formatBenchmarkSummary } from '../../benchmarks/real-benchmark-runner.js';
 import type { PlannerOutput } from '../../kernel/planning/planner-types.js';
 import type { ArchitectureBlueprint } from '../../kernel/planning/architect-types.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
-import { color, dim, log, logRaw } from '../output.js';
+import { color, dim, log, logRaw, success, error, info, labeled } from '../output.js';
 
 export async function benchmarkCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const sub = args.subcommand ?? 'run';
@@ -94,6 +96,69 @@ export async function benchmarkCommand(ctx: CLIContext, args: CLIArgs): Promise<
         metrics: { overallScore: overallScore, passed: result.overall_success ? 1 : 0, durationMs: result.total_duration_ms ?? 0 },
         traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
       };
+    }
+
+    case 'real': {
+      const realSub = args.positional[0] ?? 'list';
+
+      if (realSub === 'list') {
+        const ids = getAllBenchmarkIds();
+        logRaw('');
+        logRaw(`  ${color('Real Benchmarks', 'cyan')}`);
+        logRaw('');
+        for (const id of ids) {
+          const b = getBenchmark(id);
+          if (b) {
+            logRaw(`  ${color(b.id, 'white')}   ${color(b.name, 'gray')} [${b.difficulty}]`);
+            logRaw(`    ${color(b.description, 'gray')}`);
+          }
+        }
+        logRaw('');
+        return { success: true, message: `${ids.length} real benchmarks available`, data: { benchmarks: ids } };
+      }
+
+      if (realSub === 'run') {
+        const targetId = args.positional[1];
+        const projectDir = args.positional[2] ?? process.cwd();
+
+        if (!targetId) {
+          return { success: false, message: 'Usage: hackagent benchmark real run <benchmark-id> [project-dir]' };
+        }
+
+        log(`Running real benchmark: ${targetId}`);
+        labeled('project', projectDir);
+        log('');
+
+        const result = runBenchmark({ benchmarkId: targetId, projectDir, timeout: 60000 });
+        log(formatBenchmarkResult(result));
+
+        return {
+          success: result.passed,
+          message: `Benchmark ${targetId}: ${result.passed ? 'PASS' : 'FAIL'} (${result.score}/${result.maxScore})`,
+          data: result as unknown as Record<string, unknown>,
+        };
+      }
+
+      if (realSub === 'run-all') {
+        const projectDir = args.positional[1] ?? process.cwd();
+        const filter = args.flags.filter ? String(args.flags.filter).split(',') : undefined;
+
+        log('Running all real benchmarks...');
+        labeled('project', projectDir);
+        log('');
+
+        const results = runAllBenchmarks({ projectDir, filter });
+        log(formatBenchmarkSummary(results));
+
+        const passed = results.filter(r => r.passed).length;
+        return {
+          success: passed === results.length,
+          message: `${passed}/${results.length} benchmarks passed`,
+          data: { results: results.map(r => ({ id: r.benchmarkId, passed: r.passed, score: r.score })) },
+        };
+      }
+
+      return { success: false, message: 'Usage: hackagent benchmark real <list|run|run-all>' };
     }
 
     default:

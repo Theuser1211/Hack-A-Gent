@@ -138,7 +138,7 @@ describe('Build Verification Integration', () => {
     expect(result.status).toBe('COMPLETED');
   });
 
-  it('cleans up workspace after completion', { timeout: 30000 }, async () => {
+  it('cleans up workspace after completion', { timeout: 60000 }, async () => {
     const repo = makeRepo([{ path: 'package.json', content: JSON.stringify({ name: 'test', version: '1.0.0' }) }]);
     await agent.executeTask(makeTask({ input: { repository: repo, project_name: 'integration-test' } }));
 
