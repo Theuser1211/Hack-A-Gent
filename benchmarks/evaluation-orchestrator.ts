@@ -2,26 +2,10 @@ import type { MutationMetrics } from './benchmark-judge.js';
 import type { TestSuiteResult } from './benchmark-tester.js';
 import type { BenchmarkRunResult } from './benchmark-types.js';
 import type { VerificationResult } from './build-verifier.js';
-import type { RepairRecord } from './hackathon-benchmark-runner.js';
-import type { PerMutationTypeMetrics } from './publication-schema.js';
+import type { PerMutationTypeMetrics, FinalEvaluationResult } from './evaluation-types.js';
+import type { RepairRecord } from './runner-types.js';
 
-export interface FinalEvaluationResult {
-  robustnessScore: number;
-  repairEfficiency: number;
-  mutationSurvivalRate: number;
-  detectionAccuracy: number;
-  leaderboardRank: number;
-
-  correctnessScore: number;
-  mutationRecoveryRate: number;
-
-  perMutationTypeMetrics: PerMutationTypeMetrics[];
-  aggregateMutationMetrics: MutationMetrics;
-
-  canonicalScore: number;
-  verdict: 'pass' | 'fail';
-  reasoning: string;
-}
+export type { FinalEvaluationResult, PerMutationTypeMetrics } from './evaluation-types.js';
 
 export interface EvaluationInput {
   verificationPassed: boolean;

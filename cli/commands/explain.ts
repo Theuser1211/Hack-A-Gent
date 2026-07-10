@@ -3,8 +3,8 @@ import * as path from 'node:path';
 
 import { DecisionLogger } from '../../benchmarks/decision-trace.js';
 import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { log, dim, labeled } from '../output.js';
+import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 interface PersistedTrace {
   runId: string;

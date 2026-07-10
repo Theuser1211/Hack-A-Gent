@@ -2,8 +2,8 @@ import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js'
 import { InternetToolGateway } from '../../benchmarks/internet-tool-gateway.js';
 import { LiveBrowserTestAgent } from '../../benchmarks/live-browser-test-agent.js';
 import { TaskGraph } from '../../benchmarks/task-graph.js';
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { log, dim, error as showError, labeled } from '../output.js';
+import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 export async function testCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const projectId = args.positional[0];

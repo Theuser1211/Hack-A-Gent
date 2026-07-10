@@ -1,6 +1,6 @@
 import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { header, log, info, warn, dim } from '../output.js';
+import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 export async function memoryCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const sub = args.subcommand ?? 'stats';

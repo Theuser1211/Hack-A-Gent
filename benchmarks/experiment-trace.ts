@@ -2,10 +2,10 @@ import type { BenchmarkJudgeResult } from './benchmark-judge.js';
 import type { BenchmarkRunResult } from './benchmark-types.js';
 import type { VerificationError } from './build-verifier.js';
 import { createDeterministicUuid, deterministicNow } from './determinism-kernel.js';
-import type { ProtocolPhase } from './evaluation-protocol.js';
-import type { RepairRecord } from './hackathon-benchmark-runner.js';
 import type { MutationMetadata } from './mutation-engine.js';
 import type { MutationGene } from './mutation-genome.js';
+import type { ProtocolPhase } from './protocol-types.js';
+import type { RepairRecord } from './runner-types.js';
 
 export interface CausalLink {
   sourceEventId: string;

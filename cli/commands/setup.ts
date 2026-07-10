@@ -1,8 +1,9 @@
 import * as readline from 'node:readline';
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
+
 import { getConfig, setLLMConfig, type LLMConfig } from '../config-manager.js';
-import { initializeProviders } from '../provider-init.js';
 import { header, success, warn, info } from '../output.js';
+import { initializeProviders } from '../provider-init.js';
+import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 const PROVIDER_CHOICES = [
   { name: 'NVIDIA NIMs', value: 'nvidia' },

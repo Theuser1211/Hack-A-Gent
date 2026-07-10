@@ -9,9 +9,9 @@
  * 5. Tracks repair attempts to avoid infinite loops
  */
 
+import { execSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { execSync } from 'node:child_process';
 
 export interface RepairAttempt {
   file: string;

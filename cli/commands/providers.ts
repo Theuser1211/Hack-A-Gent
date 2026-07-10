@@ -1,7 +1,7 @@
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { getConfig } from '../config-manager.js';
-import { initializeProviders, type ProviderInitializationResult } from '../provider-init.js';
 import { header, success, warn, logRaw, color } from '../output.js';
+import { initializeProviders, type ProviderInitializationResult } from '../provider-init.js';
+import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 const ALL_PROVIDERS = ['anthropic', 'openai', 'gemini', 'openrouter', 'nvidia', 'custom'] as const;
 

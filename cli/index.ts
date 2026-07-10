@@ -3,11 +3,11 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createContext, formatDuration } from './context.js';
-import type { CLIArgs, CLIResult, CommandName } from './types.js';
 import { getConfig } from './config-manager.js';
-import { banner, success as logSuccess, error as logError, info, dim, showWelcome } from './output.js';
+import { createContext, formatDuration } from './context.js';
 import { formatError, printError } from './errors.js';
+import { banner, success as logSuccess, error as logError, info, dim, showWelcome } from './output.js';
+import type { CLIArgs, CLIResult, CommandName } from './types.js';
 
 const VALID_COMMANDS: CommandName[] = [
   'run',

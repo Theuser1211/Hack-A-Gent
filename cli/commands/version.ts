@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
+
 import { log } from '../output.js';
+import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 function readVersion(): string {
   const moduleDir = dirname(fileURLToPath(import.meta.url));

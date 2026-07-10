@@ -1,7 +1,6 @@
 import type { RNG } from './determinism-kernel.js';
 import { getSeededRandom, getGlobalRNG, createDeterministicUuid, deterministicNow } from './determinism-kernel.js';
-import type { MutationDifficultyController } from './mutation-difficulty-controller.js';
-import type { MutationSeverity } from './mutation-engine.js';
+import type { MutationSeverity } from './mutation-types.js';
 
 export const BASE_OPERATION_TYPES: string[] = [
   'remove_file',

@@ -1,18 +1,11 @@
 import type { BenchmarkRunResult } from './benchmark-types.js';
 import { deterministicNow } from './determinism-kernel.js';
-import type { RepairRecord } from './hackathon-benchmark-runner.js';
+import type { RepairRecord } from './runner-types.js';
 import type { MutationMetadata } from './mutation-engine.js';
 import type { MutationGene } from './mutation-genome.js';
 
-export type ProtocolPhase =
-  | 'generation'
-  | 'mutation'
-  | 'execution'
-  | 'verification'
-  | 'repair'
-  | 'testing'
-  | 'judging'
-  | 'aggregation';
+export type { ProtocolPhase } from './protocol-types.js';
+import type { ProtocolPhase } from './protocol-types.js';
 
 export interface PhaseMetadata {
   phase: ProtocolPhase;

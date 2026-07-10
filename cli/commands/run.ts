@@ -9,20 +9,20 @@ import { HackathonSimulationEngine } from '../../benchmarks/hackathon-simulation
 import { InternetHackathonOrchestrator } from '../../benchmarks/internet-hackathon-orchestrator.js';
 import { JudgeSimulator } from '../../benchmarks/judge-simulator.js';
 import { Phase12Orchestrator } from '../../benchmarks/phase-12-orchestrator.js';
+import { evaluateProject, formatEvaluationResult } from '../../kernel/evaluation/real-evaluator.js';
+import { recordFailure, updateRunStats, getPreventionStrategies } from '../../kernel/learning/failure-tracker.js';
+import { RouterEngine } from '../../kernel/llm/router-engine.js';
+import { qualifyHackathon } from '../../kernel/qualification/hackathon-qualifier.js';
+import { validateWithBrowser, formatBrowserResult } from '../../kernel/validation/browser-validator.js';
 import { formatDuration } from '../context.js';
 import { parseDevpostUrl, CompetitionIntelligence, WinningStrategyGenerator, HackathonPipelineOrchestrator } from '../devpost-parser.js';
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
-import { initializeProviders } from '../provider-init.js';
-import { RouterEngine } from '../../kernel/llm/router-engine.js';
+import { formatError, printError } from '../errors.js';
 import {
   log, success, error, warn, info, dim, labeled, divider,
   pipelineHeader, pipelineFooter, stageStart, stageDone, stageFail,
 } from '../output.js';
-import { formatError, printError } from '../errors.js';
-import { qualifyHackathon } from '../../kernel/qualification/hackathon-qualifier.js';
-import { evaluateProject, formatEvaluationResult } from '../../kernel/evaluation/real-evaluator.js';
-import { validateWithBrowser, formatBrowserResult } from '../../kernel/validation/browser-validator.js';
-import { recordFailure, updateRunStats, getPreventionStrategies } from '../../kernel/learning/failure-tracker.js';
+import { initializeProviders } from '../provider-init.js';
+import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   if (args.flags.help === true) {

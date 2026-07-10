@@ -8,8 +8,8 @@ import {
   compareResults,
   validateDeterministicEquality,
 } from '../../benchmarks/replay-engine.js';
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { log, dim, error as showError, labeled } from '../output.js';
+import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 interface PersistedTrace {
   runId: string;

@@ -1,9 +1,10 @@
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
+
 import { getConfig } from '../config-manager.js';
-import { initializeProviders } from '../provider-init.js';
 import { header, success, error, warn } from '../output.js';
+import { initializeProviders } from '../provider-init.js';
+import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 interface CheckResult {
   name: string;

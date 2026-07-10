@@ -1,7 +1,7 @@
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { getConfig } from '../config-manager.js';
-import { initializeProviders } from '../provider-init.js';
 import { color, logRaw, header, error } from '../output.js';
+import { initializeProviders } from '../provider-init.js';
+import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 export async function modelsCommand(_ctx: CLIContext, _args: CLIArgs): Promise<CLIResult> {
   const config = getConfig();

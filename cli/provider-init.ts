@@ -1,7 +1,7 @@
-import { RouterEngine } from '../kernel/llm/router-engine.js';
-import type { LLMProvider } from '../kernel/llm/llm-provider.js';
-import { ProviderFactory } from '../kernel/providers/provider-factory.js';
 import { getLLMConfig, getDeployConfig, type LLMConfig } from '../cli/config-manager.js';
+import type { LLMProvider } from '../kernel/llm/llm-provider.js';
+import { RouterEngine } from '../kernel/llm/router-engine.js';
+import { ProviderFactory } from '../kernel/providers/provider-factory.js';
 
 export interface ProviderInitializationResult {
   router: RouterEngine;

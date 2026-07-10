@@ -3,7 +3,7 @@ import type { Repository } from '../kernel/builders/repository-types.js';
 import type { AgentConfig } from './agent-types.js';
 import type { BenchmarkRunResult } from './benchmark-types.js';
 import { deterministicNow } from './determinism-kernel.js';
-import type { FinalEvaluationResult } from './evaluation-orchestrator.js';
+import type { FinalEvaluationResult } from './evaluation-types.js';
 import type {
   AgentExecutionTrace,
   RepairDecisionTrace,
@@ -14,21 +14,8 @@ import type {
 import type { MutationMetadata } from './mutation-engine.js';
 import type { MutationGene } from './mutation-genome.js';
 
-export interface FrozenMutationSequenceEntry {
-  geneId: string | null;
-  mutationType: string;
-  operationSequence: string[];
-  intensity: number;
-  severity: string;
-  moduleTarget: string;
-  fileTarget: string | null;
-}
-
-export interface FrozenRepositoryState {
-  projectName: string;
-  blueprintVersion: string;
-  modules: Array<{ name: string; type: string; files: Array<{ path: string; content: string }> }>;
-}
+export type { FrozenMutationSequenceEntry, FrozenRepositoryState } from './evaluation-types.js';
+import type { FrozenMutationSequenceEntry, FrozenRepositoryState } from './evaluation-types.js';
 
 export interface FrozenAgentState {
   agentId: string;

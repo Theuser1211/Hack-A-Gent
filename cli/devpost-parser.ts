@@ -1,6 +1,7 @@
-import { createDeterministicUuid } from '../benchmarks/determinism-kernel.js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import * as path from 'node:path';
+
+import { createDeterministicUuid } from '../benchmarks/determinism-kernel.js';
 
 export interface DevpostParseResult {
   title: string;

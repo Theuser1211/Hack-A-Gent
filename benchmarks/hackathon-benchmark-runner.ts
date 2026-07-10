@@ -35,18 +35,8 @@ import { applyMutations } from './mutation-engine.js';
 import type { MutationResult, MutationMetadata } from './mutation-engine.js';
 import type { PerformanceMemoryBuffer } from './performance-memory-buffer.js';
 
-export interface RepairRecord {
-  attempt: number;
-  trigger_phase: string;
-  trigger_reason: string;
-  modules_regenerated: string[];
-  modules_repaired: string[];
-  files_repaired: string[];
-  files_replaced: number;
-  diffs: ModuleDiff[];
-  strategy_used: RepairStrategy;
-  success: boolean;
-}
+export type { RepairRecord } from './runner-types.js';
+import type { RepairRecord } from './runner-types.js';
 
 export interface SharedMutationState {
   mutatedRepository: Repository;

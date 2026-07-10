@@ -1,4 +1,4 @@
-import type { MutationType } from './mutation-engine.js';
+import type { MutationType } from './mutation-types.js';
 
 export interface MutationDifficultyState {
   mutationType: MutationType;

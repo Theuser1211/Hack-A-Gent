@@ -4,8 +4,8 @@ import * as path from 'node:path';
 import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
 import { InternetHackathonOrchestrator } from '../../benchmarks/internet-hackathon-orchestrator.js';
 import { RemoteProjectState } from '../../benchmarks/remote-project-state.js';
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { log, dim, warn, error as showError, labeled } from '../output.js';
+import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 export async function resumeCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const projectId = args.positional[0];

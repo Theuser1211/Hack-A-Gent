@@ -1,4 +1,3 @@
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import {
   getConfig,
   setLLMConfig,
@@ -10,6 +9,7 @@ import {
   type DeployConfig,
 } from '../config-manager.js';
 import { initializeProviders, getProviderInfo } from '../provider-init.js';
+import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 const PROVIDER_ALIASES: Record<string, LLMConfig['provider']> = {
   'nvidia-nims': 'nvidia',

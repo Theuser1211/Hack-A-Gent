@@ -1,4 +1,4 @@
-import type { FrozenMutationSequenceEntry, FrozenRepositoryState } from './experiment-snapshot.js';
+import type { FrozenMutationSequenceEntry, FrozenRepositoryState, PerMutationTypeMetrics } from './evaluation-types.js';
 import type { MutationGene } from './mutation-genome.js';
 
 export const CURRENT_PROTOCOL_VERSION = '1.0.0';
@@ -38,15 +38,7 @@ export interface MetricRecord {
   mutationRecoveryRate: number;
 }
 
-export interface PerMutationTypeMetrics {
-  mutationType: string;
-  applied: number;
-  detected: number;
-  repaired: number;
-  detectionRate: number;
-  repairRate: number;
-  survivalRate: number;
-}
+export type { PerMutationTypeMetrics } from './evaluation-types.js';
 
 export interface PublicationExperimentOutput {
   metadata: EvaluationRunMetadata;

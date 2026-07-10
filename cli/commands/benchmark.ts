@@ -1,12 +1,12 @@
 import { getSeededRandom, createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
 import { HackathonBenchmarkRunner, type BenchmarkRunnerConfig } from '../../benchmarks/hackathon-benchmark-runner.js';
 import { ALL_BENCHMARKS } from '../../benchmarks/hackathon-benchmarks.js';
-import { REAL_BENCHMARKS, getBenchmark, getAllBenchmarkIds } from '../../benchmarks/real-benchmark-suite.js';
 import { runBenchmark, runAllBenchmarks, formatBenchmarkResult, formatBenchmarkSummary } from '../../benchmarks/real-benchmark-runner.js';
-import type { PlannerOutput } from '../../kernel/planning/planner-types.js';
+import { REAL_BENCHMARKS, getBenchmark, getAllBenchmarkIds } from '../../benchmarks/real-benchmark-suite.js';
 import type { ArchitectureBlueprint } from '../../kernel/planning/architect-types.js';
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
+import type { PlannerOutput } from '../../kernel/planning/planner-types.js';
 import { color, dim, log, logRaw, success, error, info, labeled } from '../output.js';
+import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 export async function benchmarkCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const sub = args.subcommand ?? 'run';

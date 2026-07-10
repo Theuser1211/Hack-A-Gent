@@ -1,7 +1,7 @@
 import * as readline from 'node:readline';
 
-import type { CLIContext, CLIArgs, CLIResult, CommandName } from '../types.js';
 import { log, dim } from '../output.js';
+import type { CLIContext, CLIArgs, CLIResult, CommandName } from '../types.js';
 
 const VALID_COMMANDS: CommandName[] = [
   'run', 'status', 'memory', 'deploy', 'test', 'explain', 'health',

@@ -7,9 +7,8 @@ import { getSeededRandom, getGlobalRNG } from './determinism-kernel.js';
 import type { MutationDifficultyController } from './mutation-difficulty-controller.js';
 import type { MutationGene } from './mutation-genome.js';
 
-export type MutationType = string;
-
-export type MutationSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type { MutationType, MutationSeverity } from './mutation-types.js';
+import type { MutationType, MutationSeverity } from './mutation-types.js';
 
 export interface MutationMetadata {
   type: MutationType;

@@ -1,6 +1,5 @@
 import type { EvolutionDelta } from './company-evolution-engine.js';
 import { type CompanyProfile, type CompanyResult } from './company-spawner.js';
-import { EconomyEnforcementHooks as EconomyHooksType } from './economy-enforcement-hooks.js';
 import type { HackathonCompanyOrchestrator } from './hackathon-company-orchestrator.js';
 import type { CompanyCompetitionConfig } from './hackathon-company-orchestrator.js';
 import { ResourceType, ResourceAction, ResourceSource, type ResourceBudget } from './resource-ledger.js';

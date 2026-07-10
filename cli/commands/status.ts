@@ -3,8 +3,8 @@ import * as path from 'node:path';
 
 import type { ProjectStateSnapshot } from '../../benchmarks/remote-project-state.js';
 import type { TaskGraphSnapshot } from '../../benchmarks/task-graph.js';
-import type { CLIContext, CLIArgs, CLIResult, CLIExecutionState } from '../types.js';
 import { header, log, labeled, divider } from '../output.js';
+import type { CLIContext, CLIArgs, CLIResult, CLIExecutionState } from '../types.js';
 
 export async function statusCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const projectId = args.positional[0];

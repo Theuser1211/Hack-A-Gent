@@ -1,8 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import * as path from 'node:path';
 
-import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 import { header, log, labeled, dim } from '../output.js';
+import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 export async function healthCommand(ctx: CLIContext, _args: CLIArgs): Promise<CLIResult> {
   const memoryUsage = process.memoryUsage();
