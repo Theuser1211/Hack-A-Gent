@@ -30,6 +30,7 @@ import type { UXEvaluationResult } from './ux-evaluation-agent.js';
 import { KNOWN_PACKAGE_VERSIONS, KNOWN_PACKAGE_VERSIONS_FALLBACK, LLM_GENERATION_SYSTEM_PROMPT, LLM_TASK_DESCRIPTIONS } from './orchestrator-templates.js';
 
 export type OrchestratorPhase =
+  | 'initializing'
   | 'parsing'
   | 'requirements'
   | 'decomposition'
@@ -1133,7 +1134,7 @@ export async function GET() {
       return [{
         path: 'src/lib/validation.ts',
         content: `export function validateEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  return /^[^\\s@]+@[\\s@]+\\.[^\\s@]+$/.test(email);
 }
 
 export function validateRequired(value: string): boolean {

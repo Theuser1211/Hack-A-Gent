@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import { createDeterministicUuid, deterministicNow } from './determinism-kernel.js';
 
 export type ProjectPhase =
+  | 'initializing'
   | 'parsing'
   | 'requirements'
   | 'decomposition'
@@ -263,6 +264,7 @@ export class RemoteProjectState {
     this.saveTimer = setInterval(() => {
       this.save();
     }, this.autoSaveIntervalMs);
+    this.saveTimer.unref();
   }
 
   stopAutoSave(): void {
