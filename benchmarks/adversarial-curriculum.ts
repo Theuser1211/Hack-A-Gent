@@ -1,5 +1,5 @@
 import type { CompanyProfile } from './company-spawner.js';
-import { createDeterministicUuid, deterministicNow, getSeededRandom, type RNG } from './determinism-kernel.js';
+import { createDeterministicUuid, deterministicNow, getSeededRandom, nextTraceCounter, type RNG } from './determinism-kernel.js';
 
 export interface AdversarialCompetency {
   competencyId: string;
@@ -53,6 +53,7 @@ export class AdversarialIntelligenceCurriculum {
   private readonly competitionAwareness: CompetitionAwareness[] = [];
   private readonly counterStrategies: CounterStrategy[] = [];
   private readonly storageKey = 'hackagent-adversarial-curriculum';
+  private _idCounter = 0;
 
   constructor(seed: number | { seed?: number } = 42, ..._extra: unknown[]) {
     if (typeof seed === 'object') seed = seed.seed ?? 42;
@@ -69,7 +70,7 @@ export class AdversarialIntelligenceCurriculum {
     specializations: string[],
   ): AdversarialCompetency {
     const competency: AdversarialCompetency = {
-      competencyId: `competency-${createDeterministicUuid(this.seed, Date.now())}`,
+      competencyId: `competency-${createDeterministicUuid(this.seed, nextTraceCounter())}`,
       companyId,
       competencyType,
       proficiencyLevel,
@@ -94,7 +95,7 @@ export class AdversarialIntelligenceCurriculum {
     adaptiveResponse: string,
   ): AdaptivePressure {
     const pressure: AdaptivePressure = {
-      pressureId: `pressure-${createDeterministicUuid(this.seed, Date.now())}`,
+      pressureId: `pressure-${createDeterministicUuid(this.seed, nextTraceCounter())}`,
       targetCompanyId,
       pressureSource,
       pressureType,
@@ -121,7 +122,7 @@ export class AdversarialIntelligenceCurriculum {
     priority: 'high' | 'medium' | 'low',
   ): CompetitionAwareness {
     const awareness: CompetitionAwareness = {
-      awarenessId: `awareness-${createDeterministicUuid(this.seed, Date.now())}`,
+      awarenessId: `awareness-${createDeterministicUuid(this.seed, nextTraceCounter())}`,
       companyId,
       targetCompanyId,
       awarenessType,
@@ -148,7 +149,7 @@ export class AdversarialIntelligenceCurriculum {
     successRate: number,
   ): CounterStrategy {
     const strategy: CounterStrategy = {
-      strategyId: `strategy-${createDeterministicUuid(this.seed, Date.now())}`,
+      strategyId: `strategy-${createDeterministicUuid(this.seed, nextTraceCounter())}`,
       companyId,
       counterType,
       targetCompanyId,
@@ -329,7 +330,7 @@ export class AdversarialIntelligenceCurriculum {
           }
         }
       }
-    } catch {}
+    } catch { /* Optional localStorage persistence is best-effort. */ }
   }
 
   private persistToStorage(): void {
@@ -343,7 +344,7 @@ export class AdversarialIntelligenceCurriculum {
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
         (globalThis as any).localStorage.setItem(this.storageKey, data);
       }
-    } catch {}
+    } catch { /* Optional localStorage persistence is best-effort. */ }
   }
 
   classify(): { bdi: number; state: string } {

@@ -1,4 +1,4 @@
-import { createDeterministicUuid, deterministicNow } from './determinism-kernel.js';
+import { createDeterministicUuid, deterministicNow, nextTraceCounter } from './determinism-kernel.js';
 
 export enum ResourceAction {
   SPEND = 'spend',
@@ -143,7 +143,7 @@ export class GlobalResourceLedger {
     budget.allocated[resourceType] = (budget.allocated[resourceType] || 0) + amount;
 
     this.recordTransaction({
-      transactionId: createDeterministicUuid(this.seed, Date.now()),
+      transactionId: createDeterministicUuid(this.seed, nextTraceCounter()),
       companyId,
       amount: -amount,
       type: 'usage',
@@ -167,7 +167,7 @@ export class GlobalResourceLedger {
     if (budget) {
       budget.remaining += amount;
       this.recordTransaction({
-        transactionId: createDeterministicUuid(this.seed, Date.now()),
+        transactionId: createDeterministicUuid(this.seed, nextTraceCounter()),
         companyId,
         amount,
         type: 'reward',
@@ -257,7 +257,7 @@ export class GlobalResourceLedger {
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
         (globalThis as any).localStorage.setItem(this.storageKey, data);
       }
-    } catch {}
+    } catch { /* Optional localStorage persistence is best-effort. */ }
   }
 
   toJSON(): Record<string, unknown> {

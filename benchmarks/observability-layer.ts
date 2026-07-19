@@ -1,5 +1,5 @@
 import { DecisionLogger, type DecisionTrace } from './decision-trace.js';
-import { createDeterministicUuid, deterministicNow } from './determinism-kernel.js';
+import { createDeterministicUuid, deterministicNow, nextTraceCounter } from './determinism-kernel.js';
 import type { TaskGraphSnapshot } from './task-graph.js';
 import type { ToolExecutionRecord, RuntimeState, DeploymentRecord, MutationRecord } from './unified-types.js';
 
@@ -154,7 +154,7 @@ export class ObservabilityLayer {
     lastState: RuntimeState | null,
   ): FullExecutionReport {
     return {
-      reportId: 'report-' + createDeterministicUuid(this.seed, Date.now()).slice(0, 8),
+      reportId: 'report-' + createDeterministicUuid(this.seed, nextTraceCounter()).slice(0, 8),
       generatedAt: deterministicNow(this.seed),
       mode,
       durationMs: this.getUptimeMs(),

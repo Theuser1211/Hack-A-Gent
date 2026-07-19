@@ -197,7 +197,7 @@ export class Phase11Orchestrator {
       try {
         const res = await fetch(input, { signal: AbortSignal.timeout(10000) });
         if (res.ok) text = await res.text();
-      } catch {}
+      } catch { console.warn('Phase 11 input fetch failed; continuing with the original input.'); }
     }
 
     return {

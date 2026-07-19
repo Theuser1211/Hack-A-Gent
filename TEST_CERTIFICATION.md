@@ -1,5 +1,10 @@
 # Test Certification — Hack-Agent v1.0
 
+> **Historical snapshot — generated 2026-06-28.** Test counts reflect that date; the
+> suite has since grown. For current results, run `npm test`. Note: this snapshot
+> primarily covers the legacy `benchmarks/` simulation subsystem (e.g. `adversarial-*`,
+> `strategy-genome-database`, `civilization-*`), not the `hag run` product pipeline.
+
 Generated: 2026-06-28
 
 ## Summary

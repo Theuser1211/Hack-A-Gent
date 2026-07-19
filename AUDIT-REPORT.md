@@ -1,5 +1,8 @@
 # Hack-A-Gent Engineering Audit Report
 
+> **Historical snapshot — dated 2026-06-26.** For current status, see
+> `ARCHITECTURE-REPORT.md`.
+
 **Date:** 2026-06-26  
 **Scope:** Full codebase — benchmarks/, kernel/, agents/  
 **Auditor:** Automated Engineering Analysis

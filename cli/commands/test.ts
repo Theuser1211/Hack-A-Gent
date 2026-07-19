@@ -1,4 +1,4 @@
-import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
+import { createDeterministicUuid, nextTraceCounter } from '../../benchmarks/determinism-kernel.js';
 import { InternetToolGateway } from '../../benchmarks/internet-tool-gateway.js';
 import { LiveBrowserTestAgent } from '../../benchmarks/live-browser-test-agent.js';
 import { TaskGraph } from '../../benchmarks/task-graph.js';
@@ -69,7 +69,7 @@ export async function testCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIRe
         uxFlowScore: flowScore,
       },
       metrics: { durationMs: elapsed, passed: result.passed ? 1 : 0, failures: result.failures.length },
-      traceId: createDeterministicUuid(ctx.seed, Date.now()).slice(0, 12),
+      traceId: createDeterministicUuid(ctx.seed, 0).slice(0, 12),
     };
   } catch (err) {
     const elapsed = Date.now() - executionTime;

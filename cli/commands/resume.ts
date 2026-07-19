@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import * as path from 'node:path';
 
-import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
+import { createDeterministicUuid, nextTraceCounter } from '../../benchmarks/determinism-kernel.js';
 import { InternetHackathonOrchestrator } from '../../benchmarks/internet-hackathon-orchestrator.js';
 import { RemoteProjectState } from '../../benchmarks/remote-project-state.js';
 import { log, dim, warn, error as showError, labeled } from '../output.js';
@@ -41,17 +41,18 @@ export async function resumeCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
   const internetOrch = new InternetHackathonOrchestrator(ctx.workspaceRoot, ctx.stateDir, ctx.seed);
   ctx.orchestrator = internetOrch;
 
-  // Reload state into the orchestrator
-  const orchAny = internetOrch as unknown as Record<string, unknown>;
-  if (typeof orchAny['loadState'] === 'function') {
-    (orchAny['loadState'] as (state: unknown) => void)(loaded);
+  // Restore the saved execution state so we continue from where the previous
+  // run stopped (already-completed tasks are skipped) instead of restarting.
+  const applied = internetOrch.loadState(loaded);
+  if (!applied) {
+    return { success: false, message: `Failed to restore state for project "${projectId}"` };
   }
 
-  log('Continuing execution...');
+  log('Continuing execution from saved state...');
   const executionTime = Date.now();
 
   try {
-    const result = await internetOrch.executeFullPipeline();
+    const result = await internetOrch.resumeExecution();
     const elapsed = Date.now() - executionTime;
 
     dim('='.repeat(50));
@@ -65,7 +66,7 @@ export async function resumeCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
       message: `Resumed and completed project "${projectId}"`,
       data: { projectId, phase: result.phase, deployUrl: result.deployUrl, errors: result.errors.length },
       metrics: { durationMs: elapsed },
-      traceId: createDeterministicUuid(ctx.seed, Date.now()).slice(0, 12),
+      traceId: createDeterministicUuid(ctx.seed, nextTraceCounter()).slice(0, 12),
     };
   } catch (err) {
     const elapsed = Date.now() - executionTime;
@@ -76,7 +77,7 @@ export async function resumeCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
       message: `Resume failed: ${msg}`,
       data: { projectId, errors: [msg] },
       metrics: { durationMs: elapsed },
-      traceId: createDeterministicUuid(ctx.seed, Date.now()).slice(0, 12),
+      traceId: createDeterministicUuid(ctx.seed, nextTraceCounter()).slice(0, 12),
     };
   }
 }

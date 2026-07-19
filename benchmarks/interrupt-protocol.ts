@@ -1,5 +1,5 @@
 import { DecisionLogger, type DecisionTrace } from './decision-trace.js';
-import { createDeterministicUuid, deterministicNow } from './determinism-kernel.js';
+import { createDeterministicUuid, deterministicNow, nextTraceCounter } from './determinism-kernel.js';
 import type { RuntimeSnapshot } from './unified-types.js';
 
 export type InterruptReason =
@@ -57,7 +57,7 @@ export class InterruptProtocol {
 
   raiseInterrupt(reason: InterruptReason, questions: InterruptQuestion[], snapshot?: RuntimeSnapshot): InterruptState {
     this.currentInterrupt = {
-      interruptId: 'int-' + createDeterministicUuid(this.seed, Date.now()).slice(0, 8),
+      interruptId: 'int-' + createDeterministicUuid(this.seed, nextTraceCounter()).slice(0, 8),
       reason,
       questions,
       snapshot: snapshot ?? null,

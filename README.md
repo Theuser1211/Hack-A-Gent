@@ -39,23 +39,37 @@ $ hag help
 Usage: hackagent <command> [options]
 
 Commands:
-  run <input>      Full pipeline: parse, strategize, generate, deploy
-  setup            Interactive setup wizard
-  config           View or change LLM/config settings
-  doctor           System diagnostics
-  models           List available models
-  providers        Show provider status
-  simulate <input> Simulation only
-  status [id]      Project status
-  memory <query>   Organizational memory
-  benchmark        Benchmark suite
-  explain [id]     Decision traces and debug analysis
-  replay <id>      Deterministic replay
-  deploy <id>      Deploy a built project
-  test <id>        Run browser tests
-  health           System health check
-  chat             Interactive REPL mode
-  version          Display version
+  run <input>          Full hackathon pipeline (Devpost URL, file, or text)
+  simulate <input>     Run simulation only
+  resume <projectId>   Resume a paused execution
+  status [projectId]   Show project status / list projects
+  memory <query|stats|clear>  Organizational memory
+  benchmark list|run   Benchmark suite
+  benchmark real|measure  Real benchmarks & quality measurement
+  replay <runId>       Deterministic replay of a past run
+  config               Configure LLM providers and deploy tokens
+  setup                Interactive first-time setup wizard
+  deploy <projectId>   Deploy a built project
+  test <projectId>     Run browser tests
+  explain [projectId]  Decision traces and debug analysis
+  health               System health check
+  chat                 Interactive conversational mode
+  doctor               System diagnostics
+  models               List available models
+  providers            Show provider status
+  version              Show version information
+  hack-agent <input>   Autonomous multi-agent orchestration mode
+  analyze <url>        Competition intelligence from a Devpost URL
+  inspect <url>        Verbose analysis (risks + winners playbook)
+  opportunities <url>  Scoring opportunities + MVP focus
+  sponsors <url>       Sponsor & API breakdown
+  timeline <url>       Timeline, milestones, completion probability
+  strategy <url>       Winning strategy + differentiators
+  compare <a> <b>      Diff two hackathons
+  categories           Real benchmark framework (16 categories)
+  docs generate        Generate documentation
+  knowledge            Project quality knowledge base
+  help                 Show this help message
 ```
 
 ```
@@ -183,7 +197,8 @@ HACKAGENT_MODEL=meta/llama-3.1-8b-instruct
 
 | Command | Description |
 |---------|-------------|
-| `hag run <input>` | Full pipeline: parse, strategize, generate, typecheck, smoke test |
+| `hag run <input>` | Full pipeline: parse, strategize, generate, typecheck, smoke test. `--demo`, `--simulate-only`, `--resume`, `--force` |
+| `hag hack-agent <input>` | Autonomous agent mode (multi-agent orchestration) |
 | `hag setup` | Interactive setup wizard |
 | `hag config` | View or change LLM/config settings |
 | `hag doctor` | System diagnostics — Node, Git, config, provider, workspace |
@@ -192,13 +207,24 @@ HACKAGENT_MODEL=meta/llama-3.1-8b-instruct
 | `hag simulate <input>` | Simulation only (no code generation) |
 | `hag status [id]` | Show project status or list saved projects |
 | `hag memory <query\|stats\|clear>` | Organizational memory |
-| `hag benchmark list\|run` | Benchmark suite |
+| `hag benchmark list\|run` | Synthetic benchmark suite |
+| `hag benchmark real <list\|run\|run-all>` | Real, code-analysis-based benchmarks |
+| `hag benchmark measure [dir]` | Measure a project across 12 quality dimensions |
+| `hag benchmark history\|leaderboard\|compare\|suggest` | Track and compare benchmark runs |
 | `hag explain [id]` | Decision traces and debug analysis |
-| `hag replay <id>` | Deterministic replay |
+| `hag replay <id>` | Deterministic replay of a past run (list / trace / snapshot) |
+| `hag resume <projectId>` | Resume a paused execution from its saved snapshot |
 | `hag deploy <id>` | Deploy a built project |
 | `hag test <id>` | Run browser tests |
 | `hag health` | System health check |
 | `hag chat` | Interactive REPL mode |
+| `hag analyze <url>` | Competition intelligence from a Devpost URL |
+| `hag intelligence <analyze\|inspect\|opportunities\|sponsors\|timeline\|strategy\|compare>` | Winning-strategy intelligence |
+| `hag knowledge <update\|search\|stats\|explain\|export>` | Project quality knowledge base |
+| `hag categories <list\|run\|run-all\|compare\|history>` | Real benchmark framework (16 categories, 15 dimensions) |
+
+> **Note:** `hag run` and `hag categories run --generate` will not silently overwrite an existing, non-empty project directory. Pass `--force` to override.
+| `hag docs` | Generate documentation |
 | `hag version` | Display version |
 | `hag help` | Show help |
 
@@ -225,16 +251,15 @@ Hack-A-Gent/
 │   ├── validation/   # Browser validation
 │   ├── repair/       # Autonomous repair loop
 │   └── learning/     # Failure tracking
-├── agents/           # Agent implementations
+├── agents/           # Legacy multi-agent modules (architect, builder, planner, judge, etc.)
 │   ├── architect-v1.ts
-│   ├── builder-v1.ts
 │   ├── planner-v1.ts
-│   └── judge-panel-v1.ts
+│   ├── judge-panel-v1.ts
+│   └── ... (11 agent modules)
 ├── tests/            # Test suite
 │   ├── unit/
 │   └── integration/
-├── docs/             # Documentation
-│   └── images/       # Screenshots
+├── docs/             # Documentation (architecture, protocol, runtime specs)
 ├── .github/          # GitHub templates and workflows
 └── package.json
 ```
@@ -345,7 +370,7 @@ Windows, macOS, and Linux. Requires Node.js 20+.
 ## Known Limitations
 
 - **LLM generation quality varies** — ~40% of generated projects compile on first try with LLM-assisted generation. Template fallback (no LLM) always produces working code. Autonomous repair loop mitigates remaining failures.
-- **Browser validation is basic** — Checks HTTP 200, HTML content, titles, and headings. Does not test interactive features or run end-to-end tests.
+- **Browser validation is limited** — Starts the dev server and analyzes the rendered HTML (title, headings, interactive elements, content length). It does not run full end-to-end interaction tests.
 - **Single framework** — Currently generates Next.js projects only. Python/Go/Rust support is on the roadmap.
 - **Validation projects** — 2 of 6 validation projects pass build when using LLM generation; template fallback passes 6/6.
 

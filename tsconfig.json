@@ -30,6 +30,8 @@
     "agents/**/*.ts",
     "benchmarks/**/*.ts",
     "cli/**/*.ts",
+    "features/**/*.ts",
+    "scripts/**/*.ts",
     "tests/**/*.ts"
   ],
   "exclude": ["node_modules", "dist", "projects"]

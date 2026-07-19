@@ -361,7 +361,7 @@ export class CognitiveInjectionLayer {
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
         (globalThis as any).localStorage.setItem(this.storageKey, data);
       }
-    } catch {}
+    } catch { /* Optional localStorage persistence is best-effort. */ }
   }
 
   private loadFromStorage(): void {
@@ -375,6 +375,6 @@ export class CognitiveInjectionLayer {
           }
         }
       }
-    } catch {}
+    } catch { /* Optional localStorage persistence is best-effort. */ }
   }
 }

@@ -1,9 +1,8 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import * as path from 'node:path';
 
-import { DecisionLogger } from '../../benchmarks/decision-trace.js';
-import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
-import { log, dim, labeled } from '../output.js';
+import { createDeterministicUuid, nextTraceCounter } from '../../benchmarks/determinism-kernel.js';
+import { log, dim, warn, info, labeled } from '../output.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 interface PersistedTrace {
@@ -19,6 +18,8 @@ interface PersistedTrace {
   durationMs: number;
   decisionTraces: unknown[];
   reviewScores: Record<string, number>;
+  qualityChecks?: Array<{ check: string; passed: boolean; severity: string }>;
+  benchmarks?: Array<{ metric: string; improvement: string }>;
 }
 
 export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
@@ -59,7 +60,7 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
 
   const report = ctx.phase12orchestrator?.getLastReport();
   const inSessionDecisions = report?.decisionTraces ?? [];
-  const persistedDecisions = (persistedTrace?.decisionTraces ?? []) as import('../../benchmarks/decision-trace.js').DecisionTrace[];
+  const persistedDecisions = (persistedTrace?.decisionTraces ?? []) as Array<{ traceId?: string; agentRole?: string; action?: string }>;
   const decisionLog = inSessionDecisions.length > 0 ? inSessionDecisions : persistedDecisions;
 
   // Try loading state for more context
@@ -81,13 +82,14 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
   log('Decision Traces:');
   if (decisionLog.length === 0) {
     const hasState = state !== null;
-    log(`  No execution data available${hasState ? ' (decision traces not persisted in state file)' : ''}.`);
-    log('  Run `hackagent run <input>` first to generate decision traces.\n');
+    log(`  No execution data available${hasState ? ' (decision traces are not persisted in the state file)' : ''}.`);
+    log('  Run `hackagent run <input>` first, then `hackagent explain <project-id>`.\n');
   } else {
     log(`Total decisions: ${decisionLog.length}`);
     const byAgent = new Map<string, number>();
     for (const d of decisionLog) {
-      byAgent.set(d.agentRole, (byAgent.get(d.agentRole) ?? 0) + 1);
+      const role = (d as { agentRole?: string }).agentRole ?? 'unknown';
+      byAgent.set(role, (byAgent.get(role) ?? 0) + 1);
     }
     log('By agent:');
     for (const [agent, count] of byAgent) {
@@ -95,46 +97,19 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
     }
     log('');
 
-    // Show last 5 decisions
     log('Recent decisions:');
     for (const d of decisionLog.slice(-5)) {
-      log(
-        `[${d.traceId.slice(0, 8)}] ${d.agentRole}: ${d.action} — confidence N/A`,
-      );
+      const dd = d as { traceId?: string; agentRole?: string; action?: string };
+      const id = (dd.traceId ?? '').slice(0, 8);
+      log(`  [${id || '--------'}] ${dd.agentRole ?? '?'}: ${dd.action ?? '?'}`);
     }
     log('');
   }
 
-  // Strategy selection reasoning
-  if (report) {
-    log('Strategy Competition:');
-    log(`Winner: ${report.strategyCompetition.winner.name}`);
-    log(`Reason: ${report.strategyCompetition.selectionReason.slice(0, 120)}`);
-    log(`Candidates: ${report.strategyCompetition.candidates.map((c) => c.name).join(', ')}`);
-    log('');
-
-    log('Agent Leaderboard:');
-    for (const agent of report.strategyCompetition.agentLeaderboard) {
-      log(`  ${agent.variant.padEnd(20)} ${(agent.score * 100).toFixed(1)}% (${agent.wins} wins)`);
-    }
-    log('');
-
-    log('Reward Prediction:');
-    log(`Predicted: ${(report.rewardPrediction.predicted * 100).toFixed(1)}%`);
-    log(`Actual: ${(report.rewardPrediction.actual * 100).toFixed(1)}%`);
-    log(`Error: ${(report.rewardPrediction.error * 100).toFixed(1)}%`);
-    log('');
-
-    log('Failure Patterns:');
-    for (const fp of report.failurePatternReport.slice(0, 5)) {
-      log(`  [${fp.category}] ${fp.description.slice(0, 80)} (x${fp.frequency})`);
-    }
-    log('');
-  }
-
-  // Persisted trace summary (from disk)
+  // Persisted trace summary (from disk) — this is the source of truth for a
+  // completed run and contains only real, measured values.
   if (persistedTrace) {
-    log('Pipeline Run Summary:');
+    log('Pipeline Run Summary (from saved trace):');
     labeled('Strategy', persistedTrace.strategy);
     labeled('Phase', persistedTrace.phase);
     labeled('Deploy', persistedTrace.deployUrl ?? 'not deployed');
@@ -145,23 +120,42 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
     log('');
     if (persistedTrace.errors.length > 0) {
       log('Errors:');
-      for (const e of persistedTrace.errors.slice(0, 5)) {
-        log(`  - ${e.slice(0, 100)}`);
+      for (const e of persistedTrace.errors.slice(0, 10)) {
+        log(`  - ${e.slice(0, 140)}`);
       }
       log('');
     }
     const scores = persistedTrace.reviewScores;
-    if (scores) {
-      log('Review Scores:');
-      labeled('Innovation', `${scores.innovation}/25`);
-      labeled('Technical Depth', `${scores.technicalDepth}/20`);
-      labeled('Feasibility', `${scores.feasibility}/15`);
-      labeled('Presentation', `${scores.presentation}/15`);
-      labeled('Completeness', `${scores.completeness}/15`);
-      labeled('Maintainability', `${scores.maintainability}/10`);
-      labeled('Judge Alignment', `${scores.judgeAlignment}/5`);
+    if (scores && Object.keys(scores).length > 0) {
+      log('Self-Review Scores (0–100 scale):');
+      labeled('Innovation', String(scores.innovation ?? 'n/a'));
+      labeled('Technical Depth', String(scores.technicalDepth ?? 'n/a'));
+      labeled('Feasibility', String(scores.feasibility ?? 'n/a'));
+      labeled('Presentation', String(scores.presentation ?? 'n/a'));
+      labeled('Completeness', String(scores.completeness ?? 'n/a'));
+      labeled('Maintainability', String(scores.maintainability ?? 'n/a'));
+      labeled('Judge Alignment', String(scores.judgeAlignment ?? 'n/a'));
       log('');
     }
+    const checks = persistedTrace.qualityChecks;
+    if (checks && checks.length > 0) {
+      const passed = checks.filter(c => c.passed).length;
+      log(`Quality Checks: ${passed}/${checks.length} passed`);
+      for (const c of checks.filter(c => !c.passed).slice(0, 8)) {
+        warn(`  ✗ ${c.check} (${c.severity})`);
+      }
+      log('');
+    }
+    const benchmarks = persistedTrace.benchmarks;
+    if (benchmarks && benchmarks.length > 0) {
+      log('Pipeline Benchmarks:');
+      for (const b of benchmarks.slice(0, 8)) {
+        info(`  ${b.metric}: ${b.improvement}`);
+      }
+      log('');
+    }
+  } else if (!projectId) {
+    log('No saved trace found for this session. Run a pipeline first, then use `hackagent explain <project-id>`.\n');
   }
 
   // Project state summary
@@ -179,23 +173,16 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
     log('');
   }
 
-  // Root cause analysis
+  // Root cause analysis — driven by real errors, not simulated patterns.
   log('Root Cause Analysis:');
-  if (report?.failurePatternReport.length ?? 0 > 0) {
-    const topFailures = (report?.failurePatternReport ?? []).slice(0, 3);
-    for (const fp of topFailures) {
-      log(`${fp.category}: ${fp.description.slice(0, 80)} — occurred ${fp.frequency} times`);
-      log(`  Suggested: Check ${fp.category} patterns in memory`);
+  const realErrors = persistedTrace?.errors ?? (state ? ((state['errors'] as string[] | undefined) ?? []) : []);
+  if (realErrors.length > 0) {
+    for (const e of realErrors.slice(0, 5)) {
+      log(`  ${e.slice(0, 140)}`);
     }
-  } else if (state) {
-    const errors = (state['errors'] as string[] | undefined) ?? [];
-    if (errors.length > 0) {
-      for (const e of errors.slice(0, 3)) {
-        log(`${e.slice(0, 100)}`);
-      }
-    } else {
-      log('No errors detected. Pipeline is healthy.');
-    }
+    log('  Suggested: re-run `hackagent run <input>` after fixing the above, or inspect the generated project directly.');
+  } else if (persistedTrace || state) {
+    log('No errors recorded. Pipeline reached a healthy state.');
   } else {
     log('No execution data available.');
   }
@@ -207,9 +194,9 @@ export async function explainCommand(ctx: CLIContext, args: CLIArgs): Promise<CL
     data: {
       projectId,
       decisionCount: decisionLog.length,
-      strategyWinner: report?.strategyCompetition.winner.name,
-      topFailures: report?.failurePatternReport.slice(0, 3),
+      strategyWinner: persistedTrace?.strategy ?? report?.strategyCompetition.winner.name,
+      errors: realErrors.slice(0, 5),
     },
-    traceId: createDeterministicUuid(ctx.seed, Date.now()).slice(0, 12),
+    traceId: createDeterministicUuid(ctx.seed, 0).slice(0, 12),
   };
 }

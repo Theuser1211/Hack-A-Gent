@@ -1,27 +1,26 @@
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import * as path from 'node:path';
 
-import { ComplexityCollapseEngine } from '../../benchmarks/complexity-collapse-map.js';
-import { DemoSurfaceCompiler } from '../../benchmarks/demo-surface-compiler.js';
-import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
-import type { ParsedHackathonSpec } from '../../benchmarks/devpost-ingestion-layer.js';
-import { HackathonSimulationEngine } from '../../benchmarks/hackathon-simulation-engine.js';
+import { createDeterministicUuid, deterministicNow, nextTraceCounter } from '../../benchmarks/determinism-kernel.js';
 import { InternetHackathonOrchestrator } from '../../benchmarks/internet-hackathon-orchestrator.js';
-import { JudgeSimulator } from '../../benchmarks/judge-simulator.js';
-import { Phase12Orchestrator } from '../../benchmarks/phase-12-orchestrator.js';
 import { evaluateProject, formatEvaluationResult } from '../../kernel/evaluation/real-evaluator.js';
-import { recordFailure, updateRunStats, getPreventionStrategies } from '../../kernel/learning/failure-tracker.js';
+import { recordFailure, updateRunStats, getPreventionStrategies, formatLearningSummary } from '../../kernel/learning/failure-tracker.js';
 import { RouterEngine } from '../../kernel/llm/router-engine.js';
 import { qualifyHackathon } from '../../kernel/qualification/hackathon-qualifier.js';
 import { validateWithBrowser, formatBrowserResult } from '../../kernel/validation/browser-validator.js';
 import { formatDuration } from '../context.js';
-import { parseDevpostUrl, CompetitionIntelligence, WinningStrategyGenerator, HackathonPipelineOrchestrator } from '../devpost-parser.js';
+import { parseDevpostUrl, WinningStrategyGenerator, HackathonPipelineOrchestrator } from '../devpost-parser.js';
+import { CompetitionIntelligenceAgent } from '../agents/index.js';
+import { DecisionStore } from '../decisions.js';
+import { OrganizationalMemory } from '../learning/organizational-memory.js';
+import { CheckpointStore } from '../orchestration/checkpoint-store.js';
 import { formatError, printError } from '../errors.js';
 import {
   log, success, error, warn, info, dim, labeled, divider,
   pipelineHeader, pipelineFooter, stageStart, stageDone, stageFail,
 } from '../output.js';
 import { initializeProviders } from '../provider-init.js';
+import { resumeCommand } from './resume.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
@@ -40,6 +39,7 @@ export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIRes
     --demo               Demo mode: compilation + simulation only
     --simulate-only      Simulation only: no execution/deploy
     --resume             Resume from saved snapshot
+    --research           Use the experimental Phase12 research subsystem
     --json               Output raw JSON
     --quiet              Minimal output
     --verbose            Verbose logging
@@ -50,6 +50,19 @@ export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIRes
     hackagent run spec.txt
     hackagent run "Build a chatbot"`,
     };
+  }
+
+  // --resume delegates to the same resume implementation as `hag resume`,
+  // continuing an interrupted run from its saved state instead of restarting.
+  // The project id may be given as a positional or as `--resume <id>`.
+  if (args.flags.resume) {
+    if (args.flags.resume === true && args.positional.length === 0) {
+      return { success: false, message: 'Missing project ID for --resume. Usage: hackagent run --resume <project-id>' };
+    }
+    const resumeArgs: CLIArgs = args.positional.length > 0
+      ? args
+      : { ...args, positional: [String(args.flags.resume)] };
+    return resumeCommand(ctx, resumeArgs);
   }
 
   const input = args.positional[0];
@@ -124,7 +137,7 @@ export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIRes
     return runDemoSurfacePipeline(ctx, parsed, seed, dryRun);
   }
 
-  return runFullPipeline(ctx, parsed, seed, dryRun);
+  return runFullPipeline(ctx, parsed, seed, dryRun, args);
 }
 
 async function runDemoSurfacePipeline(
@@ -136,6 +149,7 @@ async function runDemoSurfacePipeline(
   const executionTime = Date.now();
 
   stageStart('Demo Surface Compilation');
+  const { DemoSurfaceCompiler } = await import('../../benchmarks/demo-surface-compiler.js');
   const compiler = new DemoSurfaceCompiler(seed + 13000);
   const plan = compiler.compile({
     title: parsed.title,
@@ -174,11 +188,12 @@ async function runDemoSurfacePipeline(
         },
       },
       metrics: { durationMs: Date.now() - executionTime, winScore: plan.winScore, steps: plan.executionSteps.length },
-      traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
+      traceId: createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12),
     };
   }
 
   stageStart('Simulation Preview');
+  const { HackathonSimulationEngine } = await import('../../benchmarks/hackathon-simulation-engine.js');
   const simEngine = new HackathonSimulationEngine(seed + 14000);
   const simResult = simEngine.simulate({
     devpost: {
@@ -236,7 +251,7 @@ async function runDemoSurfacePipeline(
       },
     },
     metrics: { durationMs: Date.now() - executionTime, winScore: plan.winScore, predictedScore: simResult.finalJudgeVerdict.total },
-    traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
+    traceId: createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12),
   };
 }
 
@@ -245,10 +260,9 @@ async function runFullPipeline(
   parsed: ParsedInput,
   seed: number,
   dryRun: boolean,
+  args: CLIArgs,
 ): Promise<CLIResult> {
   const t0 = Date.now();
-  const phase12 = new Phase12Orchestrator(seed, ctx.memory);
-  ctx.phase12orchestrator = phase12;
 
   stageStart('Initializing LLM providers');
   let routerEngine: RouterEngine | null = null;
@@ -262,38 +276,86 @@ async function runFullPipeline(
     warn('Falling back to template-based generation (no LLM).\n');
   }
 
-  stageStart('Running strategy competition');
-  const strategyReport = await phase12.runProject({
-    title: parsed.title,
-    problemStatement: parsed.problemStatement,
-    judgingCriteria: parsed.judgingCriteria,
-    constraints: parsed.constraints,
-    techStack: parsed.recommendedStack,
-    preferredStack: parsed.recommendedStack,
+  // Generate the winning strategy from the competition analysis (production path).
+  // --research runs the experimental Phase12 strategy-competition subsystem instead.
+  const useResearch = args.flags.research === true || args.flags.experimental === true;
+  let strategyReport: import('../../benchmarks/phase-12-orchestrator.js').Phase12Report | null = null;
+  if (useResearch) {
+    const { Phase12Orchestrator } = await import('../../benchmarks/phase-12-orchestrator.js');
+    const phase12 = new Phase12Orchestrator(seed, ctx.memory);
+    ctx.phase12orchestrator = phase12;
+    stageStart('Running strategy competition (research)');
+    strategyReport = await phase12.runProject({
+      title: parsed.title,
+      problemStatement: parsed.problemStatement,
+      judgingCriteria: parsed.judgingCriteria,
+      constraints: parsed.constraints,
+      techStack: parsed.recommendedStack,
+      preferredStack: parsed.recommendedStack,
+    });
+    stageDone('Running strategy competition (research)', Date.now() - t0);
+    labeled('winner', strategyReport.strategyCompetition.winner.name);
+    labeled('candidates', String(strategyReport.strategyCompetition.candidates.length));
+  }
+
+  stageStart('Generating winning strategy');
+  const runId = createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12);
+  const decisionStore = new DecisionStore(ctx.dataDir, runId);
+  const memory = new OrganizationalMemory(ctx.dataDir);
+  const checkpointStore = new CheckpointStore(ctx.dataDir);
+
+  // M1 migration: Competition Intelligence now runs as a PipelineAgent.
+  // The agent delegates to the same production engine, so the analysis is
+  // behaviour-identical, but it also records autonomous decisions (Part 2)
+  // and organizational learning (Part 4). Checkpoints enable recovery (Part 3).
+  const intelligenceAgent = new CompetitionIntelligenceAgent();
+  const intelResult = await intelligenceAgent.run({
+    seed,
+    inputs: { parsed, decisionStore, memory },
+    scratch: {},
   });
-  stageDone('Running strategy competition', Date.now() - t0);
-  labeled('winner', strategyReport.strategyCompetition.winner.name);
-  labeled('candidates', String(strategyReport.strategyCompetition.candidates.length));
-  labeled('predicted reward', 'N/A (no historical data)');
+  if (intelResult.status !== 'completed') {
+    stageFail('Generating winning strategy', intelResult.summary);
+    printError(formatError(new Error(intelResult.summary)));
+    return { success: false, message: intelResult.summary };
+  }
+  const competitionAnalysis = (intelResult.output as { analysis: import('../pipeline/index.js').CompetitionAnalysis }).analysis;
+  checkpointStore.saveState(runId, 'requirements', {
+    phase: 'requirements',
+    startedAt: Date.now(),
+    updatedAt: Date.now(),
+    currentTaskId: 'competition-intelligence',
+    tasks: {},
+    failures: [],
+    retries: 0,
+    progress: 0.1,
+    checkpoints: [],
+    context: { analysisId: competitionAnalysis.analysisId },
+  });
+  const strategyGenerator = new WinningStrategyGenerator();
+  const winningStrategy = strategyGenerator.generate(competitionAnalysis);
+  stageDone('Winning strategy', Date.now() - t0);
+  labeled('strategy', winningStrategy.projectName);
+  labeled('estimated score', String(winningStrategy.estimatedJudgeScore));
+  labeled('differentiators', String(winningStrategy.differentiators.length));
 
   if (dryRun) {
     pipelineFooter();
     divider();
     success('Dry Run Complete');
     labeled('Project', `"${parsed.title}"`);
-    labeled('Winner', strategyReport.strategyCompetition.winner.name);
-    labeled('Candidates', String(strategyReport.strategyCompetition.candidates.length));
-    labeled('Predicted Reward', 'N/A (no historical data)');
+    labeled('Strategy', winningStrategy.projectName);
+    labeled('Estimated Score', `${winningStrategy.estimatedJudgeScore}/100`);
     info('Next: run without --dry-run to execute the full pipeline.');
     log('');
     return {
       success: true,
       message: 'Dry run complete. Strategy selected, no execution performed.',
       data: {
-        strategy: strategyReport.strategyCompetition.winner,
-        predictedReward: strategyReport.rewardPrediction.predicted,
+        strategy: winningStrategy,
+        predictedReward: undefined,
       },
-      traceId: strategyReport.decisionTraces[0]?.traceId,
+      traceId: createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12),
     };
   }
 
@@ -385,42 +447,44 @@ async function runFullPipeline(
 
     divider();
 
-    stageStart('Running competition intelligence analysis');
-    const intelligence = new CompetitionIntelligence();
-    const competitionAnalysis = intelligence.analyze(parsed);
-    stageDone('Competition intelligence', Date.now() - t0);
     labeled('criteria', String(competitionAnalysis.judgingCriteria.length));
     labeled('sponsor APIs', String(competitionAnalysis.sponsorAPIs.length));
-
-    stageStart('Generating winning strategy');
-    const strategyGenerator = new WinningStrategyGenerator();
-    const winningStrategy = strategyGenerator.generate(competitionAnalysis);
-    stageDone('Winning strategy', Date.now() - t0);
-    labeled('estimated score', String(winningStrategy.estimatedJudgeScore));
-    labeled('differentiators', String(winningStrategy.differentiators.length));
 
     // Initialize the full pipeline orchestrator with pre-computed analysis and strategy
     const orchestrator = new HackathonPipelineOrchestrator(seed);
     orchestrator.init(competitionAnalysis, winningStrategy);
 
-  stageStart('Running post-project learning cycle');
-    const learningOutput = await phase12.runPostProject({
-      projectName,
-      projectDescription: parsed.problemStatement,
-      strategy: strategyReport.strategyCompetition.winner.plan,
-      techStack: parsed.recommendedStack,
-      judgeCriteria: parsed.judgingCriteria,
-      constraints: parsed.constraints,
-      uxResults: result.uxResults ?? [],
-      deploySuccess: result.deployUrl !== null,
-      taskCompletionRate: result.completionRate ?? 0.8,
-      errors: result.errors,
-      failurePatterns: result.failurePatterns ?? [],
-      judgeScore: result.judgeScore ?? 0.7,
-      demoAvailable: result.deployUrl !== null,
-    });
+    // Post-project learning cycle (production): record real failures + update run stats.
+    // In --research mode, also feed the experimental Phase12 subsystem.
+    stageStart('Running post-project learning cycle');
+    if (useResearch && strategyReport) {
+      // The experimental orchestrator is already initialized in the strategy stage.
+      const learningOutput = await ctx.phase12orchestrator!.runPostProject({
+        projectName,
+        projectDescription: parsed.problemStatement,
+        strategy: strategyReport.strategyCompetition.winner.plan,
+        techStack: parsed.recommendedStack,
+        judgeCriteria: parsed.judgingCriteria,
+        constraints: parsed.constraints,
+        uxResults: result.uxResults ?? [],
+        deploySuccess: result.deployUrl !== null,
+        taskCompletionRate: result.completionRate ?? 0.8,
+        errors: result.errors,
+        failurePatterns: result.failurePatterns ?? [],
+        judgeScore: result.judgeScore ?? 0.7,
+        demoAvailable: result.deployUrl !== null,
+      });
+      info(`Research memory: ${learningOutput.memorySummary.totalProjects} projects`);
+    }
+    updateRunStats(ctx.dataDir, validation.valid, result.judgeScore ?? 0);
+    for (const err of result.errors) {
+      recordFailure(ctx.dataDir, { errorType: 'unknown', errorMessage: err, projectName, phase: 'building' });
+    }
+    for (const err of validation.errors) {
+      recordFailure(ctx.dataDir, { errorType: 'typescript', errorMessage: err, projectName, phase: 'testing' });
+    }
     stageDone('Post-project learning', Date.now() - t0);
-    info(`Memory: ${learningOutput.memorySummary.totalProjects} projects`);
+    info(`Learning: ${formatLearningSummary(ctx.dataDir).split('\n')[0]}`);
 
     // Run the new pipeline stages: self-review, optimization, quality, report
     stageStart('Running self-review & optimization');
@@ -444,7 +508,7 @@ async function runFullPipeline(
     labeled('quality checks', `${qualityPassed} passed, ${qualityFailed} failed (${failedRequired} required)`);
 
     stageStart('Generating missing scaffolding');
-    const generatedFiles = orchestrator.generateScaffolding(projectDir);
+    const generatedFiles = orchestrator.generateScaffolding(projectDir, args.flags.force === true);
     stageDone('Generating missing scaffolding', Date.now() - t0);
     labeled('files generated', generatedFiles.length > 0 ? generatedFiles.map(g => g.file).join(', ') : 'none needed');
 
@@ -506,6 +570,8 @@ async function runFullPipeline(
     }
 
     const deployStatus = result.deployUrl ? result.deployUrl : 'not deployed';
+    const isMockDeploy = !!result.deployUrl &&
+      (result.deployUrl.includes('/mock/') || result.deployUrl.includes('.vercel.app') || result.deployUrl.includes('.netlify.app'));
     divider();
     if (validation.valid) {
       success('Pipeline Complete');
@@ -513,12 +579,16 @@ async function runFullPipeline(
       error('Pipeline FAILED - see validation errors above');
     }
     labeled('Project', `"${parsed.title}"`);
-    labeled('Strategy', strategyReport.strategyCompetition.winner.name);
+    labeled('Strategy', winningStrategy.projectName);
     labeled('Duration', formatDuration(elapsed));
     labeled('Tasks', String(taskCount));
     labeled('Validation', validation.valid ? 'PASSED' : 'FAILED');
     labeled('Errors', String(validation.errors.length));
-    labeled('Deploy', deployStatus);
+    if (isMockDeploy) {
+      warn(`Deploy: no real deployment — ${deployStatus} (set GITHUB_TOKEN/VERCEL_TOKEN to deploy for real)`);
+    } else {
+      labeled('Deploy', deployStatus);
+    }
     if (validation.valid) {
       info('Next: run `hag test <project-id>` to run browser tests');
     } else {
@@ -529,7 +599,7 @@ async function runFullPipeline(
     // Persist decision traces + pipeline summary for explain/replay
     const tracesDir = path.resolve(ctx.dataDir, 'traces');
     if (!existsSync(tracesDir)) mkdirSync(tracesDir, { recursive: true });
-    const traceId = createDeterministicUuid(seed, Date.now()).slice(0, 12);
+    const traceId = createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12);
     try {
       writeFileSync(
         path.resolve(tracesDir, `${projectName}.trace.json`),
@@ -537,14 +607,14 @@ async function runFullPipeline(
           runId: traceId,
           projectName,
           masterSeed: seed,
-          timestamp: new Date().toISOString(),
-          strategy: strategyReport.strategyCompetition.winner.name,
+          timestamp: deterministicNow(seed),
+          strategy: winningStrategy.projectName,
           phase: result.phase,
           deployUrl: result.deployUrl,
           errors: result.errors,
           taskCount,
           durationMs: elapsed,
-          decisionTraces: strategyReport.decisionTraces,
+          decisionTraces: useResearch && strategyReport ? strategyReport.decisionTraces : [],
           reviewScores: {
             innovation: finalReport.innovationScore,
             technicalDepth: finalReport.technicalDepthScore,
@@ -581,9 +651,9 @@ async function runFullPipeline(
         errors: result.errors,
         validationErrors: validation.errors,
         validationChecks: validation.checks,
-        strategy: strategyReport.strategyCompetition.winner.name,
-        predictedReward: strategyReport.rewardPrediction.predicted,
-        memoryUpdated: learningOutput.memorySummary.totalProjects,
+        strategy: winningStrategy.projectName,
+        predictedReward: useResearch && strategyReport ? strategyReport.rewardPrediction.predicted : undefined,
+        memoryUpdated: formatLearningSummary(ctx.dataDir).split('\n').find(l => l.includes('Total runs'))?.replace(/\D/g, '') ?? '0',
         competitionAnalysis: {
           criteriaCount: competitionAnalysis.judgingCriteria.length,
           sponsorAPIs: competitionAnalysis.sponsorAPIs.length,
@@ -638,7 +708,7 @@ async function runFullPipeline(
         errorCount: result.errors.length,
         judgeScorePrediction: finalReport.judgeScorePrediction,
       },
-      traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
+      traceId: createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12),
     };
 } catch (err) {
      const elapsed = Date.now() - executionTime;
@@ -647,14 +717,14 @@ async function runFullPipeline(
      // Save execution snapshot for replay
      const snapshotsDir = path.resolve(ctx.dataDir, 'snapshots');
      if (!existsSync(snapshotsDir)) mkdirSync(snapshotsDir, { recursive: true });
-     const traceId = createDeterministicUuid(seed, Date.now()).slice(0, 12);
+     const traceId = createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12);
      try {
        writeFileSync(
          path.resolve(snapshotsDir, `run-${traceId}.snapshot.json`),
          JSON.stringify({
            runId: traceId,
            masterSeed: seed,
-           timestamp: new Date().toISOString(),
+           timestamp: deterministicNow(seed),
            project: projectName,
            status: 'failed',
            error: msg,
@@ -674,7 +744,7 @@ async function runFullPipeline(
        message: `Pipeline failed: ${msg}`,
        data: { projectName, phase: internetOrch.getPhase(), errors: [msg] },
        metrics: { durationMs: elapsed },
-       traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
+       traceId: createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12),
      };
   }
 }

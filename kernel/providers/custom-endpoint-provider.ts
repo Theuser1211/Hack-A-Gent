@@ -318,7 +318,7 @@ export class CustomEndpointProvider implements LLMProvider {
                   finish_reason: null,
                 });
               }
-            } catch {}
+            } catch { /* Ignore incomplete streaming JSON chunks. */ }
           }
         }
       }

@@ -1,4 +1,5 @@
 import * as readline from 'node:readline';
+import type { Readable } from 'node:stream';
 
 import { getConfig, setLLMConfig, type LLMConfig } from '../config-manager.js';
 import { header, success, warn, info } from '../output.js';
@@ -14,9 +15,28 @@ const PROVIDER_CHOICES = [
   { name: 'Custom (Ollama, LM Studio, etc.)', value: 'custom' },
 ];
 
-function ask(rl: readline.ReadLine, question: string): Promise<string> {
+function ask(rl: readline.ReadLine, input: Readable, question: string): Promise<string | null> {
   return new Promise((resolve) => {
-    rl.question(question, (answer) => resolve(answer.trim()));
+    let settled = false;
+    let inputEnded = false;
+    const onEnd = (): void => {
+      inputEnded = true;
+      finish(null);
+    };
+    const onClose = (): void => finish(null);
+    const cleanup = (): void => {
+      input.removeListener('end', onEnd);
+      rl.removeListener('close', onClose);
+    };
+    const finish = (answer: string | null): void => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(answer);
+    };
+    input.once('end', onEnd);
+    rl.once('close', onClose);
+    rl.question(question, (answer) => finish(inputEnded || typeof answer !== 'string' ? null : answer.trim()));
   });
 }
 
@@ -47,8 +67,11 @@ export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIR
     console.log();
 
     let providerIndex = -1;
-    while (providerIndex < 0 || providerIndex >= PROVIDER_CHOICES.length) {
-      const raw = await ask(rl, '  Enter number (1-' + PROVIDER_CHOICES.length + '): ');
+    while (isNaN(providerIndex) || providerIndex < 0 || providerIndex >= PROVIDER_CHOICES.length) {
+      const raw = await ask(rl, process.stdin,'  Enter number (1-' + PROVIDER_CHOICES.length + '): ');
+      if (raw === null) {
+        return { success: false, message: 'Setup cancelled: no interactive input available.' };
+      }
       providerIndex = parseInt(raw, 10) - 1;
       if (isNaN(providerIndex) || providerIndex < 0 || providerIndex >= PROVIDER_CHOICES.length) {
         console.log('  Invalid choice. Try again.\n');
@@ -58,17 +81,27 @@ export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIR
     const chosenProvider = PROVIDER_CHOICES[providerIndex]!;
     console.log(`  Selected: ${chosenProvider.name}\n`);
 
-    const apiKey = await ask(rl, '  Enter API key: ');
+    const apiKey = await ask(rl, process.stdin,'  Enter API key: ');
+    if (apiKey === null) {
+      return { success: false, message: 'Setup cancelled: no interactive input available.' };
+    }
     if (!apiKey) {
       return { success: false, message: 'API key is required.' };
     }
 
     let baseUrl = '';
     if (providerIndex === 0) {
-      baseUrl = await ask(rl, '  Enter endpoint URL (press Enter for default NVIDIA NIMs endpoint): ');
+      const endpoint = await ask(rl, process.stdin,'  Enter endpoint URL (press Enter for default NVIDIA NIMs endpoint): ');
+      if (endpoint === null) {
+        return { success: false, message: 'Setup cancelled: no interactive input available.' };
+      }
+      baseUrl = endpoint;
     }
 
-    const model = await ask(rl, '  Enter model name (press Enter for default): ');
+    const model = await ask(rl, process.stdin,'  Enter model name (press Enter for default): ');
+    if (model === null) {
+      return { success: false, message: 'Setup cancelled: no interactive input available.' };
+    }
 
     const llmConfig: LLMConfig = {
       provider: chosenProvider.value as LLMConfig['provider'],
@@ -81,7 +114,10 @@ export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIR
 
     success('Configuration saved.\n');
 
-    const verifyAnswer = await ask(rl, '  Verify connection with this provider? (Y/n): ');
+    const verifyAnswer = await ask(rl, process.stdin,'  Verify connection with this provider? (Y/n): ');
+    if (verifyAnswer === null) {
+      return { success: false, message: 'Setup cancelled: no interactive input available.' };
+    }
     if (verifyAnswer.toLowerCase() !== 'n') {
       info('Verifying...\n');
       try {

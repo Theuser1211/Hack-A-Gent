@@ -30,7 +30,18 @@ export type CommandName =
   | 'doctor'
   | 'models'
   | 'providers'
-  | 'version';
+  | 'version'
+  // Feature commands (logic lives in features/, registered in cli/index.ts
+  | 'analyze'
+  | 'inspect'
+  | 'opportunities'
+  | 'sponsors'
+  | 'timeline'
+  | 'strategy'
+  | 'compare'
+  | 'categories'
+  | 'docs'
+  | 'knowledge';
 
 export interface CLIArgs {
   command: CommandName;

@@ -225,6 +225,37 @@ describe('Benchmark Command', () => {
     expect(result.success).toBe(true);
     expect(result.data).toBeDefined();
   });
+
+  it('dispatches real subcommand without positional off-by-one (regression)', async () => {
+    const ctx = createContext(42);
+    const { benchmarkCommand } = await import('../../cli/commands/benchmark.js');
+
+    // `real list` previously failed because the handler read positional[0]
+    // ('real') instead of the normalized rest[0]. This reproduces that path.
+    const result = await benchmarkCommand(ctx, {
+      command: 'benchmark',
+      subcommand: undefined,
+      positional: ['real', 'list'],
+      flags: {},
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('reports usage error for unknown real subcommand', async () => {
+    const ctx = createContext(42);
+    const { benchmarkCommand } = await import('../../cli/commands/benchmark.js');
+
+    const result = await benchmarkCommand(ctx, {
+      command: 'benchmark',
+      subcommand: undefined,
+      positional: ['real', 'bogus'],
+      flags: {},
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('Usage');
+  });
 });
 
 describe('Deploy Command - validation', () => {

@@ -1,4 +1,4 @@
-import { createDeterministicUuid, deterministicNow } from './determinism-kernel.js';
+import { createDeterministicUuid, deterministicNow, nextTraceCounter } from './determinism-kernel.js';
 import type { TaskGraph, TaskGraphSnapshot } from './task-graph.js';
 
 export type QuestionType = 'choice' | 'text' | 'confirm' | 'multi-select';
@@ -123,7 +123,7 @@ export class InteractionManager {
     agentStates: Record<string, string>,
   ): ExecutionCheckpoint {
     return {
-      checkpointId: `ckpt-${createDeterministicUuid(this.seed, Date.now()).slice(0, 8)}`,
+      checkpointId: `ckpt-${createDeterministicUuid(this.seed, nextTraceCounter()).slice(0, 8)}`,
       taskGraphSnapshot: taskGraph.saveCheckpoint(),
       pendingQuestions: [...this.pendingQuestions],
       answeredQuestions: [...this.answeredQuestions],

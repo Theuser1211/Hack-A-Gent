@@ -1,4 +1,4 @@
-import { getSeededRandom, deterministicNow, createDeterministicUuid, type RNG } from './determinism-kernel.js';
+import { getSeededRandom, deterministicNow, createDeterministicUuid, nextTraceCounter, type RNG } from './determinism-kernel.js';
 import type { SwarmLeaderboardEntry, StrategySuccessRecord } from './swarm-leaderboard.js';
 import type { StrategyTemplate, StrategyTemplateCategory } from './winning-strategy-templates.js';
 import { WINNING_STRATEGIES } from './winning-strategy-templates.js';
@@ -25,7 +25,7 @@ export class SwarmEvolutionEngine {
     strategySuccess: StrategySuccessRecord[],
     currentPool: StrategyTemplate[],
   ): EvolutionResult {
-    const generationId = `gen-${createDeterministicUuid(this.seed, Date.now()).slice(0, 8)}`;
+    const generationId = `gen-${createDeterministicUuid(this.seed, nextTraceCounter()).slice(0, 8)}`;
 
     const { kept, discarded } = this.applySelectionPressure(allEntries, currentPool, strategySuccess);
 

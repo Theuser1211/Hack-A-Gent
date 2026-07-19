@@ -14,10 +14,25 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 
+export type BenchmarkAppType =
+  | 'landing-page'
+  | 'dashboard'
+  | 'saas'
+  | 'healthcare'
+  | 'ai-chat'
+  | 'education'
+  | 'crm'
+  | 'portfolio'
+  | 'cli'
+  | 'api'
+  | 'documentation';
+
 export interface BenchmarkSpec {
   id: string;
   name: string;
   description: string;
+  /** The application archetype this benchmark represents (for cross-cutting comparison). */
+  appType: BenchmarkAppType;
   input: {
     title: string;
     problemStatement: string;
@@ -74,8 +89,9 @@ export const REAL_BENCHMARKS: BenchmarkSpec[] = [
   {
     id: 'real-todo-api',
     name: 'Todo API Service',
-    description: 'Generate a RESTful API for todo management with SQLite',
-    input: {
+  description: 'Generate a RESTful API for todo management with SQLite',
+  appType: 'api',
+  input: {
       title: 'Todo API',
       problemStatement: 'Build a RESTful API service for managing todo items with SQLite persistence. Must support CRUD operations, filtering by status, and pagination.',
       techStack: ['typescript', 'express', 'sqlite'],
@@ -108,8 +124,9 @@ export const REAL_BENCHMARKS: BenchmarkSpec[] = [
   {
     id: 'real-chatbot-frontend',
     name: 'Chatbot Frontend',
-    description: 'Generate a React chat UI with message history',
-    input: {
+  description: 'Generate a React chat UI with message history',
+  appType: 'ai-chat',
+  input: {
       title: 'Chatbot UI',
       problemStatement: 'Build a modern chat interface with message history, typing indicators, and message grouping by sender. Must be responsive and accessible.',
       techStack: ['typescript', 'react', 'tailwind'],
@@ -141,8 +158,9 @@ export const REAL_BENCHMARKS: BenchmarkSpec[] = [
   {
     id: 'real-fullstack-auth',
     name: 'Full-Stack Auth App',
-    description: 'Generate a Next.js app with authentication',
-    input: {
+  description: 'Generate a Next.js app with authentication',
+  appType: 'saas',
+  input: {
       title: 'Auth Dashboard',
       problemStatement: 'Build a Next.js application with user authentication (login/register), protected dashboard route, and session management. Use SQLite for user storage.',
       techStack: ['typescript', 'nextjs', 'sqlite'],
@@ -174,8 +192,9 @@ export const REAL_BENCHMARKS: BenchmarkSpec[] = [
   {
     id: 'real-data-viz',
     name: 'Data Visualization Dashboard',
-    description: 'Generate a dashboard with charts and data tables',
-    input: {
+  description: 'Generate a dashboard with charts and data tables',
+  appType: 'dashboard',
+  input: {
       title: 'Analytics Dashboard',
       problemStatement: 'Build a data analytics dashboard with interactive charts (line, bar, pie) and sortable data tables. Data should be fetched from a mock API and displayed with real-time updates.',
       techStack: ['typescript', 'react', 'tailwind'],
@@ -206,8 +225,9 @@ export const REAL_BENCHMARKS: BenchmarkSpec[] = [
   {
     id: 'real-cli-tool',
     name: 'CLI Utility Tool',
-    description: 'Generate a Node.js CLI tool with argument parsing',
-    input: {
+  description: 'Generate a Node.js CLI tool with argument parsing',
+  appType: 'cli',
+  input: {
       title: 'File Organizer CLI',
       problemStatement: 'Build a CLI tool that organizes files in a directory by extension. Should support dry-run mode, custom rules, and progress reporting.',
       techStack: ['typescript', 'node'],
@@ -235,6 +255,167 @@ export const REAL_BENCHMARKS: BenchmarkSpec[] = [
     ],
     difficulty: 'easy',
     estimatedMinutes: 5,
+  },
+
+  {
+    id: 'real-landing-page',
+    name: 'Marketing Landing Page',
+    description: 'Generate a responsive marketing landing page with hero, features, and CTA',
+    appType: 'landing-page',
+    input: {
+      title: 'Marketing Landing Page',
+      problemStatement: 'Build a conversion-focused landing page for a SaaS product.',
+      techStack: ['next', 'react', 'typescript', 'tailwind'],
+      constraints: ['Responsive', 'Accessible', 'Fast first paint'],
+      judgingCriteria: ['Visual design', 'Responsiveness', 'Accessibility', 'Performance'],
+    },
+    acceptanceCriteria: [
+      { id: 'pkg', description: 'package.json exists', weight: 1, verification: 'file_exists', target: 'package.json' },
+      { id: 'page', description: 'Landing page component', weight: 1, verification: 'file_content', target: 'src', contentPattern: /hero|Hero|landing|Landing|section|Section/ },
+      { id: 'cta', description: 'Call-to-action button', weight: 1, verification: 'file_content', target: 'src', contentPattern: /button|Button|cta|CTA|signup|Sign ?up|get started/i },
+      { id: 'responsive', description: 'Responsive classes', weight: 1, verification: 'file_content', target: 'src', contentPattern: /sm:|md:|lg:|xl:|@media|grid|flex/ },
+      { id: 'aria', description: 'Accessible markup', weight: 0.6, verification: 'file_content', target: 'src', contentPattern: /aria-|role=|alt=|label/i },
+      { id: 'readme', description: 'README', weight: 0.5, verification: 'file_content', target: 'README.md', contentPattern: /#|npm|install|run/ },
+    ],
+    verificationSteps: [
+      { name: 'install', command: 'npm install', successPattern: /added \d+ packages/, timeout: 60000 },
+      { name: 'build', command: 'npx tsc --noEmit', successPattern: /$|error/, timeout: 30000 },
+    ],
+    difficulty: 'easy',
+    estimatedMinutes: 5,
+  },
+
+  {
+    id: 'real-healthcare',
+    name: 'Healthcare Patient Dashboard',
+    description: 'Generate a HIPAA-aware patient dashboard with records and appointments',
+    appType: 'healthcare',
+    input: {
+      title: 'Healthcare Patient Dashboard',
+      problemStatement: 'Build a patient dashboard showing records, appointments, and alerts.',
+      techStack: ['next', 'react', 'typescript', 'tailwind'],
+      constraints: ['Privacy-aware', 'Accessible', 'Clear data presentation'],
+      judgingCriteria: ['Data clarity', 'Accessibility', 'Security awareness', 'UX'],
+    },
+    acceptanceCriteria: [
+      { id: 'pkg', description: 'package.json exists', weight: 1, verification: 'file_exists', target: 'package.json' },
+      { id: 'records', description: 'Patient records view', weight: 1, verification: 'file_content', target: 'src', contentPattern: /patient|Patient|record|Record|appointment|Appointment/i },
+      { id: 'privacy', description: 'Privacy/consent handling', weight: 1, verification: 'file_content', target: 'src', contentPattern: /consent|privacy|phi|hipaa|auth/i },
+      { id: 'aria', description: 'Accessible tables/lists', weight: 0.6, verification: 'file_content', target: 'src', contentPattern: /aria-|role=|scope=|caption/i },
+      { id: 'responsive', description: 'Responsive layout', weight: 0.8, verification: 'file_content', target: 'src', contentPattern: /sm:|md:|lg:|grid|flex/ },
+    ],
+    verificationSteps: [
+      { name: 'install', command: 'npm install', successPattern: /added \d+ packages/, timeout: 60000 },
+      { name: 'build', command: 'npx tsc --noEmit', successPattern: /$|error/, timeout: 30000 },
+    ],
+    difficulty: 'medium',
+    estimatedMinutes: 10,
+  },
+
+  {
+    id: 'real-education',
+    name: 'Education Course Platform',
+    description: 'Generate a course/lesson platform with modules and progress',
+    appType: 'education',
+    input: {
+      title: 'Education Course Platform',
+      problemStatement: 'Build a platform to browse courses, view lessons, and track progress.',
+      techStack: ['next', 'react', 'typescript', 'tailwind'],
+      constraints: ['Clear learning path', 'Progress tracking', 'Accessible'],
+      judgingCriteria: ['Content structure', 'Progress UX', 'Accessibility'],
+    },
+    acceptanceCriteria: [
+      { id: 'pkg', description: 'package.json exists', weight: 1, verification: 'file_exists', target: 'package.json' },
+      { id: 'courses', description: 'Course listing', weight: 1, verification: 'file_content', target: 'src', contentPattern: /course|Course|lesson|Lesson|module|Module/i },
+      { id: 'progress', description: 'Progress tracking', weight: 1, verification: 'file_content', target: 'src', contentPattern: /progress|Progress|complete|Complete|percent|%/ },
+      { id: 'aria', description: 'Accessible navigation', weight: 0.6, verification: 'file_content', target: 'src', contentPattern: /aria-|role=|nav|Nav/ },
+    ],
+    verificationSteps: [
+      { name: 'install', command: 'npm install', successPattern: /added \d+ packages/, timeout: 60000 },
+      { name: 'build', command: 'npx tsc --noEmit', successPattern: /$|error/, timeout: 30000 },
+    ],
+    difficulty: 'medium',
+    estimatedMinutes: 10,
+  },
+
+  {
+    id: 'real-crm',
+    name: 'CRM Contact Manager',
+    description: 'Generate a CRM with contacts, notes, and pipeline views',
+    appType: 'crm',
+    input: {
+      title: 'CRM Contact Manager',
+      problemStatement: 'Build a CRM to manage contacts, log notes, and track deal stages.',
+      techStack: ['next', 'react', 'typescript', 'tailwind'],
+      constraints: ['Data entry ergonomics', 'Searchable', 'Accessible'],
+      judgingCriteria: ['CRUD completeness', 'Search UX', 'Data presentation'],
+    },
+    acceptanceCriteria: [
+      { id: 'pkg', description: 'package.json exists', weight: 1, verification: 'file_exists', target: 'package.json' },
+      { id: 'contacts', description: 'Contact model/views', weight: 1, verification: 'file_content', target: 'src', contentPattern: /contact|Contact|deal|Deal|pipeline|Pipeline/i },
+      { id: 'crud', description: 'CRUD operations', weight: 1, verification: 'file_content', target: 'src', contentPattern: /create|update|delete|POST|PUT|DELETE/i },
+      { id: 'search', description: 'Search/filter', weight: 0.8, verification: 'file_content', target: 'src', contentPattern: /search|filter|query|find/i },
+    ],
+    verificationSteps: [
+      { name: 'install', command: 'npm install', successPattern: /added \d+ packages/, timeout: 60000 },
+      { name: 'build', command: 'npx tsc --noEmit', successPattern: /$|error/, timeout: 30000 },
+    ],
+    difficulty: 'medium',
+    estimatedMinutes: 10,
+  },
+
+  {
+    id: 'real-portfolio',
+    name: 'Developer Portfolio',
+    description: 'Generate a personal developer portfolio with projects and bio',
+    appType: 'portfolio',
+    input: {
+      title: 'Developer Portfolio',
+      problemStatement: 'Build a portfolio site showcasing projects, skills, and contact.',
+      techStack: ['next', 'react', 'typescript', 'tailwind'],
+      constraints: ['Fast', 'Responsive', 'Accessible'],
+      judgingCriteria: ['Visual design', 'Project showcase', 'Responsiveness'],
+    },
+    acceptanceCriteria: [
+      { id: 'pkg', description: 'package.json exists', weight: 1, verification: 'file_exists', target: 'package.json' },
+      { id: 'projects', description: 'Projects section', weight: 1, verification: 'file_content', target: 'src', contentPattern: /project|Project|work|Work|portfolio/i },
+      { id: 'bio', description: 'About/bio section', weight: 0.8, verification: 'file_content', target: 'src', contentPattern: /about|bio|About|hello|intro/i },
+      { id: 'responsive', description: 'Responsive layout', weight: 0.8, verification: 'file_content', target: 'src', contentPattern: /sm:|md:|lg:|grid|flex/ },
+      { id: 'aria', description: 'Accessible markup', weight: 0.6, verification: 'file_content', target: 'src', contentPattern: /aria-|role=|alt=|label/i },
+    ],
+    verificationSteps: [
+      { name: 'install', command: 'npm install', successPattern: /added \d+ packages/, timeout: 60000 },
+      { name: 'build', command: 'npx tsc --noEmit', successPattern: /$|error/, timeout: 30000 },
+    ],
+    difficulty: 'easy',
+    estimatedMinutes: 5,
+  },
+
+  {
+    id: 'real-documentation',
+    name: 'API Documentation Site',
+    description: 'Generate a documentation site for an API with guides and references',
+    appType: 'documentation',
+    input: {
+      title: 'API Documentation Site',
+      problemStatement: 'Build a docs site with sidebar navigation, guides, and an API reference.',
+      techStack: ['next', 'react', 'typescript', 'tailwind', 'mdx'],
+      constraints: ['Navigable', 'Searchable', 'Clear examples'],
+      judgingCriteria: ['Information architecture', 'Code examples', 'Navigation UX'],
+    },
+    acceptanceCriteria: [
+      { id: 'pkg', description: 'package.json exists', weight: 1, verification: 'file_exists', target: 'package.json' },
+      { id: 'docs', description: 'Docs pages', weight: 1, verification: 'file_content', target: 'src', contentPattern: /doc|Doc|guide|Guide|reference|api/i },
+      { id: 'nav', description: 'Sidebar/nav', weight: 1, verification: 'file_content', target: 'src', contentPattern: /nav|Nav|sidebar|Sidebar|menu|Menu/ },
+      { id: 'code', description: 'Code examples', weight: 0.8, verification: 'file_content', target: 'src', contentPattern: /```|code|Code|snippet|example/i },
+      { id: 'readme', description: 'README', weight: 0.5, verification: 'file_content', target: 'README.md', contentPattern: /#|npm|install|run/ },
+    ],
+    verificationSteps: [
+      { name: 'install', command: 'npm install', successPattern: /added \d+ packages/, timeout: 60000 },
+      { name: 'build', command: 'npx tsc --noEmit', successPattern: /$|error/, timeout: 30000 },
+    ],
+    difficulty: 'medium',
+    estimatedMinutes: 10,
   },
 ];
 

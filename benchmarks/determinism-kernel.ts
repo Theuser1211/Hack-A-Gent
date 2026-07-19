@@ -79,6 +79,15 @@ export function createDeterministicUuid(seed: number, counter: number): string {
   return `${segment(8)}-${segment(4)}-4${segment(3)}-${['8', '9', 'a', 'b'][rng.nextInt(0, 3)]}${segment(3)}-${segment(12)}`;
 }
 
+// Deterministic monotonic counter for trace ids. Using `Date.now()` as the
+// counter defeats reproducibility; this starts at a fixed value and advances
+// by 1 each call so identical inputs/seed produce identical ids per process.
+let traceCounter = 1;
+
+export function nextTraceCounter(): number {
+  return traceCounter++;
+}
+
 export function deterministicNow(seed: number): string {
   const base = new Date('2026-01-01T00:00:00.000Z');
   const offset = (seed % 365) * 86400000 + (seed % 86400) * 1000;

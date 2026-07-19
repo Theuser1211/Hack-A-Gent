@@ -1,4 +1,11 @@
 import type { PromptComponent, PromptAssembly } from './prompt-types.js';
+import {
+  type PromptTemplate,
+  type RenderContext,
+  getTemplate,
+  renderMessages,
+  wantsJsonMode,
+} from './templates.js';
 
 const DEFAULT_COMPONENTS: PromptComponent[] = [
   { id: 'agent_role', priority: 0, max_tokens: 300, required: true, content: '', rendered: '' },
@@ -13,6 +20,7 @@ const DEFAULT_COMPONENTS: PromptComponent[] = [
 export class PromptEngine {
   private components: Map<string, PromptComponent> = new Map();
   private renderers: Map<string, (ctx: Record<string, unknown>) => Promise<string>> = new Map();
+  private templates: Map<string, PromptTemplate> = new Map();
 
   constructor() {
     for (const c of DEFAULT_COMPONENTS) {
@@ -90,6 +98,56 @@ export class PromptEngine {
       budget,
       within_budget: withinBudget,
       warnings,
+    };
+  }
+
+  /**
+   * Register a reusable template (from the prompt-template library) so it can
+   * be assembled by id. Templates are the canonical, audited prompt source.
+   */
+  registerTemplate(template: PromptTemplate): void {
+    this.templates.set(template.id, template);
+  }
+
+  /** Ids of all templates registered with this engine. */
+  listTemplates(): string[] {
+    return [...this.templates.keys()];
+  }
+
+  /**
+   * Assemble a complete prompt from a registered template.
+   *
+   * Renders the template (system role) + optional task (user role) into a
+   * provider-ready message array, then runs it through the same budget +
+   * validation logic as `assemble`. Deterministic: identical template + context
+   * yields identical messages.
+   */
+  async assembleFromTemplate(
+    templateId: string,
+    ctx: RenderContext = {},
+    budget: number = 4096,
+  ): Promise<PromptAssembly & { messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>; jsonMode: boolean }> {
+    const template = this.templates.get(templateId) ?? getTemplate(templateId);
+    if (!template) {
+      throw new Error(`Unknown prompt template: ${templateId}`);
+    }
+
+    const messages = renderMessages(template, ctx);
+    const totalTokens = messages.reduce((s, m) => s + m.content.length, 0);
+    const withinBudget = totalTokens <= budget;
+
+    const assembly: PromptAssembly = {
+      system_prompt: messages.find((m) => m.role === 'system')?.content ?? '',
+      messages,
+      token_count: totalTokens,
+      budget,
+      within_budget: withinBudget,
+      warnings: withinBudget ? [] : [`Total tokens (${totalTokens}) exceed budget (${budget})`],
+    };
+
+    return {
+      ...assembly,
+      jsonMode: wantsJsonMode(template),
     };
   }
 

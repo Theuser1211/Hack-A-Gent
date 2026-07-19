@@ -1,5 +1,5 @@
 import type { CompanyResult, CompanyProfile, CompanyStrategyType } from './company-spawner.js';
-import { getSeededRandom, createDeterministicUuid, type RNG } from './determinism-kernel.js';
+import { getSeededRandom, createDeterministicUuid, nextTraceCounter, type RNG } from './determinism-kernel.js';
 
 export interface EvolutionDelta {
   generationId: string;
@@ -36,7 +36,7 @@ export class CompanyEvolutionEngine {
   }
 
   evolve(companies: CompanyProfile[], results: CompanyResult[]): EvolutionDelta {
-    const generationId = `company-gen-${createDeterministicUuid(this.seed, Date.now()).slice(0, 8)}`;
+    const generationId = `company-gen-${createDeterministicUuid(this.seed, nextTraceCounter()).slice(0, 8)}`;
 
     const sorted = [...results].sort((a, b) => b.finalScore - a.finalScore);
     const top3 = sorted.slice(0, 3);

@@ -1,7 +1,7 @@
 import { readFileSync, existsSync, readdirSync as fsReaddirSync } from 'node:fs';
 import * as path from 'node:path';
 
-import { getSeededRandom, createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
+import { getSeededRandom, createDeterministicUuid, nextTraceCounter } from '../../benchmarks/determinism-kernel.js';
 import { ExperimentSnapshotBuilder } from '../../benchmarks/experiment-snapshot.js';
 import {
   replayMutationSequence,
@@ -177,6 +177,6 @@ export async function replayCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
     message: `Replay completed for ${runId}`,
     data: { runId, hasTrace: !!trace, hasSnapshot: !!snapshot },
     metrics: { durationMs: elapsed },
-    traceId: createDeterministicUuid(ctx.seed, Date.now()).slice(0, 12),
+    traceId: createDeterministicUuid(ctx.seed, 0).slice(0, 12),
   };
 }

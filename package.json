@@ -46,8 +46,9 @@
     "test:coverage": "vitest run --coverage",
     "lint": "eslint benchmarks/ tests/ cli/ kernel/",
     "lint:fix": "eslint benchmarks/ tests/ cli/ kernel/ --fix",
-    "format": "prettier --write \"benchmarks/**/*.ts\" \"tests/**/*.ts\" \"cli/**/*.ts\" \"kernel/**/*.ts\"",
-    "typecheck": "tsc --noEmit"
+    "format": "prettier --write \"benchmarks/**/*.ts\" \"tests/**/*.ts\" \"cli/**/*.ts\" \"kernel/**/*.ts\" \"features/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "gen-docs": "tsx scripts/generate-docs.ts"
   },
   "dependencies": {
     "xstate": "^5.19.2",

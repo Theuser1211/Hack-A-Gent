@@ -1,5 +1,8 @@
 # Repository Health Report — Hack-Agent v1.0
 
+> **Historical snapshot — generated 2026-06-28.** For current status, see
+> `ARCHITECTURE-REPORT.md` and run the CI/lint/typecheck/test gates.
+
 Generated: 2026-06-28
 
 ## Summary

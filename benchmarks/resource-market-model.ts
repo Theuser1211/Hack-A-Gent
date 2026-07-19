@@ -366,7 +366,7 @@ export class ResourceMarketModel {
           this.marketState = { ...this.marketState, ...parsed };
         }
       }
-    } catch {}
+    } catch { /* Optional localStorage persistence is best-effort. */ }
   }
 
   private persistToStorage(): void {
@@ -375,6 +375,6 @@ export class ResourceMarketModel {
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
         (globalThis as any).localStorage.setItem(this.storageKey, data);
       }
-    } catch {}
+    } catch { /* Optional localStorage persistence is best-effort. */ }
   }
 }

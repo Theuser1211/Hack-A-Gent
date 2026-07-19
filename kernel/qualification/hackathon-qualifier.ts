@@ -111,6 +111,12 @@ function checkUnsupportedPatterns(text: string): UnsupportedPattern[] {
 
 /**
  * Classify a single technology requirement.
+ *
+ * Unknown technologies are treated as `partial` (we can usually fall back to
+ * templates or a supported alternative) rather than `unsupported`. Only
+ * explicit unsupported *patterns* (see UNSUPPORTED_PATTERNS) should hard-block
+ * a hackathon — a missing capability in the registry is not proof we cannot
+ * build the project.
  */
 function classifyRequirement(tech: string): 'supported' | 'unsupported' | 'partial' {
   const lower = tech.toLowerCase();
@@ -125,7 +131,10 @@ function classifyRequirement(tech: string): 'supported' | 'unsupported' | 'parti
   );
   if (partialMatch) return 'partial';
 
-  return 'unsupported';
+  // Unknown technology: treat as partial (template fallback / substitution),
+  // NOT unsupported. Rejecting on an unrecognized keyword would wrongly
+  // disqualify normal hackathons whose stack we simply haven't enumerated.
+  return 'partial';
 }
 
 /**
@@ -202,31 +211,41 @@ export function qualifyHackathon(requirements: HackathonRequirements): Qualifica
   }
 
   // 4. Determine overall status
+  //
+  // Hard rejection (UNSUPPORTED) is reserved for explicit unsupported *patterns*
+  // that describe genuinely impossible requirements (e.g. hardware, native mobile,
+  // VR/AR, cloud-only mandates). Unknown or unenumerated technologies are treated
+  // as PARTIAL (we can substitute a supported stack or fall back to templates),
+  // never as a blocker. This keeps normal Devpost hackathons from being wrongly
+  // rejected when their tech stack isn't fully enumerated in the registry.
   let status: QualificationStatus;
   let confidence: number;
   let explanation: string;
   let recommendedAction: string;
 
-  if (unsupported.length === 0 && partial.length === 0) {
-    status = 'SUPPORTED';
-    confidence = 0.9;
-    explanation = `All detected requirements (${supported.length} technologies) are supported.`;
-    recommendedAction = 'Proceed with full pipeline execution.';
-  } else if (unsupported.length === 0 && partial.length > 0) {
-    status = 'PARTIALLY_SUPPORTED';
-    confidence = 0.7;
-    explanation = `${supported.length} technologies supported, ${partial.length} partially supported. No critical blockers detected.`;
-    recommendedAction = 'Proceed with caution. Some features may fall back to templates.';
-  } else if (unsupported.length <= 2 && supported.length > unsupported.length) {
-    status = 'PARTIALLY_SUPPORTED';
-    confidence = 0.5;
-    explanation = `${supported.length} technologies supported, but ${unsupported.length} unsupported: ${unsupported.join(', ')}.`;
-    recommendedAction = `Proceed with reduced scope. Unsupported: ${reasons.join('; ')}`;
-  } else {
+  if (unsupportedMatches.length > 0) {
+    // Only explicit unsupported patterns are true blockers.
     status = 'UNSUPPORTED';
     confidence = 0.9;
     explanation = `Critical requirements cannot be met: ${unsupported.join(', ')}. ${reasons.join('; ')}`;
     recommendedAction = `Reject this hackathon. ${reasons.join(' ')}`;
+  } else if (supported.length === 0 && partial.length === 0) {
+    // Nothing detected — default to SUPPORTED rather than rejecting. The
+    // pipeline will use template fallback and detect requirements from the page.
+    status = 'SUPPORTED';
+    confidence = 0.6;
+    explanation = 'No explicit capability requirements detected. The pipeline will infer requirements from the Devpost page and use template fallback where needed.';
+    recommendedAction = 'Proceed with full pipeline execution.';
+  } else if (partial.length > 0) {
+    status = 'PARTIALLY_SUPPORTED';
+    confidence = 0.7;
+    explanation = `${supported.length} technologies supported, ${partial.length} not explicitly enumerated (will use supported substitutes or templates). No critical blockers detected.`;
+    recommendedAction = 'Proceed. Some technologies may fall back to templates or substitutes.';
+  } else {
+    status = 'SUPPORTED';
+    confidence = 0.9;
+    explanation = `All detected requirements (${supported.length} technologies) are supported.`;
+    recommendedAction = 'Proceed with full pipeline execution.';
   }
 
   return {

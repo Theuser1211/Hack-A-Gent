@@ -298,7 +298,7 @@ export class GlobalGoalMonitor {
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
         (globalThis as any).localStorage.setItem(this.storageKey, data);
       }
-    } catch {}
+    } catch { /* Optional localStorage persistence is best-effort. */ }
   }
 
   private loadFromStorage(): void {
@@ -323,6 +323,6 @@ export class GlobalGoalMonitor {
           }
         }
       }
-    } catch {}
+    } catch { /* Optional localStorage persistence is best-effort. */ }
   }
 }

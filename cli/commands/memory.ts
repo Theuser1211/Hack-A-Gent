@@ -1,4 +1,4 @@
-import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
+import { createDeterministicUuid, nextTraceCounter } from '../../benchmarks/determinism-kernel.js';
 import { header, log, info, warn, dim } from '../output.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
@@ -28,7 +28,7 @@ export async function memoryCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
         success: true,
         message: `Query returned ${results.snapshots.length} results`,
         data: { query: queryText, similarity: results.similarity, snapshots: results.snapshots },
-        traceId: createDeterministicUuid(ctx.seed, Date.now()).slice(0, 12),
+        traceId: createDeterministicUuid(ctx.seed, 0).slice(0, 12),
       };
     }
 

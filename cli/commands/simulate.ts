@@ -1,6 +1,6 @@
 import { ComplexityCollapseEngine } from '../../benchmarks/complexity-collapse-map.js';
 import { DemoSurfaceCompiler } from '../../benchmarks/demo-surface-compiler.js';
-import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
+import { createDeterministicUuid, nextTraceCounter } from '../../benchmarks/determinism-kernel.js';
 import type { ParsedHackathonSpec } from '../../benchmarks/devpost-ingestion-layer.js';
 import { HackathonSimulationEngine } from '../../benchmarks/hackathon-simulation-engine.js';
 import { JudgeSimulator } from '../../benchmarks/judge-simulator.js';
@@ -66,7 +66,7 @@ export async function simulateCommand(ctx: CLIContext, args: CLIArgs): Promise<C
           reductionRisk: reductionPlan.riskScore,
         },
       },
-      traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
+      traceId: createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12),
     };
   }
 
@@ -117,6 +117,6 @@ export async function simulateCommand(ctx: CLIContext, args: CLIArgs): Promise<C
       failures: simResult.failureTimeline.length,
       repairs: simResult.repairTimeline.length,
     },
-    traceId: createDeterministicUuid(seed, Date.now()).slice(0, 12),
+    traceId: createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12),
   };
 }

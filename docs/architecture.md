@@ -1,8 +1,25 @@
 # Hack-A-Gent: System Architecture Specification
 
 > **Version:** 1.0.0  
-> **Status:** Draft  
+> **Status:** Draft — **Design Proposal, NOT the implemented system**  
 > **Author:** Principal AI Systems Architect  
+
+> ⚠️ **Read this before relying on this document.** This spec describes an
+> *aspirational* event-driven, state-machine-orchestrated micro-agent architecture
+> (orchestrator + planner/question/architect/judge agents communicating over an event
+> bus). **That system is not what `hag run` actually executes today.**
+>
+> The production pipeline is orchestrated by
+> `benchmarks/internet-hackathon-orchestrator.ts` and driven from
+> `cli/commands/run.ts`. It uses a different, simpler structure: Devpost parsing →
+> qualification → requirement extraction → `RouterEngine` task graph → code generation
+> (LLM or template fallback) → typecheck/repair → browser validation → evaluation.
+> Some building blocks referenced here (`agents/`, `kernel/events`, `kernel/tasks`)
+> do exist, but the event-bus micro-agent runtime described in full below does not.
+>
+> Treat this document as historical design context, not as a guide to the current code.
+> For the real architecture, see `README.md` (Architecture / Pipeline Stages) and
+> `ARCHITECTURE-REPORT.md`.
 
 ---
 

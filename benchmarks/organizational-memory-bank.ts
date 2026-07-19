@@ -215,7 +215,7 @@ export class OrganizationalMemoryBank {
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
       const data = JSON.stringify({ snapshots: this.snapshots, updatedAt: deterministicNow(this.seed) }, null, 2);
       writeFileSync(this.storagePath, data, 'utf-8');
-    } catch {}
+    } catch { /* Optional filesystem persistence is best-effort. */ }
   }
 
   private loadFromStorage(): void {
@@ -226,7 +226,7 @@ export class OrganizationalMemoryBank {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed.snapshots)) this.snapshots = parsed.snapshots;
       }
-    } catch {}
+    } catch { /* Optional filesystem persistence is best-effort. */ }
   }
 
   toJSON(): Record<string, unknown> {

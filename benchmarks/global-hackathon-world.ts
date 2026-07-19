@@ -385,7 +385,7 @@ export class GlobalHackathonWorld {
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
         (globalThis as any).localStorage.removeItem(this.storageKey);
       }
-    } catch {}
+    } catch { /* Optional localStorage persistence is best-effort. */ }
   }
 
   toJSON(): string {
@@ -403,7 +403,7 @@ export class GlobalHackathonWorld {
       if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
         (globalThis as any).localStorage.setItem(this.storageKey, data);
       }
-    } catch {}
+    } catch { /* Optional localStorage persistence is best-effort. */ }
   }
 
   private loadFromStorage(): void {
@@ -421,6 +421,6 @@ export class GlobalHackathonWorld {
           if (typeof parsed.currentEpoch === 'number') this.currentEpoch = parsed.currentEpoch;
         }
       }
-    } catch {}
+    } catch { /* Optional localStorage persistence is best-effort. */ }
   }
 }

@@ -47,6 +47,7 @@ import {
   deterministicNow,
   getSeededRandom,
   initializeGlobalRNG,
+  nextTraceCounter,
 } from './determinism-kernel.js';
 import { DevpostIngestionLayer, type ParsedHackathonSpec } from './devpost-ingestion-layer.js';
 
@@ -373,7 +374,7 @@ export class UnifiedRuntimeOS {
 
   snapshot(): RuntimeSnapshot {
     const snapshot: RuntimeSnapshot = {
-      snapshotId: 'snap-' + createDeterministicUuid(this.config.seed, Date.now()).slice(0, 8),
+      snapshotId: 'snap-' + createDeterministicUuid(this.config.seed, nextTraceCounter()).slice(0, 8),
       version: RUNTIME_VERSION,
       state: JSON.parse(JSON.stringify(this.state)),
       config: { ...this.config },
@@ -1314,7 +1315,7 @@ export class UnifiedRuntimeOS {
     const winner = phase12Report?.strategyCompetition.winner;
 
     const projectSnapshot: ProjectSnapshot = {
-      snapshotId: 'snap-' + createDeterministicUuid(this.config.seed, Date.now()).slice(0, 8),
+      snapshotId: 'snap-' + createDeterministicUuid(this.config.seed, nextTraceCounter()).slice(0, 8),
       projectName: this.parsedInput.title,
       projectDescription: this.parsedInput.problemStatement,
       strategy: winner?.plan ?? {

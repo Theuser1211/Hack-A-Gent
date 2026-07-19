@@ -23,9 +23,10 @@ import {
   type LiveBrowserTestSpec,
   type LiveBrowserRepairAction,
 } from './live-browser-test-agent.js';
-import { RemoteProjectState, type ProjectPhase, type DeploymentSnapshot } from './remote-project-state.js';
+import { RemoteProjectState, type ProjectPhase, type DeploymentSnapshot, type ProjectStateSnapshot } from './remote-project-state.js';
 import { TaskGraph, type TaskNode, type TaskCategory } from './task-graph.js';
 import type { UXEvaluationResult } from './ux-evaluation-agent.js';
+import { KNOWN_PACKAGE_VERSIONS, KNOWN_PACKAGE_VERSIONS_FALLBACK, LLM_GENERATION_SYSTEM_PROMPT, LLM_TASK_DESCRIPTIONS } from './orchestrator-templates.js';
 
 export type OrchestratorPhase =
   | 'parsing'
@@ -181,6 +182,115 @@ export class InternetHackathonOrchestrator {
 
   setDevpostData(data: DevpostData): void {
     this.devpostData = data;
+  }
+
+  /**
+   * Restore orchestrator state from a previously persisted snapshot so a run
+   * can be resumed instead of restarted. Restores the execution plan, task
+   * graph (with per-task statuses), current phase, and Devpost data.
+   *
+   * Returns true if the snapshot was applied successfully.
+   */
+  loadState(snapshot: ProjectStateSnapshot): boolean {
+    try {
+      this.projectState.load(snapshot.projectName);
+      const tg = snapshot.taskGraphState as unknown as ReturnType<TaskGraph['toJSON']> | null;
+      if (tg && Array.isArray(tg.nodes)) {
+        (this.taskGraph as unknown) = TaskGraph.fromJSON(tg);
+      }
+      this.phase = (snapshot.phase as OrchestratorPhase) ?? 'building';
+      const projectDir = path.resolve(this.workspaceRoot, snapshot.projectName);
+      this.plan = {
+        projectName: snapshot.projectName,
+        requirements: [],
+        taskGraph: this.taskGraph,
+        techStack: { frontend: 'nextjs_framework', backend: 'node_express', database: 'postgres_database', deployment: 'vercel' },
+        framework: 'nextjs',
+        database: 'postgres',
+        deploymentTarget: snapshot.deployment?.target ?? 'vercel',
+        gitHubRepo: snapshot.projectName,
+      };
+      this.devpostData = {
+        title: snapshot.projectName,
+        problemStatement: snapshot.metadata?.['problemStatement'] ?? '',
+        judgingCriteria: [],
+        constraints: [],
+        recommendedStack: [],
+        submissionRequirements: [],
+        rawText: '',
+      };
+      void projectDir;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Resume execution from a previously saved state. Unlike `executeFullPipeline`,
+   * this does NOT reset the task graph — already-`done` tasks are skipped and the
+   * pipeline continues from the first pending/blocked task, then runs the
+   * post-generation stages (GitHub sync, deployment, live tests) that had not
+   * completed.
+   */
+  async resumeExecution(): Promise<PipelineResult> {
+    if (!this.plan) {
+      throw new Error('No plan loaded. Call loadState() with a valid snapshot first.');
+    }
+    // Build/generation loop: getNextReady() already skips done tasks, so this
+    // naturally continues from where the previous run stopped.
+    this.setPhase(this.phase === 'parsing' || this.phase === 'requirements' || this.phase === 'decomposition' ? 'building' : this.phase);
+
+    while (this.taskGraph.hasUnfinishedWork() && !this.humanControl.isPaused()) {
+      const next = this.taskGraph.getNextReady();
+      if (!next) break;
+      const routing = this.envRouter.routeTask(next);
+      this.logDecision('build_next', next.id, `Resuming via ${routing.assignedEnvironment}`, 0.9);
+      this.taskGraph.markRunning(next.id);
+      try {
+        await this.executeTaskInEnvironment(next, routing.assignedEnvironment);
+        this.taskGraph.markDone(next.id);
+        this.artifacts.push(next.id);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.taskGraph.markBlocked(next.id, msg);
+        this.errors.push(msg);
+      }
+      this.projectState.setTaskGraphState(this.taskGraph.toJSON() as unknown as Record<string, unknown>);
+    }
+
+    if (this.errors.length > 0) {
+      this.setPhase('repairing');
+      await this.runRepairLoop();
+    }
+
+    if (this.taskGraph.getProgress().blocked === 0) {
+      await this.runGitHubSync();
+      await this.runDeployment();
+      await this.runLiveBrowserTests();
+    }
+
+    const fProgress = this.taskGraph.getProgress();
+    if (fProgress.blocked === 0 && fProgress.pending === 0) {
+      this.setPhase('complete', { artifacts: this.artifacts });
+    } else {
+      this.setPhase('failed', { errors: this.errors });
+    }
+
+    if (this.plan) {
+      const projectDir = path.resolve(this.workspaceRoot, this.plan.projectName);
+      this.postProcessProject(projectDir);
+    }
+
+    return {
+      phase: this.phase,
+      deployUrl: this.projectState.getDeployUrl(),
+      errors: this.errors,
+      uxResults: [],
+      completionRate: fProgress.done / Math.max(fProgress.total, 1),
+      failurePatterns: [],
+      judgeScore: 0,
+    };
   }
 
   buildExecutionPlan(): InternetExecutionPlan {
@@ -903,7 +1013,7 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
           if (pkg.dependencies?.[k]) delete pkg.dependencies[k];
         }
         const builtinOrScoped = new Set(['next', 'react', 'react-dom', 'fs', 'path', 'http', 'https', 'url', 'stream', 'util', 'events', 'crypto', 'os', 'child_process', 'net', 'tls', 'zlib', 'querystring', 'buffer']);
-        const knownVersions: Record<string, string> = { uuid: '^9.0.0', 'styled-components': '^6.0.0', 'swr': '^2.0.0', zustand: '^4.0.0', 'react-hook-form': '^7.0.0', 'react-query': '^3.0.0', '@tanstack/react-query': '^5.0.0', prisma: '^5.0.0', '@prisma/client': '^5.0.0', bcryptjs: '^2.4.3', jsonwebtoken: '^9.0.0', stripe: '^14.0.0', openai: '^4.0.0', langchain: '^0.2.0', 'react-markdown': '^9.0.0', 'react-syntax-highlighter': '^15.0.0', date: 'npm:date-fns@^3.0.0', 'date-fns': '^3.0.0', lodash: '^4.0.0', axios: '^1.7.0', tailwindcss: '^3.4.0', postcss: '^8.4.0', autoprefixer: '^10.4.0', express: '^4.18.0', '@types/express': '^4.17.0', mongoose: '^8.0.0', cors: '^2.8.0', dotenv: '^16.0.0' };
+        const knownVersions = KNOWN_PACKAGE_VERSIONS;
         const existingPkgs = new Set([...Object.keys(pkg.dependencies), ...Object.keys(pkg.devDependencies)]);
         for (const f of files) {
           if (f.path === 'package.json') continue;
@@ -1039,7 +1149,7 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
       pkg.devDependencies = pkg.devDependencies ?? {};
 
       const builtinOrScoped = new Set(['next', 'react', 'react-dom', 'fs', 'path', 'http', 'https', 'url', 'stream', 'util', 'events', 'crypto', 'os', 'child_process', 'net', 'tls', 'zlib', 'querystring', 'buffer', '@/']);
-      const knownVersions: Record<string, string> = { tailwindcss: '^3.4.0', postcss: '^8.4.0', autoprefixer: '^10.4.0', express: '^4.18.0', '@types/express': '^4.17.0', mongoose: '^8.0.0', cors: '^2.8.0', dotenv: '^16.0.0', axios: '^1.7.0', uuid: '^9.0.0', 'react-hook-form': '^7.0.0', zustand: '^4.0.0', 'react-query': '^3.0.0', '@tanstack/react-query': '^5.0.0', prisma: '^5.0.0', '@prisma/client': '^5.0.0', bcryptjs: '^2.4.3', jsonwebtoken: '^9.0.0', stripe: '^14.0.0', openai: '^4.0.0', 'react-markdown': '^9.0.0', 'react-syntax-highlighter': '^15.0.0', 'date-fns': '^3.0.0', lodash: '^4.0.0', 'next-auth': '^4.24.0', '@types/cors': '^2.8.0', 'socket.io': '^4.7.0', 'socket.io-client': '^4.7.0' };
+      const knownVersions = KNOWN_PACKAGE_VERSIONS_FALLBACK;
       const existingPkgs = new Set([...Object.keys(pkg.dependencies), ...Object.keys(pkg.devDependencies)]);
 
       const scanDir = (dir: string) => {
@@ -1114,7 +1224,7 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
           for (const entry of readdirSync(dir, { withFileTypes: true })) {
             const p = path.join(dir, entry.name);
             if (entry.isDirectory()) removeDir(p);
-            else { try { writeFileSync(p, ''); } catch { /* file blank failed — non-fatal */ } }
+            else { try { writeFileSync(p, ''); } catch (e) { console.warn(`[scaffold] placeholder write skipped (non-fatal): ${e instanceof Error ? e.message : e}`); } }
           }
         };
         removeDir(pagesDir);
@@ -1130,7 +1240,7 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
           for (const bad of ['_app.tsx', '_app.jsx', 'index.tsx', 'index.jsx']) {
             const badPath = path.join(appDir, bad);
             if (existsSync(badPath)) {
-              try { writeFileSync(badPath, ''); } catch { /* ignore */ }
+              try { writeFileSync(badPath, ''); } catch (e) { console.warn(`[scaffold] redundant file write skipped (non-fatal): ${e instanceof Error ? e.message : e}`); }
             }
           }
         }
@@ -1186,7 +1296,7 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
           if (relPath.startsWith('src/app/') && relPath.endsWith('page.tsx')) continue;
           if (relPath.startsWith('src/app/') && relPath.endsWith('layout.tsx')) continue;
           if (relPath === 'package.json' || relPath === 'tsconfig.json') continue;
-          try { writeFileSync(filePath, ''); } catch { /* file blank failed — non-fatal */ }
+          try { writeFileSync(filePath, ''); } catch (e) { console.warn(`[scaffold] placeholder write skipped (non-fatal): ${e instanceof Error ? e.message : e}`); }
         }
       }
 
@@ -1621,11 +1731,11 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
     this.generationAttempted.add(fileType);
 
     const taskDescriptions: Record<string, string> = {
-      scaffold: 'Generate the complete project scaffold including package.json, tsconfig.json, next.config.js, src/app/layout.tsx, src/app/page.tsx, .gitignore, and any other essential config files.',
-      frontend: `Generate frontend React/Next.js component code for: ${context.specificTask}. Include actual implementation, not stubs.`,
-      backend: `Generate backend API code for: ${context.specificTask}. Include Next.js API routes with real handlers.`,
-      database: `Generate database schema and configuration for: ${context.specificTask}. Include SQL schemas and ORM models.`,
-      config: `Generate configuration files for the project.`,
+      scaffold: LLM_TASK_DESCRIPTIONS.scaffold!,
+      frontend: LLM_TASK_DESCRIPTIONS.frontend!.replace('{specificTask}', context.specificTask ?? ''),
+      backend: LLM_TASK_DESCRIPTIONS.backend!.replace('{specificTask}', context.specificTask ?? ''),
+      database: LLM_TASK_DESCRIPTIONS.database!.replace('{specificTask}', context.specificTask ?? ''),
+      config: LLM_TASK_DESCRIPTIONS.config!,
     };
 
     const techStack = context.techStack.length > 0 ? context.techStack.join(', ') : 'Next.js 14, React 18, TypeScript, Tailwind CSS';
@@ -1637,39 +1747,7 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
       ? `\nREQUIRED TECHNOLOGIES (you MUST include these in your code — import them, configure them, use them in actual implementation):\n${requiredTechs.map(t => `- ${t}: Include in package.json dependencies AND use in actual code (imports, configuration, API calls)`).join('\n')}\n`
       : '';
 
-    const systemPrompt = `You are an expert full-stack TypeScript developer building a hackathon project. You generate production-quality code that builds without errors.
-
-RULES:
-- Use 'export default' for all React components and page files
-- Use 'export default function ComponentName()' pattern (NOT named exports)
-- For type imports, use 'import type { X } from "..."' or 'export type { X }'
-- Define types inline in the same file — do NOT create separate type files
-- Every component with children must accept '{ children: React.ReactNode }' prop
-- Never use 'import { X } from "@/types/..."' — define types locally
-- Use semicolons between statements and newlines between functions
-- ALL component files MUST go under src/components/
-- ALL page files MUST go under src/app/ (Next.js App Router)
-- ALL API routes MUST go under src/app/api/
-- Import components using: import ComponentName from '@/components/ComponentName'
-- Use the @/ alias which maps to src/
-
-OUTPUT FORMAT: Return ONLY valid JSON. No markdown, no explanation, no code fences.
-{
-  "files": [
-    {
-      "path": "relative/path/filename.tsx",
-      "content": "file content here"
-    }
-  ]
-}
-
-CONFIG / IMPORT RULES:
-- If you import from @/config, you MUST generate src/config.ts with safe defaults.
-- If you import from @/lib/*, @/hooks/*, @/utils/*, @/constants/*, @/types/*, etc., you MUST generate those target files in the same response.
-- NEVER leave an import pointing at a file that does not exist in the generated file list.
-- If environment variables are used, generate .env.example documenting them.
-- Generate src/config.ts and .env.example for any API keys, secrets, or configuration values.
-`;
+    const systemPrompt = LLM_GENERATION_SYSTEM_PROMPT;
 
     const userPrompt = `Project: ${this.devpostData.title}
 Problem: ${this.devpostData.problemStatement}

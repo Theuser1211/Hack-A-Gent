@@ -172,7 +172,7 @@ Turn Hack-A-Gent into a production-quality CLI that any developer can install gl
 - All new classes are exported from `cli/devpost-parser.ts`
 
 ## Remaining Ideas
-- Wire `CompetitionIntelligence`, `WinningStrategyGenerator`, `PipelineReportGenerator` into `cli/commands/run.ts` — they exist but aren't called yet
+- `CompetitionIntelligence`, `WinningStrategyGenerator`, `PipelineReportGenerator` — wired into `cli/commands/run.ts` via `HackathonPipelineOrchestrator`
 - Phase 3: Multi-Agent Pipeline — chain agents with filtered info flow
 - Phase 4: Prompt Engineering Audit — improve clarity, structure, JSON reliability
 - Phase 5: Project Quality Scaffolding — auto-generate README, LICENSE, .gitignore, .env.example, Docker, CI

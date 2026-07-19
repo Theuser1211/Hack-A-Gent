@@ -1,5 +1,9 @@
 # Production Audit — Hack-Agent v1.0
 
+> **Historical snapshot — generated 2026-06-28.** Describes the codebase as of that
+> date. For current status, run `npm run lint`, `npm run typecheck`, and `npm test`,
+> or see `RELEASE-READINESS.md` and `ARCHITECTURE-REPORT.md`.
+
 Generated: 2026-06-28
 
 ## Repository Health

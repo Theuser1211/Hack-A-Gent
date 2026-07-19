@@ -9,7 +9,26 @@ import { formatError, printError } from './errors.js';
 import { banner, success as logSuccess, error as logError, info, dim, showWelcome } from './output.js';
 import type { CLIArgs, CLIResult, CommandName } from './types.js';
 
-const VALID_COMMANDS: CommandName[] = [
+// Feature commands live under features/commands/<name>.ts (kept out of the
+// refactored cli/ production files). Register them here only. The
+// command functions live in features/, so this stays isolated from the
+// files the other engineer is actively refactoring.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const FEATURE_COMMANDS: Record<string, { mod: () => Promise<any>; fn: string }> = {
+  analyze: { mod: () => import('../features/commands/intelligence.js'), fn: 'analyzeCommand' },
+  inspect: { mod: () => import('../features/commands/intelligence.js'), fn: 'inspectCommand' },
+  opportunities: { mod: () => import('../features/commands/intelligence.js'), fn: 'opportunitiesCommand' },
+  sponsors: { mod: () => import('../features/commands/intelligence.js'), fn: 'sponsorsCommand' },
+  timeline: { mod: () => import('../features/commands/intelligence.js'), fn: 'timelineCommand' },
+  strategy: { mod: () => import('../features/commands/intelligence.js'), fn: 'strategyCommand' },
+  compare: { mod: () => import('../features/commands/intelligence.js'), fn: 'compareCommand' },
+  categories: { mod: () => import('../features/commands/categories.js'), fn: 'categoriesCommand' },
+  docs: { mod: () => import('../features/commands/docs.js'), fn: 'docsCommand' },
+  knowledge: { mod: () => import('../features/commands/knowledge.js'), fn: 'knowledgeCommand' },
+};
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+const VALID_COMMANDS: string[] = [
   'run',
   'resume',
   'status',
@@ -30,6 +49,16 @@ const VALID_COMMANDS: CommandName[] = [
   'models',
   'providers',
   'version',
+  'analyze',
+  'inspect',
+  'opportunities',
+  'sponsors',
+  'timeline',
+  'strategy',
+  'compare',
+  'categories',
+  'docs',
+  'knowledge',
 ];
 
 const COMMAND_ALIASES: Record<string, CommandName> = {
@@ -56,7 +85,7 @@ function parseArgs(argv: string[]): CLIArgs {
   }
   if (!allValid.includes(command)) {
     console.error(`  Unknown command: '${rawCommand}'. Run 'hag help' to see available commands.`);
-    return { command: 'help' as CommandName, subcommand: undefined, positional: [], flags: {} };
+    return { command: 'help' as CommandName, subcommand: undefined, positional: [], flags: { unknownCommand: rawCommand } };
   }
 
   let i = 1;
@@ -91,7 +120,7 @@ function parseArgs(argv: string[]): CLIArgs {
     } else if (
       !seenSubcommand &&
       (command === 'memory' || command === 'benchmark' || command === 'replay' || command === 'run') &&
-      (arg === 'query' || arg === 'stats' || arg === 'clear' || arg === 'list' || arg === 'run')
+      (arg === 'query' || arg === 'stats' || arg === 'clear' || arg === 'list' || arg === 'run' || arg === 'real' || arg === 'measure' || arg === 'history' || arg === 'leaderboard' || arg === 'compare' || arg === 'suggest')
     ) {
       subcommand = arg;
       seenSubcommand = true;
@@ -181,7 +210,27 @@ function showHelp(): void {
     hackagent benchmark run --adversarial --seed 42
     hackagent replay run-2026-01-15
     hackagent chat
-`);
+    hackagent analyze https://devpost.com/software/example
+    hackagent categories list
+    hackagent docs generate
+
+  Intelligence Engine (Hackathon Intelligence):
+    analyze <url|file|text>     Full 20+ dimension analysis (terminal)
+    inspect <url|file|text>     Same, but verbose (risks + winners playbook)
+    opportunities <url|file|text>  Scoring opportunities + MVP focus (why)
+    sponsors <url|file|text>    Sponsor & API breakdown (why it matters)
+    timeline <url|file|text>    Timeline, milestones, completion probability
+    strategy <url|file|text>    Winning strategy + differentiators
+    compare <a> <b>             Diff two hackathons (competitiveness Δ)
+    (all support --json and --out <file>)
+
+  Knowledge Base (Hackathon Intelligence):
+    knowledge update [--url <devpost|github> ...] [--no-prev]   Seed + augment KB
+    knowledge search <query> [--category <c>] [--source <s>] [--limit n]
+    knowledge stats [--json]                                    Totals + breakdown
+    knowledge explain <id|title> [--json]                        Full entry + evidence
+    knowledge export [--format json|md] [--out <file>]           Export the KB
+  `);
 }
 
 async function ensureConfig(command: CommandName): Promise<boolean> {
@@ -218,6 +267,7 @@ async function main(): Promise<void> {
 
   if (args.command === 'help' || args.command === undefined) {
     const rawArgs = process.argv.slice(2);
+    const unknownCommand = typeof args.flags.unknownCommand === 'string';
     if (rawArgs.length === 0) {
       showWelcome(getVersion());
       const config = getConfig();
@@ -229,7 +279,7 @@ async function main(): Promise<void> {
     } else {
       showHelp();
     }
-    process.exitCode = 0;
+    process.exitCode = unknownCommand ? 1 : 0;
     return;
   }
 
@@ -356,8 +406,25 @@ async function main(): Promise<void> {
         result = await versionCommand(ctx, args);
         break;
       }
-      default:
+      default: {
+        // Feature commands: dynamically load from features/commands/<name>.ts.
+        // Kept out of the main switch so new capabilities never touch
+        // the refactored production pipeline files.
+        const name = String(args.command);
+        const feature = FEATURE_COMMANDS[name];
+        if (feature) {
+          try {
+            const mod = await feature.mod();
+            result = await mod[feature.fn](ctx, args);
+            break;
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            result = { success: false, message: `Feature command "${name}" failed: ${msg}` };
+            break;
+          }
+        }
         result = { success: false, message: `Unknown command: ${args.command}. Use 'hackagent help'.` };
+      }
     }
   } catch (err) {
     const debug = args.flags.debug === true;
@@ -372,6 +439,7 @@ async function main(): Promise<void> {
   }
 
   result.durationMs = Date.now() - executionTime;
+
 
   if (ctx.outputFormat === 'json') {
     console.log(JSON.stringify(result, null, 2));

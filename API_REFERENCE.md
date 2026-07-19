@@ -1,8 +1,8 @@
 # Hack-A-Gent API Reference
 
-> **Version:** 0.1.0  
+> **Version:** 1.0.5  
 > **Language:** TypeScript (Node.js)  
-> **Package:** `hack-agent`
+> **Package:** `hag-cli`
 
 ---
 
@@ -777,7 +777,7 @@ The CLI entry point in `cli/index.ts` parses arguments and dispatches to command
 
 | Export | Description |
 |---|---|
-| `CommandName` | `'run' \| 'resume' \| 'status' \| 'memory' \| 'benchmark' \| 'replay' \| 'deploy' \| 'test' \| 'explain' \| 'health' \| 'chat' \| 'help' \| 'simulate' \| 'hack-agent'` |
+| `CommandName` | `'run' \| 'resume' \| 'status' \| 'memory' \| 'benchmark' \| 'replay' \| 'deploy' \| 'test' \| 'explain' \| 'health' \| 'chat' \| 'help' \| 'simulate' \| 'hack-agent' \| 'config' \| 'setup' \| 'doctor' \| 'models' \| 'providers' \| 'version' \| 'analyze' \| 'inspect' \| 'opportunities' \| 'sponsors' \| 'timeline' \| 'strategy' \| 'compare' \| 'categories' \| 'docs' \| 'knowledge'` |
 | `CLIArgs` | `{ command, subcommand?, positional, flags }` |
 | `CLIResult` | `{ success, message, data?, traceId?, metrics?, durationMs? }` |
 | `CLIExecutionState` | Snapshot of current execution state |
@@ -811,6 +811,7 @@ The main pipeline command. Accepts a Devpost URL, file path, or text description
 |---|---|---|
 | `--demo` | `boolean` | Demo surface mode (compile + simulate only) |
 | `--simulate-only` | `boolean` | Simulation only |
+| `--resume <project-id>` | `string` | Resume a saved project execution |
 | `--seed` | `number` | Deterministic seed |
 | `--dry-run` | `boolean` | No execution |
 
@@ -841,7 +842,7 @@ Queries the `OrganizationalMemoryBank`.
 
 #### `benchmarkCommand` (`cli/commands/benchmark.ts`)
 
-Subcommands: `list`, `run [id]`.
+Subcommands: `list`, `run [id]`, `real <list|run|run-all>`, `measure [dir]`, `history`, `leaderboard`, `compare`, `suggest`.
 
 | Flag | Type | Description |
 |---|---|---|

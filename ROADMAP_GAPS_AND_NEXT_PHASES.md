@@ -1,5 +1,13 @@
 # Hack-Agent System — Gaps, Problems & Future Phases Roadmap
 
+> ⚠️ **This is a research-subsystem roadmap, NOT the product roadmap for `hag run`.**
+> It describes the *adversarial/multi-agent-swarm/company-simulation* research branch
+> under `benchmarks/` (e.g. `civilization-*`, `company-*`, `swarm-*`,
+> `cognitive-injection-layer`, `deception-layer`). That subsystem is **not wired into
+> the `hag run` CLI pipeline**, which is documented in `README.md` and
+> `ARCHITECTURE-REPORT.md`. Read this only if you are working on the simulation/research
+> engine, not the end-user CLI.
+
 ## Status: Phases 17–18 Complete
 System Type: Multi-Agent Swarm + Company Simulation + Evolution Engine  
 Current Level: **Closed-loop deterministic hackathon simulation (single-world runtime)**

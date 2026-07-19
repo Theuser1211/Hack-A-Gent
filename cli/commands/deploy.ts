@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import * as path from 'node:path';
 
-import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
+import { createDeterministicUuid, nextTraceCounter } from '../../benchmarks/determinism-kernel.js';
 import { InternetHackathonOrchestrator } from '../../benchmarks/internet-hackathon-orchestrator.js';
 import { RemoteProjectState } from '../../benchmarks/remote-project-state.js';
 import { header, log, success, error as showError, dim } from '../output.js';
@@ -75,7 +75,7 @@ export async function deployCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
         : `Deployment status: ${deployResult.success ? 'success' : 'failed'}`,
       data: { projectId, url: deployResult.url, status: deployResult.success ? 'deployed' : 'failed' },
       metrics: { durationMs: elapsed },
-      traceId: createDeterministicUuid(ctx.seed, Date.now()).slice(0, 12),
+      traceId: createDeterministicUuid(ctx.seed, nextTraceCounter()).slice(0, 12),
     };
   } catch (err) {
     const elapsed = Date.now() - executionTime;
