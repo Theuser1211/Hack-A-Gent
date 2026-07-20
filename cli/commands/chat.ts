@@ -1,6 +1,4 @@
-import * as readline from 'node:readline';
-
-import { log, dim } from '../output.js';
+import { log, dim, ask } from '../output.js';
 import type { CLIContext, CLIArgs, CLIResult, CommandName } from '../types.js';
 
 const VALID_COMMANDS: CommandName[] = [
@@ -93,83 +91,69 @@ export async function chatCommand(ctx: CLIContext, _args: CLIArgs): Promise<CLIR
   dim('='.repeat(50));
   log('');
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    prompt: 'hackagent> ',
-  });
+  while (true) {
+    const line = await ask('hackagent> ');
+    if (line === null) {
+      log('Interactive session ended.');
+      break;
+    }
 
-  rl.prompt();
+    const trimmed = line; // ask() automatically trims
+    if (!trimmed) continue;
 
-  return new Promise((resolve) => {
-    rl.on('line', async (line: string) => {
-      const trimmed = line.trim();
-      if (!trimmed) {
-        rl.prompt();
-        return;
+    if (trimmed === 'exit' || trimmed === 'quit') {
+      log('Goodbye.');
+      break;
+    }
+
+    if (trimmed === 'help') {
+      log('Available commands:');
+      log('  run <input>        \u2014 Run full pipeline (Devpost URL, file, or description)');
+      log('  status             \u2014 Show current project status');
+      log('  memory query <txt> \u2014 Search organizational memory');
+      log('  memory stats       \u2014 Show memory statistics');
+      log('  deploy <id>        \u2014 Deploy a project');
+      log('  test <id> --url     \u2014 Run browser tests');
+      log('  explain <id>       \u2014 Debug/explain analysis');
+      log('  health             \u2014 System health check');
+      log('  exit               \u2014 Exit interactive mode');
+      log('');
+      log('Tip: Just type a description like "Build a weather app" to run directly.');
+      continue;
+    }
+
+    const parts = trimmed.split(/\s+/);
+    const firstWord = parts[0] as CommandName;
+
+    if (VALID_COMMANDS.includes(firstWord)) {
+      const chatArgs: CLIArgs = {
+        command: firstWord,
+        subcommand: parts[1] === 'query' || parts[1] === 'stats' || parts[1] === 'clear' ? parts[1] : undefined,
+        positional: parts.slice(1),
+        flags: {},
+      };
+      try {
+        const result = await dispatchCommand(ctx, chatArgs);
+        log(`\u2192 ${result.success ? 'OK' : 'FAIL'}: ${result.message.slice(0, 100)}`);
+      } catch (err) {
+        log(`Error: ${err instanceof Error ? err.message : String(err)}`);
       }
-
-      if (trimmed === 'exit' || trimmed === 'quit') {
-        log('Goodbye.');
-        rl.close();
-        resolve({ success: true, message: 'Interactive session ended' });
-        return;
+    } else {
+      const chatArgs: CLIArgs = {
+        command: 'run' as CommandName,
+        subcommand: undefined,
+        positional: [trimmed],
+        flags: {},
+      };
+      try {
+        log(`Running: "${trimmed.slice(0, 80)}"`);
+        const result = await dispatchCommand(ctx, chatArgs);
+        log(`\u2192 ${result.success ? 'OK' : 'FAIL'}: ${result.message.slice(0, 100)}`);
+      } catch (err) {
+        log(`Error: ${err instanceof Error ? err.message : String(err)}`);
       }
+    }
+  }
 
-      if (trimmed === 'help') {
-        log('Available commands:');
-        log('  run <input>        \u2014 Run full pipeline (Devpost URL, file, or description)');
-        log('  status             \u2014 Show current project status');
-        log('  memory query <txt> \u2014 Search organizational memory');
-        log('  memory stats       \u2014 Show memory statistics');
-        log('  deploy <id>        \u2014 Deploy a project');
-        log('  test <id> --url     \u2014 Run browser tests');
-        log('  explain <id>       \u2014 Debug/explain analysis');
-        log('  health             \u2014 System health check');
-        log('  exit               \u2014 Exit interactive mode');
-        log('');
-        log('Tip: Just type a description like "Build a weather app" to run directly.');
-        rl.prompt();
-        return;
-      }
-
-      const parts = trimmed.split(/\s+/);
-      const firstWord = parts[0] as CommandName;
-
-      if (VALID_COMMANDS.includes(firstWord)) {
-        const chatArgs: CLIArgs = {
-          command: firstWord,
-          subcommand: parts[1] === 'query' || parts[1] === 'stats' || parts[1] === 'clear' ? parts[1] : undefined,
-          positional: parts.slice(1),
-          flags: {},
-        };
-        try {
-          const result = await dispatchCommand(ctx, chatArgs);
-          log(`\u2192 ${result.success ? 'OK' : 'FAIL'}: ${result.message.slice(0, 100)}`);
-        } catch (err) {
-          log(`Error: ${err instanceof Error ? err.message : String(err)}`);
-        }
-      } else {
-        const chatArgs: CLIArgs = {
-          command: 'run' as CommandName,
-          subcommand: undefined,
-          positional: [trimmed],
-          flags: {},
-        };
-        try {
-          log(`Running: "${trimmed.slice(0, 80)}"`);
-          const result = await dispatchCommand(ctx, chatArgs);
-          log(`\u2192 ${result.success ? 'OK' : 'FAIL'}: ${result.message.slice(0, 100)}`);
-        } catch (err) {
-          log(`Error: ${err instanceof Error ? err.message : String(err)}`);
-        }
-      }
-
-      rl.prompt();
-    });
-
-    rl.on('close', () => {
-      resolve({ success: true, message: 'Interactive session ended' });
-    });
-  });
+  return { success: true, message: 'Interactive session ended' };
 }

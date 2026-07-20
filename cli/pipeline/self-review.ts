@@ -271,21 +271,12 @@ export class SelfReviewScorer {
     const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
     improvementActions.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
 
-    // If no weaknesses detected, add a generic strength
-    if (weaknesses.length === 0) {
-      strengths.push('Project scores well across all dimensions');
-    }
+    // Note: strengths are empty when no dimension scored 75+.
+    // This means the project needs work — no fabricated strengths.
 
-    // If no improvement actions but weaknesses remain, add generic action
-    if (improvementActions.length === 0 && weaknesses.length > 0) {
-      improvementActions.push({
-        category: 'general',
-        action: 'Review project holistically and address the identified weaknesses above',
-        expectedImpact: 10,
-        effortDays: 0.5,
-        priority: 'medium',
-      });
-    }
+    // If no improvement actions but weaknesses remain, the individual dimension
+    // handlers above should have generated them. Empty is honest.
+    // No fabricated improvement actions.
 
     return {
       strengths,
@@ -318,6 +309,9 @@ export class SelfReviewScorer {
    * Run the full improvement feedback loop end-to-end.
    * Scores the project, generates feedback, and iterates until convergence or max iterations.
    * Returns the final feedback with accumulated improvements across all iterations.
+   *
+   * @experimental Improvement simulation is a placeholder — no real code changes are made.
+   * Scores are modeled, not measured. Use only for estimating potential impact.
    */
   runImprovementLoop(params: {
     hasUI: boolean;

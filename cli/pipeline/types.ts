@@ -1,3 +1,5 @@
+import type { ExtractedField } from '../confidence.js';
+
 export interface DevpostParseResult {
   title: string;
   problemStatement: string;
@@ -6,6 +8,16 @@ export interface DevpostParseResult {
   recommendedStack: string[];
   rawText: string;
   submissionRequirements: string[];
+  /** Confidence levels for each extracted field. Original fields preserved for backward compatibility. */
+  confidence: {
+    title: ExtractedField<string>;
+    judgingCriteria: ExtractedField<string[]>;
+    deadlines: ExtractedField<Array<{ label: string; date: string; type: 'submission' | 'judging' | 'demo' }>>;
+    sponsorAPIs: ExtractedField<string[]>;
+    organizer: ExtractedField<string>;
+    techStack: ExtractedField<string[]>;
+    restrictions: ExtractedField<string[]>;
+  };
 }
 
 // Phase 1: Competition Intelligence Types
@@ -43,6 +55,18 @@ export interface CompetitionAnalysis {
     date: string;
     type: 'submission' | 'judging' | 'demo';
   }>;
+  /** Extraction confidence metadata — parallel to the fields above. All original fields preserved. */
+  extractionConfidence?: {
+    title: ExtractedField<string>;
+    theme: ExtractedField<string>;
+    difficulty: ExtractedField<string>;
+    organizer: ExtractedField<string>;
+    participants: ExtractedField<number>;
+    judgingCriteria: ExtractedField<string[]>;
+    sponsorAPIs: ExtractedField<string[]>;
+    restrictions: ExtractedField<string[]>;
+    deadlines: ExtractedField<Array<{ label: string; date: string; type: 'submission' | 'judging' | 'demo' }>>;
+  };
 }
 
 // Phase 2: Winning Strategy Types
