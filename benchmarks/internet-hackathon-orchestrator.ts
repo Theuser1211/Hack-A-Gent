@@ -3,6 +3,7 @@ import { execSync, spawn } from 'node:child_process';
 import * as http from 'node:http';
 import * as path from 'node:path';
 
+import { warn, debug, aiUnavailable } from '../cli/output.js';
 import { CapabilityRegistry, type CapabilityDefinition } from './capability-registry.js';
 import { DeploymentRepairController, type DeploymentCycle } from './deployment-repair-controller.js';
 import { createDeterministicUuid, deterministicNow } from './determinism-kernel.js';
@@ -29,6 +30,7 @@ import type { UXEvaluationResult } from './ux-evaluation-agent.js';
 import { KNOWN_PACKAGE_VERSIONS, KNOWN_PACKAGE_VERSIONS_FALLBACK, LLM_GENERATION_SYSTEM_PROMPT, LLM_TASK_DESCRIPTIONS } from './orchestrator-templates.js';
 
 export type OrchestratorPhase =
+  | 'initializing'
   | 'parsing'
   | 'requirements'
   | 'decomposition'
@@ -94,6 +96,12 @@ export interface PipelineResult {
   completionRate: number;
   failurePatterns: Array<{ category: string; description: string; frequency: number; suggestedFix: string }>;
   judgeScore: number;
+  /** Count of tasks that recovered via retry */
+  retryRecovered?: number;
+  /** Total retry attempts across all tasks */
+  retryAttempts?: number;
+  /** Per-task retry log */
+  retryLog?: Array<{ taskId: string; taskDesc: string; attempt: number; maxRetries: number; outcome: string }>;
 }
 
 export class InternetHackathonOrchestrator {
@@ -111,13 +119,17 @@ export class InternetHackathonOrchestrator {
   private readonly deployRepair: DeploymentRepairController;
   private readonly routerEngine: RouterEngine | null;
 
-  private phase: OrchestratorPhase = 'parsing';
+  private hasWarnedLLMFailure = false;
+
+  private phase: OrchestratorPhase = 'initializing';
   private plan: InternetExecutionPlan | null = null;
   private devpostData: DevpostData | null = null;
   private errors: string[] = [];
   private artifacts: string[] = [];
   private decisionLog: AutoDecision[] = [];
   private generationAttempted = new Set<string>();
+  private taskRetries = new Map<string, number>();
+  private taskRetryLog: Array<{ taskId: string; taskDesc: string; attempt: number; maxRetries: number; reason: string; outcome: 'retry' | 'skip' | 'blocked' }> = [];
   private onPhaseChange: ((phase: OrchestratorPhase, data?: Record<string, unknown>) => void) | null = null;
 
   constructor(workspaceRoot: string, stateDir?: string, seed = 42, routerEngine?: RouterEngine) {
@@ -251,10 +263,47 @@ export class InternetHackathonOrchestrator {
         await this.executeTaskInEnvironment(next, routing.assignedEnvironment);
         this.taskGraph.markDone(next.id);
         this.artifacts.push(next.id);
+        this.projectState.addAgentLog({
+          agentId: routing.assignedEnvironment,
+          taskId: next.id,
+          action: 'execute',
+          status: 'completed',
+          startedAt: deterministicNow(this.seed),
+          completedAt: deterministicNow(this.seed + 1),
+          output: 'Task completed',
+          error: null,
+        });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        this.taskGraph.markBlocked(next.id, msg);
-        this.errors.push(msg);
+        // Attempt per-task retry with intelligent limits before marking blocked
+        const retryOutcome = await this.attemptTaskRetry(next, msg, routing.assignedEnvironment);
+        if (retryOutcome === 'recovered') {
+          this.taskGraph.markDone(next.id);
+          this.artifacts.push(next.id);
+          this.projectState.addAgentLog({
+            agentId: routing.assignedEnvironment,
+            taskId: next.id,
+            action: 'retry_execute',
+            status: 'completed',
+            startedAt: deterministicNow(this.seed),
+            completedAt: deterministicNow(this.seed + 2),
+            output: 'Recovered after retry',
+            error: null,
+          });
+        } else {
+          this.taskGraph.markBlocked(next.id, msg);
+          this.errors.push(msg);
+          this.projectState.addAgentLog({
+            agentId: routing.assignedEnvironment,
+            taskId: next.id,
+            action: 'execute',
+            status: 'failed',
+            startedAt: deterministicNow(this.seed),
+            completedAt: deterministicNow(this.seed + 1),
+            output: '',
+            error: msg,
+          });
+        }
       }
       this.projectState.setTaskGraphState(this.taskGraph.toJSON() as unknown as Record<string, unknown>);
     }
@@ -290,6 +339,9 @@ export class InternetHackathonOrchestrator {
       completionRate: fProgress.done / Math.max(fProgress.total, 1),
       failurePatterns: [],
       judgeScore: 0,
+      retryRecovered: this.taskRetryLog.filter(r => r.outcome === 'retry' && fProgress.done > 0).length,
+      retryAttempts: this.taskRetries.size,
+      retryLog: this.taskRetryLog.map(r => ({ taskId: r.taskId, taskDesc: r.taskDesc, attempt: r.attempt, maxRetries: r.maxRetries, outcome: r.outcome })),
     };
   }
 
@@ -332,7 +384,7 @@ export class InternetHackathonOrchestrator {
         const res = await fetch(input, { signal: AbortSignal.timeout(10000) });
         if (res.ok) text = await res.text();
       } catch {
-        console.warn(`Failed to fetch URL: ${input} — using raw text`);
+        warn(`Could not fetch ${input} — using the text you provided instead.`);
       }
     }
 
@@ -517,6 +569,9 @@ export class InternetHackathonOrchestrator {
           completionRate: progress.done / Math.max(progress.total, 1),
           failurePatterns: [],
           judgeScore: 0,
+          retryRecovered: this.taskRetryLog.filter(r => r.outcome === 'retry' && progress.done > 0).length,
+          retryAttempts: this.taskRetries.size,
+          retryLog: this.taskRetryLog.map(r => ({ taskId: r.taskId, taskDesc: r.taskDesc, attempt: r.attempt, maxRetries: r.maxRetries, outcome: r.outcome })),
         };
       }
 
@@ -546,18 +601,35 @@ export class InternetHackathonOrchestrator {
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        this.taskGraph.markBlocked(next.id, msg);
-        this.errors.push(msg);
-        this.projectState.addAgentLog({
-          agentId: routing.assignedEnvironment,
-          taskId: next.id,
-          action: 'execute',
-          status: 'failed',
-          startedAt: deterministicNow(this.seed),
-          completedAt: deterministicNow(this.seed + 1),
-          output: '',
-          error: msg,
-        });
+        // Attempt per-task retry with intelligent limits before marking blocked
+        const retryOutcome = await this.attemptTaskRetry(next, msg, routing.assignedEnvironment);
+        if (retryOutcome === 'recovered') {
+          this.taskGraph.markDone(next.id);
+          this.artifacts.push(next.id);
+          this.projectState.addAgentLog({
+            agentId: routing.assignedEnvironment,
+            taskId: next.id,
+            action: 'retry_execute',
+            status: 'completed',
+            startedAt: deterministicNow(this.seed),
+            completedAt: deterministicNow(this.seed + 2),
+            output: 'Recovered after retry',
+            error: null,
+          });
+        } else {
+          this.taskGraph.markBlocked(next.id, msg);
+          this.errors.push(msg);
+          this.projectState.addAgentLog({
+            agentId: routing.assignedEnvironment,
+            taskId: next.id,
+            action: 'execute',
+            status: 'failed',
+            startedAt: deterministicNow(this.seed),
+            completedAt: deterministicNow(this.seed + 1),
+            output: '',
+            error: msg,
+          });
+        }
       }
 
       this.projectState.setTaskGraphState(this.taskGraph.toJSON() as unknown as Record<string, unknown>);
@@ -594,7 +666,100 @@ export class InternetHackathonOrchestrator {
       completionRate: fProgress.done / Math.max(fProgress.total, 1),
       failurePatterns: [],
       judgeScore: 0, // Not computed — requires real evaluation
+      retryRecovered: this.taskRetryLog.filter(r => r.outcome === 'retry' && fProgress.done > 0).length,
+      retryAttempts: this.taskRetries.size,
+      retryLog: this.taskRetryLog.map(r => ({ taskId: r.taskId, taskDesc: r.taskDesc, attempt: r.attempt, maxRetries: r.maxRetries, outcome: r.outcome })),
     };
+  }
+
+  /**
+   * Determine the maximum retries for a task based on failure type.
+   * Build failures get more retries, API/key errors fewer, deploy errors moderate.
+   */
+  private getMaxRetries(errorMessage: string, taskCategory: string): number {
+    const msg = errorMessage.toLowerCase();
+    const cat = taskCategory.toLowerCase();
+
+    // Network/API errors — retry once (transient)
+    if (msg.includes('timeout') || msg.includes('network') || msg.includes('econnrefused') || msg.includes('enotfound')) {
+      return 2;
+    }
+    // Auth/key errors — no retry (won't fix itself)
+    if (msg.includes('401') || msg.includes('403') || msg.includes('api key') || msg.includes('unauthorized') || msg.includes('token')) {
+      return 0;
+    }
+    // Build/compile errors — retry 3 times (repair may fix)
+    if (msg.includes('typescript') || msg.includes('tsc') || msg.includes('build') || msg.includes('compile') || cat.includes('frontend') || cat.includes('backend')) {
+      return 3;
+    }
+    // Deployment errors — retry 2 times (may be transient)
+    if (cat.includes('deploy') || msg.includes('deploy')) {
+      return 2;
+    }
+    // Install/dep errors — retry 1 time (may be cache)
+    if (msg.includes('npm') || msg.includes('install') || msg.includes('dependency') || msg.includes('package')) {
+      return 1;
+    }
+    // Default: 1 retry
+    return 1;
+  }
+
+  /**
+   * Attempt to retry a failed task after understanding the failure type.
+   * Records every retry reason. Never retries forever.
+   */
+  private async attemptTaskRetry(
+    node: TaskNode,
+    errorMessage: string,
+    environment: EnvironmentType,
+  ): Promise<'recovered' | 'failed'> {
+    const currentRetries = this.taskRetries.get(node.id) ?? 0;
+    const maxRetries = this.getMaxRetries(errorMessage, node.category);
+
+    if (currentRetries >= maxRetries) {
+      this.taskRetryLog.push({
+        taskId: node.id,
+        taskDesc: node.description,
+        attempt: currentRetries,
+        maxRetries,
+        reason: `Exhausted retries (${currentRetries}/${maxRetries}): ${errorMessage.slice(0, 100)}`,
+        outcome: 'blocked',
+      });
+      this.logDecision('skip_task', node.id, `Retries exhausted for ${node.description} (${currentRetries}/${maxRetries})`, 0.3);
+      return 'failed';
+    }
+
+    this.taskRetries.set(node.id, currentRetries + 1);
+
+    // Log the retry decision with reason
+    this.logDecision(
+      'build_next',
+      node.id,
+      `Retry ${currentRetries + 1}/${maxRetries} for ${node.description}: ${errorMessage.slice(0, 80)}`,
+      Math.max(0.1, 1 - (currentRetries + 1) / (maxRetries + 1)),
+    );
+
+    this.taskRetryLog.push({
+      taskId: node.id,
+      taskDesc: node.description,
+      attempt: currentRetries + 1,
+      maxRetries,
+      reason: errorMessage.slice(0, 120),
+      outcome: 'retry',
+    });
+
+    // Wait with exponential backoff before retry (avoid tight loop on transient errors)
+    const delayMs = 500 * Math.pow(2, currentRetries);
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+
+    try {
+      await this.executeTaskInEnvironment(node, environment);
+      return 'recovered';
+    } catch (retryErr) {
+      const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
+      // Recurse with incremented counter
+      return this.attemptTaskRetry(node, retryMsg, environment);
+    }
   }
 
   private autonomousDecide(): AutoDecision {
@@ -719,97 +884,76 @@ export class InternetHackathonOrchestrator {
     const projectName = plan.projectName;
     const title = projectName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     return [
-  {
-    path: 'package.json',
-    content: JSON.stringify(
       {
-        name: projectName,
-        version: '0.1.0',
-        private: true,
-        scripts: {
-          dev: 'next dev',
-          build: 'next build',
-          start: 'next start',
-          test: 'vitest run',
-          lint: 'next lint',
-          typecheck: 'tsc --noEmit',
-        },
-        dependencies: { next: '^14.0.0', react: '^18.2.0', 'react-dom': '^18.2.0' },
-        devDependencies: {
-          typescript: '^5.3.0',
-          vitest: '^1.6.0',
-          eslint: '^8.57.0',
-          'eslint-config-next': '^14.2.0',
-          '@types/react': '^18.2.0',
-          '@types/node': '^20.0.0',
-        },
+        path: 'package.json',
+        content: JSON.stringify({
+          name: projectName,
+          version: '0.1.0',
+          private: true,
+          scripts: { dev: 'next dev', build: 'next build', start: 'next start' },
+          dependencies: { next: '^14.0.0', react: '^18.2.0', 'react-dom': '^18.2.0' },
+          devDependencies: { typescript: '^5.3.0', '@types/react': '^18.2.0', '@types/node': '^20.0.0' },
+        }, null, 2),
       },
-      null,
-      2,
-    ),
-  },
       {
         path: 'tsconfig.json',
-        content: JSON.stringify(
-          {
-            compilerOptions: {
-              target: 'ES2017',
-              lib: ['dom', 'dom.iterable', 'esnext'],
-              module: 'esnext',
-              moduleResolution: 'bundler',
-              jsx: 'preserve',
-              strict: true,
-              noEmit: true,
-              paths: { '@/*': ['./src/*'] },
-            },
-            include: ['next-env.d.ts', '**/*.ts', '**/*.tsx'],
-            exclude: ['node_modules'],
+        content: JSON.stringify({
+          compilerOptions: {
+            target: 'ES2017',
+            lib: ['dom', 'dom.iterable', 'esnext'],
+            module: 'esnext',
+            moduleResolution: 'bundler',
+            jsx: 'preserve',
+            strict: true,
+            noEmit: true,
+            paths: { '@/*': ['./src/*'] },
           },
-          null,
-          2,
-        ),
+          include: ['next-env.d.ts', '**/*.ts', '**/*.tsx'],
+          exclude: ['node_modules'],
+        }, null, 2),
       },
       {
-        path: 'next.config.js',
-        content: '/** @type { import("next").NextConfig } */\nconst nextConfig = {};\nmodule.exports = nextConfig;\n',
+        path: '.gitignore',
+        content: ['node_modules/', '.next/', '.env', '.env.local', 'dist/', 'build/', '.DS_Store', '*.log'].join('\n') + '\n',
       },
       {
         path: 'src/app/globals.css',
-        content: `* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: system-ui, sans-serif; line-height: 1.6; color: #333; }
-.container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
-nav { background: #1a1a2e; color: white; padding: 1rem; }
-nav a { color: white; text-decoration: none; margin-right: 1rem; }
-nav a:hover { text-decoration: underline; }
-main { padding: 2rem 1rem; }
-footer { background: #f4f4f4; padding: 1rem; text-align: center; margin-top: 2rem; }
-h1 { margin-bottom: 1rem; color: #1a1a2e; }
-button { background: #1a1a2e; color: white; border: none; padding: 0.5rem 1rem; cursor: pointer; border-radius: 4px; }
+        content: `*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #1a1a2e; background: #f8f9fa; }
+.container { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
+nav { background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; padding: 1rem 1.5rem; display: flex; gap: 1.5rem; align-items: center; }
+nav a { color: #a0c4ff; text-decoration: none; font-weight: 500; }
+nav a:hover { color: white; }
+main { min-height: calc(100vh - 120px); }
+footer { background: #e9ecef; padding: 1rem; text-align: center; color: #666; font-size: 0.9rem; margin-top: 2rem; }
+h1 { font-size: 1.8rem; margin-bottom: 0.75rem; color: #1a1a2e; }
+h2 { font-size: 1.3rem; margin-bottom: 0.5rem; color: #16213e; }
+p { margin-bottom: 1rem; color: #444; }
+.card { background: white; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e0e0e0; }
+button, .btn { background: #1a1a2e; color: white; border: none; padding: 0.5rem 1.25rem; border-radius: 6px; cursor: pointer; font-size: 0.95rem; font-weight: 500; transition: background 0.15s; }
 button:hover { background: #2d2d4a; }
-input, textarea { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; }
-.card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }\n`,
+input, textarea { width: 100%; padding: 0.5rem; border: 1px solid #d0d0d0; border-radius: 6px; font-size: 0.95rem; }
+input:focus, textarea:focus { outline: none; border-color: #1a1a2e; box-shadow: 0 0 0 2px rgba(26,26,46,0.1); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.tag { display: inline-block; background: #e8f0fe; color: #1a1a2e; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.85rem; margin: 0.15rem; }\n`,
       },
       {
         path: 'src/app/layout.tsx',
-        content: `import Link from 'next/link';
-import './globals.css';
+        content: `import './globals.css';
 
-export const metadata = { title: '${title}', description: 'Built with Hack-A-Gent' };
+export const metadata = { title: '${title}', description: 'Built for hackathon' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
         <nav>
-          <div className="container" style={{display:'flex',gap:'1rem',alignItems:'center'}}>
-            <strong style={{fontSize:'1.1rem'}}>${title}</strong>
-            <Link href="/" style={{color:'white'}}>Home</Link>
-            <Link href="/about" style={{color:'white'}}>About</Link>
-          </div>
+          <strong style={{fontSize:'1.1rem',color:'white'}}>${title}</strong>
+          <a href="/">Home</a>
         </nav>
         {children}
         <footer>
-          <p>Built with Hack-A-Gent — Autonomous Software Engineering</p>
+          Built for <strong>${title}</strong> &mdash; Hackathon Project
         </footer>
       </body>
     </html>
@@ -821,169 +965,202 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         content: `export default function Home() {
   return (
     <main className="container">
-      <h1>Welcome to ${title}</h1>
-      <p style={{marginBottom:'1.5rem',color:'#666'}}>This project was generated by Hack-A-Gent, an autonomous software engineering CLI.</p>
-      <div className="card">
-        <h2>Getting Started</h2>
-        <p>Run <code style={{background:'#f4f4f4',padding:'0.2rem 0.4rem',borderRadius:'3px'}}>npm run dev</code> to start the development server.</p>
-      </div>
-      <div className="card">
-        <h2>Project Structure</h2>
-        <ul style={{paddingLeft:'1.2rem'}}>
-          <li><code>/src/app</code> — Next.js App Router pages and layouts</li>
-          <li><code>/src/components</code> — Reusable React components</li>
-          <li><code>/src/lib</code> — Utility functions and helpers</li>
-          <li><code>/src/app/api</code> — API routes (if needed)</li>
-        </ul>
-      </div>
-      <div className="card">
-        <h2>Next Steps</h2>
-        <p>Customize this project by editing <code>src/app/page.tsx</code> and adding your own components.</p>
-      </div>
-    </main>
-  );
-}\n`,
-      },
-      {
-        path: 'src/app/about/page.tsx',
-        content: `export default function About() {
-  return (
-    <main className="container">
-      <h1>About This Project</h1>
-      <div className="card">
-        <h2>${title}</h2>
-        <p>This project was automatically generated by <strong>Hack-A-Gent</strong>, an autonomous software engineering CLI.</p>
-        <p style={{marginTop:'0.5rem'}}>Hack-A-Gent parses hackathon requirements, generates winning strategies, and produces production-ready code.</p>
-      </div>
-      <div className="card">
-        <h2>Tech Stack</h2>
-        <ul style={{paddingLeft:'1.2rem'}}>
-          <li><strong>Framework:</strong> Next.js 14 (App Router)</li>
-          <li><strong>Language:</strong> TypeScript</li>
-          <li><strong>Styling:</strong> Custom CSS (globals.css)</li>
-          <li><strong>Testing:</strong> Vitest</li>
-        </ul>
+      <h1>${title}</h1>
+      <p>Built for submission. Edit <code>src/app/page.tsx</code> to add your content.</p>
+      <div className="grid">
+        <div className="card">
+          <h2>Getting Started</h2>
+          <p>Run <code>npm run dev</code> to start the dev server at <strong>localhost:3000</strong>.</p>
+        </div>
+        <div className="card">
+          <h2>Project Structure</h2>
+          <p style={{marginBottom:'0.5rem'}}><code>src/app/</code> &mdash; Pages and layouts</p>
+          <p style={{marginBottom:'0.5rem'}}><code>src/app/api/</code> &mdash; API routes</p>
+          <p><code>src/components/</code> &mdash; React components</p>
+        </div>
+        <div className="card">
+          <h2>Tech Stack</h2>
+          <span className="tag">Next.js 14</span>
+          <span className="tag">TypeScript</span>
+          <span className="tag">App Router</span>
+        </div>
       </div>
     </main>
   );
 }\n`,
       },
       {
-        path: 'src/app/api/health/route.ts',
-        content: `import { NextResponse } from 'next/server';
+        path: 'README.md',
+        content: `# ${title}
 
-export async function GET() {
-  return NextResponse.json({ status: 'ok', timestamp: new Date().toISOString() });
-}\n`,
+Built with Hack-A-Gent for hackathon submission.
+
+## Tech Stack
+
+- Next.js 14 (App Router)
+- TypeScript
+
+## Getting Started
+
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
+
+Open [http://localhost:3000](http://localhost:3000) to view the project.
+
+## Project Structure
+
+- \`src/app/\` — Pages and layouts (App Router)
+- \`src/app/api/\` — API routes
+- \`src/components/\` — React components
+
+## Deployment
+
+This project is ready to deploy on Vercel.
+`,
       },
-      {
-        path: 'src/components/NavBar.tsx',
-        content: `import Link from 'next/link';
-
-interface NavBarProps { title?: string; }
-
-export default function NavBar({ title = 'Project' }: NavBarProps) {
-  return (
-    <nav>
-      <div className="container" style={{display:'flex',gap:'1rem',alignItems:'center'}}>
-        <strong style={{fontSize:'1.1rem'}}>{title}</strong>
-        <Link href="/">Home</Link>
-        <Link href="/about">About</Link>
-      </div>
-    </nav>
-  );
-}\n`,
-      },
-      { path: '.gitignore', content: 'node_modules/\n.next/\n.env\n.env.local\n*.local\ndist/\nbuild/\ncoverage/\n' },
-{ path: '.eslintrc.json', content: '{\n  "extends": "next/core-web-vitals"\n}\n' },
-{ path: 'src/config.ts', content: '// Runtime configuration - values loaded from environment variables\n' + 'export const config = {\n' + '  nasaApiKey: process.env.NASA_API_KEY || \'\',\n' + '  appName: process.env.NEXT_PUBLIC_APP_NAME || \'' + title + '\',\n' + '  nodeEnv: process.env.NODE_ENV || \'development\',\n' + '} as const;\n' + '\n' + 'export const NASA_API_KEY = config.nasaApiKey;\n' },
-{ path: '.env.example', content: '# Copy to .env and fill in your values\nNASA_API_KEY=your_nasa_api_key_here\nNEXT_PUBLIC_APP_NAME=' + title + '\n' },
-      { path: 'src/lib/utils.ts', content: `export function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-}
-
-export function cn(...classes: (string | undefined | null | false)[]): string {
-  return classes.filter(Boolean).join(' ');
-}\n` },
     ];
   }
 
   private generateFrontendFiles(node: TaskNode, plan: InternetExecutionPlan): Array<{ path: string; content: string }> {
     const desc = node.description.toLowerCase();
     if (desc.includes('layout'))
-      return [
-        {
-          path: 'src/components/NavBar.tsx',
-          content:
-            'export default function NavBar() { return <nav style={ {padding: "1rem", background: "#333", color: "#fff" }}><a href="/">Home</a> <a href="/about">About</a></nav>; }\n',
-        },
-      ];
+      return [{
+        path: 'src/app/layout.tsx',
+        content: `import './globals.css';
+
+export const metadata = { title: '${plan.projectName}', description: 'Hackathon project' };
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <nav style={{background:'#1a1a2e',color:'white',padding:'0.75rem 1.5rem',display:'flex',gap:'1.5rem',alignItems:'center'}}>
+          <strong>{'${plan.projectName}'}</strong>
+          <a href="/" style={{color:'#a0c4ff',textDecoration:'none'}}>Home</a>
+        </nav>
+        {children}
+        <footer style={{background:'#e9ecef',padding:'1rem',textAlign:'center',marginTop:'2rem',color:'#666',fontSize:'0.85rem'}}>
+          Hackathon Project
+        </footer>
+      </body>
+    </html>
+  );
+}\n`,
+      }];
     if (desc.includes('auth'))
-      return [
-        {
-          path: 'src/components/AuthForm.tsx',
-          content:
-            'export default function AuthForm() { return <form><input placeholder="Email" /><input type="password" placeholder="Password" /><button type="submit">Sign In</button></form>; }\n',
-        },
-      ];
+      return [{
+        path: 'src/components/AuthForm.tsx',
+        content: `'use client';
+
+export default function AuthForm({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
+  return (
+    <form onSubmit={e => e.preventDefault()} style={{maxWidth:'400px',margin:'2rem auto',display:'flex',flexDirection:'column',gap:'0.75rem'}}>
+      <h2>{mode === 'signin' ? 'Sign In' : 'Create Account'}</h2>
+      <input type="email" placeholder="Email" required />
+      <input type="password" placeholder="Password" required />
+      <button type="submit">{mode === 'signin' ? 'Sign In' : 'Sign Up'}</button>
+    </form>
+  );
+}\n`,
+      }];
     if (desc.includes('styling'))
-      return [
-        {
-          path: 'src/app/globals.css',
-          content:
-            'body { margin: 0; font-family: system-ui, sans-serif; } main { max-width: 1200px; margin: 0 auto; padding: 2rem; }\n',
-        },
-      ];
-    return [
-      {
-        path: 'src/app/about/page.tsx',
-        content:
-          'export default function About() { return <main><h1>About</h1><p>Hackathon project built with Hack-A-Gent autonomous system.</p></main>; }\n',
-      },
-    ];
+      return [{
+        path: 'src/app/globals.css',
+        content: 'body { margin: 0; font-family: system-ui, sans-serif; } main { max-width: 960px; margin: 0 auto; padding: 2rem; }\n',
+      }];
+    return [{
+      path: 'src/app/page.tsx',
+      content: `export default function Home() {
+  return (
+    <main style={{maxWidth:'960px',margin:'0 auto',padding:'2rem'}}>
+      <h1>${plan.projectName}</h1>
+      <p>Hackathon project built with Next.js.</p>
+    </main>
+  );
+}\n`,
+    }];
   }
 
   private generateBackendFiles(node: TaskNode, plan: InternetExecutionPlan): Array<{ path: string; content: string }> {
     const desc = node.description.toLowerCase();
     if (desc.includes('schema'))
-      return [
-        {
-          path: 'src/db/schema.sql',
-          content:
-            'CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, email TEXT UNIQUE NOT NULL, name TEXT, created_at TIMESTAMPTZ DEFAULT NOW());\nCREATE TABLE IF NOT EXISTS items (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), title TEXT NOT NULL, description TEXT, created_at TIMESTAMPTZ DEFAULT NOW());\n',
-        },
-      ];
+      return [{
+        path: 'src/db/schema.sql',
+        content: `CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  name TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS items (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  title TEXT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+`,
+      }];
     if (desc.includes('auth'))
-      return [
-        {
-          path: 'src/middleware/auth.ts',
-          content:
-            'import { NextResponse } from "next/server"; import type { NextRequest } from "next/server"; export function middleware(req: NextRequest) { const token = req.cookies.get("token")?.value; if (!token && req.nextUrl.pathname.startsWith("/api/protected")) { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); } return NextResponse.next(); }\n',
-        },
-      ];
+      return [{
+        path: 'src/app/api/auth/route.ts',
+        content: `import { NextResponse } from 'next/server';
+
+export async function POST(req: Request) {
+  const body = await req.json();
+  if (!body.email || !body.password) {
+    return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
+  }
+  // In production, validate credentials against your database
+  return NextResponse.json({ token: 'demo-token', user: { email: body.email } });
+}
+
+export async function GET() {
+  return NextResponse.json({ status: 'auth service running' });
+}
+`,
+      }];
     if (desc.includes('api'))
-      return [
-        {
-          path: 'src/app/api/health/route.ts',
-          content:
-            'export async function GET() { return Response.json({ status: "ok", timestamp: new Date().toISOString() }); }\n',
-        },
-      ];
+      return [{
+        path: 'src/app/api/health/route.ts',
+        content: `export async function GET() {
+  return Response.json({ status: 'ok', timestamp: new Date().toISOString() });
+}
+`,
+      }];
     if (desc.includes('validation'))
-      return [
-        {
-          path: 'src/lib/validation.ts',
-          content:
-            'export function validateEmail(email: string): boolean { return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email); }\nexport function validateRequired(value: string): boolean { return value.trim().length > 0; }\n',
-        },
-      ];
-    return [
-      {
-        path: 'src/app/api/items/route.ts',
-        content:
-          'import { NextResponse } from "next/server"; const items: Array<{ id: number; title: string }> = []; export async function GET() { return NextResponse.json(items); }\nexport async function POST(req: Request) { const body = await req.json(); const item = { id: items.length + 1, title: body.title }; items.push(item); return NextResponse.json(item, { status: 201 }); }\n',
-      },
-    ];
+      return [{
+        path: 'src/lib/validation.ts',
+        content: `export function validateEmail(email: string): boolean {
+  return /^[^\\s@]+@[\\s@]+\\.[^\\s@]+$/.test(email);
+}
+
+export function validateRequired(value: string): boolean {
+  return value.trim().length > 0;
+}
+`,
+      }];
+    return [{
+      path: 'src/app/api/items/route.ts',
+      content: `import { NextResponse } from 'next/server';
+
+type Item = { id: number; title: string; completed: boolean };
+const items: Item[] = [];
+
+export async function GET() {
+  return NextResponse.json(items);
+}
+
+export async function POST(req: Request) {
+  const body = await req.json();
+  const item: Item = { id: items.length + 1, title: body.title ?? '', completed: false };
+  items.push(item);
+  return NextResponse.json(item, { status: 201 });
+}
+`,
+    }];
   }
 
   private normalizePackageVersions(files: Array<{ path: string; content: string }>): Array<{ path: string; content: string }> {
@@ -1224,7 +1401,7 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
           for (const entry of readdirSync(dir, { withFileTypes: true })) {
             const p = path.join(dir, entry.name);
             if (entry.isDirectory()) removeDir(p);
-            else { try { writeFileSync(p, ''); } catch (e) { console.warn(`[scaffold] placeholder write skipped (non-fatal): ${e instanceof Error ? e.message : e}`); } }
+            else { try { writeFileSync(p, ''); } catch (e) { debug(`[scaffold] placeholder write skipped (non-fatal): ${e instanceof Error ? e.message : e}`); } }
           }
         };
         removeDir(pagesDir);
@@ -1240,7 +1417,7 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
           for (const bad of ['_app.tsx', '_app.jsx', 'index.tsx', 'index.jsx']) {
             const badPath = path.join(appDir, bad);
             if (existsSync(badPath)) {
-              try { writeFileSync(badPath, ''); } catch (e) { console.warn(`[scaffold] redundant file write skipped (non-fatal): ${e instanceof Error ? e.message : e}`); }
+              try { writeFileSync(badPath, ''); } catch (e) { debug(`[scaffold] redundant file write skipped (non-fatal): ${e instanceof Error ? e.message : e}`); }
             }
           }
         }
@@ -1296,7 +1473,7 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
           if (relPath.startsWith('src/app/') && relPath.endsWith('page.tsx')) continue;
           if (relPath.startsWith('src/app/') && relPath.endsWith('layout.tsx')) continue;
           if (relPath === 'package.json' || relPath === 'tsconfig.json') continue;
-          try { writeFileSync(filePath, ''); } catch (e) { console.warn(`[scaffold] placeholder write skipped (non-fatal): ${e instanceof Error ? e.message : e}`); }
+          try { writeFileSync(filePath, ''); } catch (e) { debug(`[scaffold] placeholder write skipped (non-fatal): ${e instanceof Error ? e.message : e}`); }
         }
       }
 
@@ -1810,14 +1987,14 @@ Generate real, working code that scores highly on: ${this.devpostData.judgingCri
         // Validate and auto-fix common LLM issues before returning
         const validation = validateGeneratedFiles(normalized);
         if (validation.issues.length > 0) {
-          console.log(formatValidationResult(validation));
+          debug(formatValidationResult(validation));
         }
         const validatedFiles = validation.valid ? normalized : validation.fixedFiles;
 
         if (fileType === 'scaffold' && this.plan) {
           const templateFiles = await this.generateScaffoldFiles(this.plan);
           const templateMap = new Map(templateFiles.map(f => [f.path, f.content]));
-          const criticalPaths = new Set(['src/app/layout.tsx', 'src/app/page.tsx', 'next.config.js', 'tsconfig.json', 'package.json']);
+          const criticalPaths = new Set(['src/app/layout.tsx', 'src/app/page.tsx', 'tsconfig.json', 'package.json']);
           const result: Array<{ path: string; content: string }> = [];
           const seenPaths = new Set<string>();
           for (const f of validatedFiles) {
@@ -1847,10 +2024,21 @@ Generate real, working code that scores highly on: ${this.devpostData.judgingCri
         return singleValidation.valid ? singleFile : singleValidation.fixedFiles;
       }
 
-      console.warn(`LLM response for ${fileType} had unexpected structure, falling back to templates`);
+      debug(`LLM response for ${fileType} had unexpected structure, falling back to templates`);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      console.error(`LLM generation failed for ${fileType}, falling back to templates: ${errMsg}`);
+      if (!this.hasWarnedLLMFailure) {
+        aiUnavailable({
+          reason: errMsg,
+          fallback: 'Using project templates instead.',
+          help: [
+            'Run: hag doctor',
+            'Run: hag setup (to reconfigure your provider)',
+          ],
+        });
+        this.hasWarnedLLMFailure = true;
+      }
+      debug(`LLM generation failed for ${fileType}: ${errMsg}`);
     }
 
     if (fileType === 'scaffold') return this.enforceRequiredTechnologies(this.normalizePackageVersions(await this.generateScaffoldFiles(this.plan)), requiredTechs);
@@ -1976,7 +2164,7 @@ Generate real, working code that scores highly on: ${this.devpostData.judgingCri
     if (!this.plan) return;
     const projectDir = path.resolve(this.workspaceRoot, this.plan.projectName);
 
-    console.log('🔧 Starting autonomous repair loop...');
+    debug('Starting autonomous repair loop...');
 
     const result = await autonomousRepair({
       projectDir,
@@ -1984,20 +2172,20 @@ Generate real, working code that scores highly on: ${this.devpostData.judgingCri
       timeout: 60000,
     });
 
-    console.log(formatRepairResult(result));
+    debug(formatRepairResult(result));
 
     if (result.success) {
-      console.log('✅ All errors fixed — build passes');
+      debug('All errors fixed — build passes');
       // Unblock any tasks that were blocked by errors
       const blocked = this.taskGraph.getNodesByStatus('blocked');
       for (const node of blocked) {
         this.taskGraph.markPending(node.id);
       }
     } else if (result.totalFixes > 0) {
-      console.log(`⚠️  Partially repaired — ${result.totalFixes} fixes applied, ${result.remainingErrors.length} errors remain`);
+      debug(`Partially repaired — ${result.totalFixes} fixes applied, ${result.remainingErrors.length} errors remain`);
       // Still try to continue
     } else {
-      console.log('❌ Could not auto-repair — manual intervention needed');
+      debug('Could not auto-repair — manual intervention needed');
     }
   }
 

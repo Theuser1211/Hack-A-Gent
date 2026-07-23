@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { createDeterministicUuid, deterministicNow } from './determinism-kernel.js';
+import { githubDisabled } from '../cli/output.js';
 
 export type GitProvider = 'github';
 export type DeployTarget = 'vercel' | 'netlify' | 'github-pages' | 'docker';
@@ -79,6 +80,7 @@ export class InternetToolGateway {
   private gitHubRepoCache: Map<string, GitHubRepoConfig> = new Map();
   private deployCache: Map<string, DeployResult> = new Map();
   private callLog: Array<{ tool: string; action: string; timestamp: string; success: boolean }> = [];
+  private hasWarnedNoGitHub = false;
 
   constructor(config: ToolGatewayConfig, seed = 42) {
     this.config = { ...config, defaultBranch: config.defaultBranch ?? 'main' };
@@ -126,7 +128,10 @@ export class InternetToolGateway {
     const token = this.getGitHubToken();
     if (!token) {
       this.log('github', 'create_mock', true);
-      console.warn('No GITHUB_TOKEN — using mock data (not real)');
+      if (!this.hasWarnedNoGitHub) {
+        githubDisabled();
+        this.hasWarnedNoGitHub = true;
+      }
       return {
         success: true,
         repoUrl: `https://github.com/mock/${config.repoName}`,
@@ -186,7 +191,10 @@ export class InternetToolGateway {
     const token = this.getGitHubToken();
     if (!token) {
       this.log('github', 'push_mock', true);
-      console.warn('No GITHUB_TOKEN — using mock data (not real)');
+      if (!this.hasWarnedNoGitHub) {
+        githubDisabled();
+        this.hasWarnedNoGitHub = true;
+      }
       return {
         success: true,
         repoUrl: `https://github.com/mock/${repoName}`,
@@ -304,7 +312,10 @@ export class InternetToolGateway {
     const token = this.getGitHubToken();
     if (!token) {
       this.log('sync', 'local_to_remote_mock', true);
-      console.warn('No GITHUB_TOKEN — using mock data (not real)');
+      if (!this.hasWarnedNoGitHub) {
+        githubDisabled();
+        this.hasWarnedNoGitHub = true;
+      }
       return {
         success: true,
         repoUrl: `https://github.com/mock/${repoName}`,

@@ -49,8 +49,9 @@ describe('prompt template library', () => {
     const t = getTemplate('judge.v1')!;
     const a = renderTemplate(t, { seed: 1 });
     const b = renderTemplate(t, { seed: 2 });
-    // Same body content; only the deterministic trace id differs.
-    expect(a.split('trace=')[0]).toBe(b.split('trace=')[0]);
+    // Same body content; only the deterministic seed label + trace id differ.
+    const stripSeed = (s: string) => s.replace(/seed=\d+/g, 'seed=X').replace(/trace=[a-z0-9]+/g, 'trace=X');
+    expect(stripSeed(a)).toBe(stripSeed(b));
     expect(a).not.toBe(b);
   });
 

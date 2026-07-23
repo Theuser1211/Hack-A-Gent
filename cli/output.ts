@@ -1,6 +1,20 @@
+import * as readline from 'node:readline';
 import { formatDuration } from './context.js';
 
 const isTTY = process.stdout.isTTY && !process.env.CI;
+
+// Verbose mode reveals internal details (provider routing, retry logic,
+// fallback chains, HTTP payloads, model names, timings, stack traces).
+// It is only enabled via the `--verbose` flag and never leaks into normal mode.
+let verboseMode = false;
+
+export function setVerbose(enabled: boolean): void {
+  verboseMode = enabled;
+}
+
+export function isVerbose(): boolean {
+  return verboseMode;
+}
 
 const RESET = '\x1b[0m';
 const BOLD = '\x1b[1m';
@@ -27,81 +41,21 @@ function stripAnsi(text: string): string {
   return text.replace(new RegExp(ANSI_PATTERN, 'g'), '');
 }
 
-function center(text: string): string {
-  const width = process.stdout.columns ?? 80;
-  const pad = Math.max(0, Math.floor((width - stripAnsi(text).length) / 2));
-  return ' '.repeat(pad) + text;
-}
-
-export function showWelcome(version: string): void {
-  logRaw('');
-
-  const logoLines = [
-    '                           ██╗  ██╗ █████╗  ██████╗',
-    '                           ██║  ██║██╔══██╗██╔════╝',
-    '                           ███████║███████║██║  ███╗',
-    '                           ██╔══██║██╔══██║██║   ██║',
-    '                           ██║  ██║██║  ██║╚██████╔╝',
-    '                           ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝',
-  ];
-  const logoContentWidth = Math.max(...logoLines.map(l => l.trimStart().length));
-  const logoPad = Math.max(0, Math.floor(((process.stdout.columns ?? 80) - logoContentWidth) / 2));
-  const logoPadStr = ' '.repeat(logoPad);
-  logoLines.forEach(line => logRaw(logoPadStr + line.trimStart()));
-  logRaw('');
-
-  logRaw(center(color('Hack-A-Gent v' + version, 'cyan')));
-  logRaw(center(color('Autonomous Hackathon AI Agent', 'gray')));
-  logRaw(center(color('─'.repeat(42), 'gray')));
-  logRaw(center(color('Turn Devpost URLs into Working Projects', 'cyan')));
-
-  logRaw('');
-
-  function renderSection(header: string, commands: [string, string][], maxCmdLen: number): void {
-    const cmdWidth = maxCmdLen + 6;
-    logRaw(center(color(header, 'cyan')));
-    for (const [cmd, desc] of commands) {
-      const padding = ' '.repeat(Math.max(0, cmdWidth - cmd.length));
-      logRaw(center(color(cmd, 'green') + padding + color(desc, 'gray')));
-    }
-  }
-
-  renderSection('Quick Start', [
-    ['hackagent setup', 'Configure your AI provider'],
-    ['hackagent run <url>', 'Generate a hackathon project'],
-    ['hackagent doctor', 'Verify your environment'],
-    ['hackagent chat', 'Interactive AI assistant'],
-  ], 18);
-
-  logRaw('');
-
-  renderSection('Useful Commands', [
-    ['hackagent providers', 'List available AI providers'],
-    ['hackagent models', 'List available models'],
-    ['hackagent benchmark list', 'List available benchmarks'],
-    ['hackagent config --show', 'Show current configuration'],
-  ], 26);
-
-  logRaw('');
-
-  renderSection('Need more help?', [
-    ['hackagent --help', 'Show all available commands'],
-  ], 17);
-
-  logRaw('');
-
-  logRaw(center(color('GitHub', 'cyan')));
-  logRaw(center(color('https://github.com/Theuser1211/Hack-A-Gent', 'gray')));
-  logRaw('');
+export function showVersion(version: string): void {
+  console.log(`  ${color('Hack-A-Gent', 'cyan')} ${color('v' + version, 'gray')}`);
+  console.log(`  ${color('Paste a hackathon link. I\'ll handle the rest.', 'gray')}`);
+  console.log();
 }
 
 export const icons = {
-  success: color('✔', 'green'),
-  error: color('✘', 'red'),
-  warning: color('⚠', 'yellow'),
-  info: color('ℹ', 'blue'),
-  arrow: color('→', 'cyan'),
-  bull: color('•', 'magenta'),
+  success: '\u2713',
+  error: '\u2717',
+  warning: '\u26A0',
+  info: '\u2139',
+  arrow: '\u2192',
+  bull: '\u2022',
+  skip: '\u203E',
+  recover: '\u21BB',
 };
 
 export function log(message: string): void {
@@ -112,63 +66,116 @@ export function logRaw(message: string): void {
   console.log(message);
 }
 
-export function banner(): void {
-  logRaw('');
-  logRaw(`  ${BOLD}${color('┌─────────────────────────────────────────────┐', 'cyan')}${RESET}`);
-  logRaw(`  ${BOLD}${color('│        Welcome to Hack-A-Gent! 🚀             │', 'cyan')}${RESET}`);
-  logRaw(`  ${BOLD}${color('│  Autonomous Hackathon Engineering CLI          │', 'cyan')}${RESET}`);
-  logRaw(`  ${BOLD}${color('└─────────────────────────────────────────────┘', 'cyan')}${RESET}`);
-  logRaw('');
-}
-
 export function stageStart(label: string): void {
-  log(`${icons.arrow} ${color(label, 'magenta')}...`);
+  log(`${color(icons.arrow, 'cyan')} ${label}...`);
 }
 
 export function stageDone(label: string, elapsedMs?: number): void {
   const time = elapsedMs !== undefined ? color(formatDuration(elapsedMs), 'gray') : '';
-  console.log(`  \r  ${icons.success} ${label}${time ? ' ' + time : ''}`);
+  console.log(`  \r  ${color(icons.success, 'green')} ${label}${time ? ' ' + time : ''}`);
 }
 
 export function stageFail(label: string, detail?: string): void {
-  const msg = detail ? ` — ${detail}` : '';
-  console.log(`  \r  ${icons.error} ${label}${msg}`);
+  const msg = detail ? ` \u2014 ${detail}` : '';
+  console.log(`  \r  ${color(icons.error, 'red')} ${label}${msg}`);
+}
+
+export function stageSkipped(label: string): void {
+  console.log(`  \r  ${color(icons.skip, 'gray')} ${color(label, 'gray')}`);
+}
+
+export function stageRecovered(label: string): void {
+  console.log(`  \r  ${color(icons.recover, 'yellow')} ${color(label, 'yellow')} ${color('Continuing...', 'gray')}`);
 }
 
 export function progressBar(current: number, total: number): string {
   const width = 20;
   const filled = Math.round((current / total) * width);
-  const bar = '█'.repeat(filled) + '░'.repeat(width - filled);
+  const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(width - filled);
   return `${bar} ${Math.round((current / total) * 100)}%`;
 }
 
 export function pipelineHeader(title: string): void {
   logRaw('');
-  logRaw(`  ${BOLD}${color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'cyan')}${RESET}`);
-  logRaw(`  ${BOLD}${color('  🚀  ' + title, 'cyan')}${RESET}`);
-  logRaw(`  ${color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'cyan')}${RESET}`);
+  logRaw(`  ${BOLD}${color(title, 'cyan')}${RESET}`);
+  logRaw(`  ${color('\u2500'.repeat(Math.min(title.length + 2, 58)), 'gray')}`);
   logRaw('');
 }
 
 export function pipelineFooter(): void {
-  logRaw(`  ${color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'cyan')}${RESET}`);
+  logRaw(`  ${color('\u2500'.repeat(40), 'gray')}`);
   logRaw('');
 }
 
+// ── Output hierarchy ─────────────────────────────────────────────────────────
+
+/** Critical: something the user must fix (red). Always shown. */
+export function critical(message: string): void {
+  console.log(`  ${color(icons.error, 'red')} ${color(message, 'red')}`);
+}
+
+/** Warning: something to be aware of (yellow). Optional detail follows. */
+export function warn(message: string, detail?: string): void {
+  console.log(`  ${color(icons.warning, 'yellow')} ${color(message, 'yellow')}`);
+  if (detail) console.log(`    ${color(detail, 'gray')}`);
+}
+
+/** Progress: what's happening now (green check or cyan arrow). Use stageStart/Done/Fail. */
+
+/** Informational: additional context (blue). */
+export function info(message: string): void {
+  console.log(`  ${color(icons.info, 'blue')} ${color(message, 'blue')}`);
+}
+
+// ── Collapsed AI-failure notice ────────────────────────────────────────────────
+// AI generation may fail repeatedly (per file-type). We collapse all of those
+// into a single, calm, user-facing message instead of a retry chain.
+
+export function aiUnavailable(params: {
+  reason: string;
+  fallback: string;
+  help: string[];
+}): void {
+  logRaw('');
+  warn('AI generation unavailable');
+  log(`  Reason: ${params.reason}`);
+  log(`  Fallback: ${params.fallback}`);
+  log('');
+  log('  Need help?');
+  for (const h of params.help) {
+    log(`    ${color(h, 'cyan')}`);
+  }
+  logRaw('');
+}
+
+// ── GitHub integration disabled notice (shown once) ───────────────────────────
+
+export function githubDisabled(): void {
+  info('GitHub integration disabled.');
+  log(`  ${color('Repository analysis will use local information only.', 'gray')}`);
+}
+
+/**
+ * Debug: internal diagnostics. Only printed in verbose mode (`--verbose`)
+ * or when stdout is a TTY and verbose is on. Never shown in normal mode.
+ */
+export function debug(message: string): void {
+  if (!verboseMode) return;
+  if (!isTTY) {
+    console.log(`  ${message}`);
+    return;
+  }
+  console.log(`  ${DIM}${message}${RESET}`);
+}
+
+// ── Utility display helpers ──────────────────────────────────────────────────
+
 export function success(message: string): void {
-  console.log(`  ${icons.success} ${message}`);
+  console.log(`  ${color(icons.success, 'green')} ${message}`);
 }
 
 export function error(message: string): void {
-  console.log(`  ${icons.error} ${color(message, 'red')}`);
-}
-
-export function warn(message: string): void {
-  console.log(`  ${icons.warning} ${color(message, 'yellow')}`);
-}
-
-export function info(message: string): void {
-  console.log(`  ${icons.info} ${color(message, 'blue')}`);
+  console.log(`  ${color(icons.error, 'red')} ${color(message, 'red')}`);
 }
 
 export function dim(message: string): void {
@@ -178,7 +185,7 @@ export function dim(message: string): void {
 export function header(title: string): void {
   logRaw('');
   logRaw(`  ${BOLD}${color(title, 'cyan')}${RESET}`);
-  logRaw(`  ${color('─'.repeat(Math.min(stripAnsi(title).length + 2, 56)), 'gray')}`);
+  logRaw(`  ${color('\u2500'.repeat(Math.min(stripAnsi(title).length + 2, 56)), 'gray')}`);
   logRaw('');
 }
 
@@ -186,39 +193,85 @@ export function labeled(label: string, value: string): void {
   console.log(`  ${color(label + ':', 'cyan')} ${value}`);
 }
 
-export function step(description: string): void {
-  console.log(`  ${icons.bull} ${color(description, 'gray')}...`);
+export function divider(): void {
+  console.log(`  ${color('\u2500'.repeat(50), 'gray')}`);
 }
 
-export function divider(): void {
-  console.log(`  ${color('-'.repeat(50), 'gray')}`);
+/**
+ * Prompt the user for input. Returns null if stdin is not a TTY (non-interactive).
+ */
+/**
+ * Prompt the user for input. Returns null if stdin is not a TTY (non-interactive).
+ * Readline is cleaned up after a single answer or if the interface closes.
+ */
+export function ask(question: string): Promise<string | null> {
+  if (!isTTY) return Promise.resolve(null);
+  
+  return new Promise((resolve) => {
+    let resolved = false;
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    
+    const cleanup = (): void => {
+      rl.close();
+      rl.removeAllListeners();
+    };
+
+    const finish = (answer: string | null) => {
+      if (resolved) return;
+      resolved = true;
+      cleanup();
+      resolve(answer);
+    };
+
+    rl.on('SIGINT', () => finish(null));
+    rl.on('close', () => finish(null));
+    
+    rl.question(`  ${color('?', 'cyan')} ${question}`, (answer) => {
+      const trimmed = typeof answer === 'string' ? answer.trim() : '';
+      finish(trimmed || null);
+    });
+  });
 }
+
+// ── Spinner ──────────────────────────────────────────────────────────────────
 
 export class Spinner {
-  private frames = isTTY ? ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'] : ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.'];
+  private frames = isTTY ? ['\u280B', '\u2819', '\u2839', '\u2838', '\u283C', '\u2834', '\u2826', '\u2827', '\u280F', '\u280F'] : ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.'];
   private interval: ReturnType<typeof setInterval> | null = null;
   private currentFrame = 0;
   private message = '';
+  private disposed = false;
 
   start(message: string): void {
+    if (this.disposed) return;
     this.message = message;
     if (!isTTY) {
-      console.log(`  ${message}...`);
+      console.log(`  ${message}`);
       return;
     }
     process.stdout.write(`  ${this.frames[0]} ${message}`);
     this.interval = setInterval(() => {
       this.currentFrame = (this.currentFrame + 1) % this.frames.length;
       process.stdout.write(`\r  ${this.frames[this.currentFrame]} ${this.message}`);
-    }, 80);
+    }, 120);
+    this.interval.unref();
   }
 
   succeed(message?: string): void {
-    this.stop(icons.success, message);
+    this.stop(color(icons.success, 'green'), message);
   }
 
   fail(message?: string): void {
-    this.stop(icons.error, message);
+    this.stop(color(icons.error, 'red'), message);
+  }
+
+  /** Dispose the spinner and clear its interval. Safe to call multiple times. */
+  dispose(): void {
+    this.disposed = true;
+    if (this.interval) {
+      clearInterval(this.interval);
+      this.interval = null;
+    }
   }
 
   private stop(icon: string, message?: string): void {
@@ -233,4 +286,213 @@ export class Spinner {
       console.log(`  ${icon} ${msg}`);
     }
   }
+}
+
+// ── Error summary (condensed, actionable) ────────────────────────────────────
+
+export function showErrorSummary(params: {
+  phase: string;
+  reason: string;
+  fallback?: string;
+  fix: string;
+}): void {
+  logRaw('');
+  critical(`${params.phase} failed`);
+  log(`  Reason: ${params.reason}`);
+  if (params.fallback) log(`  Fallback: ${params.fallback}`);
+  log(`  Fix: ${params.fix}`);
+  logRaw('');
+}
+
+// ── Completion screen ────────────────────────────────────────────────────────
+
+export interface CompletionInfo {
+  status: 'succeeded' | 'failed' | 'partial';
+  project: string;
+  duration: string;
+  completedSteps?: string[];
+  blockedBy?: string[];
+  details: Array<{ label: string; value: string }>;
+  nextSteps: string[];
+}
+
+export function showCompletionScreen(completion: CompletionInfo): void {
+  divider();
+
+  if (completion.status === 'succeeded') {
+    success(`Project generation complete`);
+  } else if (completion.status === 'failed') {
+    critical('Project generation incomplete');
+  } else {
+    info('Project generation completed with issues');
+  }
+
+  log('');
+  
+  if (completion.completedSteps && completion.completedSteps.length > 0) {
+    log('Completed');
+    for (const step of completion.completedSteps) {
+      log(`  ${color(icons.success, 'green')} ${step}`);
+    }
+    log('');
+  }
+  
+  if (completion.blockedBy && completion.blockedBy.length > 0) {
+    log(completion.status === 'succeeded' ? 'Errors / Warnings' : 'Blocked by');
+    for (const block of completion.blockedBy) {
+      log(`  ${color('\u2022', 'red')} ${block}`);
+    }
+    log('');
+  }
+
+  if (completion.nextSteps.length > 0) {
+    log('Next');
+    for (const step of completion.nextSteps) {
+      log(`  ${step}`);
+    }
+    log('');
+  }
+
+  for (const detail of completion.details) {
+    labeled(detail.label, detail.value);
+  }
+  
+  labeled('Duration', completion.duration);
+  logRaw('');
+}
+
+// ── Risks display ────────────────────────────────────────────────────────────
+
+/** Display risks grouped by severity */
+export function showRisks(risks: Array<{
+  description: string;
+  severity: string;
+  category: string;
+  mitigation: string;
+  resolved: boolean;
+}>): void {
+  const active = risks.filter(r => !r.resolved);
+  if (active.length === 0) return;
+
+  logRaw('');
+  log(`  ${color('Active Risks:', 'gray')}`);
+  for (const r of active) {
+    const sevColor = r.severity === 'critical' ? 'red' : r.severity === 'high' ? 'yellow' : 'gray';
+    const icon = r.severity === 'critical' ? icons.warning : icons.bull;
+    log(`    ${color(icon, sevColor)} ${color(r.description, sevColor)}`);
+    log(`      ${color(icons.arrow, 'cyan')} ${r.mitigation}`);
+  }
+  logRaw('');
+}
+
+// ── Readiness report ─────────────────────────────────────────────────────────
+
+/** Display a submission readiness report */
+export function showReadiness(report: {
+  ready: boolean;
+  checks: Array<{ name: string; passed: boolean; detail: string; severity: string }>;
+  blockers: string[];
+  warnings: string[];
+}): void {
+  logRaw('');
+  logRaw(`  ${BOLD}${color('Submission Readiness', 'cyan')}${RESET}`);
+  logRaw(`  ${color('\u2500'.repeat(40), 'gray')}`);
+  logRaw('');
+  for (const c of report.checks) {
+    const icon = c.passed ? color(icons.success, 'green') : color(icons.error, 'red');
+    const sevTag = c.severity === 'required' ? color(' required', 'yellow') : '';
+    log(`  ${icon} ${c.name}${sevTag}`);
+    log(`    ${c.detail}`);
+  }
+  if (report.blockers.length > 0) {
+    logRaw('');
+    log(`  ${color('Blockers:', 'red')}`);
+    for (const b of report.blockers) {
+      log(`    ${color(icons.warning, 'red')} ${b}`);
+    }
+  }
+  if (report.warnings.length > 0) {
+    logRaw('');
+    log(`  ${color('Notes:', 'gray')}`);
+    for (const w of report.warnings) {
+      log(`    ${color(icons.info, 'blue')} ${w}`);
+    }
+  }
+  logRaw('');
+  const status = report.ready
+    ? color('Ready to submit', 'green')
+    : color('Needs work', 'red');
+  log(`  ${status}`);
+  logRaw('');
+}
+
+// ── Execution plan ───────────────────────────────────────────────────────────
+
+/** Display a concise execution plan summary */
+export function showPlan(plan: {
+  title: string;
+  targetPrize: string;
+  estimatedTime: string;
+  strategy: string[];
+  architecture: string;
+  features: Array<{ name: string; reason: string }>;
+  risks: Array<{ risk: string; mitigation: string }>;
+  timeline: string[];
+  demoStrategy?: string[];
+  submissionStrategy?: string[];
+}): void {
+  logRaw('');
+  logRaw(`  ${BOLD}${color('Execution Plan', 'cyan')}${RESET}`);
+  logRaw(`  ${color('\u2500'.repeat(40), 'gray')}`);
+  logRaw('');
+  labeled('Project', plan.title);
+  if (plan.targetPrize) labeled('Target', plan.targetPrize);
+  labeled('Est. time', plan.estimatedTime);
+  logRaw('');
+  log(`  ${color('Strategy:', 'gray')}`);
+  for (const s of plan.strategy) {
+    log(`    ${color('\u2713', 'green')} ${s}`);
+  }
+  logRaw('');
+  labeled('Architecture', plan.architecture);
+  logRaw('');
+  log(`  ${color('Features:', 'gray')}`);
+  for (const f of plan.features) {
+    log(`    ${color('\u2022', 'cyan')} ${f.name}`);
+    log(`      ${color(f.reason, 'gray')}`);
+  }
+  if (plan.risks.length > 0) {
+    logRaw('');
+    log(`  ${color('Risks:', 'gray')}`);
+    for (const r of plan.risks) {
+      log(`    ${color('\u26A0', 'yellow')} ${r.risk} ${color('\u2192', 'cyan')} ${r.mitigation}`);
+    }
+  }
+  if (plan.timeline.length > 0) {
+    logRaw('');
+    log(`  ${color('Timeline:', 'gray')}`);
+    for (const t of plan.timeline) {
+      log(`    ${color('\u2022', 'gray')} ${t}`);
+    }
+  }
+  if (plan.demoStrategy && plan.demoStrategy.length > 0) {
+    logRaw('');
+    log(`  ${color('Demo Plan:', 'gray')}`);
+    for (const d of plan.demoStrategy) {
+      const trimmed = d.trim();
+      if (trimmed) {
+        log(`    ${trimmed}`);
+      } else {
+        logRaw('');
+      }
+    }
+  }
+  if (plan.submissionStrategy && plan.submissionStrategy.length > 0) {
+    logRaw('');
+    log(`  ${color('Submission Prep:', 'gray')}`);
+    for (const s of plan.submissionStrategy) {
+      log(`    ${color('\u2022', 'gray')} ${s}`);
+    }
+  }
+  logRaw('');
 }

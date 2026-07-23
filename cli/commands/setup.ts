@@ -1,8 +1,5 @@
-import * as readline from 'node:readline';
-import type { Readable } from 'node:stream';
-
 import { getConfig, setLLMConfig, type LLMConfig } from '../config-manager.js';
-import { header, success, warn, info } from '../output.js';
+import { header, success, warn, info, ask } from '../output.js';
 import { initializeProviders } from '../provider-init.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
@@ -15,30 +12,7 @@ const PROVIDER_CHOICES = [
   { name: 'Custom (Ollama, LM Studio, etc.)', value: 'custom' },
 ];
 
-function ask(rl: readline.ReadLine, input: Readable, question: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    let settled = false;
-    let inputEnded = false;
-    const onEnd = (): void => {
-      inputEnded = true;
-      finish(null);
-    };
-    const onClose = (): void => finish(null);
-    const cleanup = (): void => {
-      input.removeListener('end', onEnd);
-      rl.removeListener('close', onClose);
-    };
-    const finish = (answer: string | null): void => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      resolve(answer);
-    };
-    input.once('end', onEnd);
-    rl.once('close', onClose);
-    rl.question(question, (answer) => finish(inputEnded || typeof answer !== 'string' ? null : answer.trim()));
-  });
-}
+
 
 export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
   const existing = getConfig();
@@ -48,10 +22,7 @@ export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIR
     console.log();
   }
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
+  const rl = null; // Removed in favor of global ask
 
   try {
     console.log();
@@ -68,7 +39,7 @@ export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIR
 
     let providerIndex = -1;
     while (isNaN(providerIndex) || providerIndex < 0 || providerIndex >= PROVIDER_CHOICES.length) {
-      const raw = await ask(rl, process.stdin,'  Enter number (1-' + PROVIDER_CHOICES.length + '): ');
+      const raw = await ask('Enter number (1-' + PROVIDER_CHOICES.length + '): ');
       if (raw === null) {
         return { success: false, message: 'Setup cancelled: no interactive input available.' };
       }
@@ -81,7 +52,7 @@ export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIR
     const chosenProvider = PROVIDER_CHOICES[providerIndex]!;
     console.log(`  Selected: ${chosenProvider.name}\n`);
 
-    const apiKey = await ask(rl, process.stdin,'  Enter API key: ');
+    const apiKey = await ask('Enter API key: ');
     if (apiKey === null) {
       return { success: false, message: 'Setup cancelled: no interactive input available.' };
     }
@@ -91,14 +62,14 @@ export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIR
 
     let baseUrl = '';
     if (providerIndex === 0) {
-      const endpoint = await ask(rl, process.stdin,'  Enter endpoint URL (press Enter for default NVIDIA NIMs endpoint): ');
+      const endpoint = await ask('Enter endpoint URL (press Enter for default NVIDIA NIMs endpoint): ');
       if (endpoint === null) {
         return { success: false, message: 'Setup cancelled: no interactive input available.' };
       }
       baseUrl = endpoint;
     }
 
-    const model = await ask(rl, process.stdin,'  Enter model name (press Enter for default): ');
+    const model = await ask('Enter model name (press Enter for default): ');
     if (model === null) {
       return { success: false, message: 'Setup cancelled: no interactive input available.' };
     }
@@ -114,7 +85,7 @@ export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIR
 
     success('Configuration saved.\n');
 
-    const verifyAnswer = await ask(rl, process.stdin,'  Verify connection with this provider? (Y/n): ');
+    const verifyAnswer = await ask('Verify connection with this provider? (Y/n): ');
     if (verifyAnswer === null) {
       return { success: false, message: 'Setup cancelled: no interactive input available.' };
     }
@@ -139,7 +110,7 @@ export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIR
 
     success('Setup complete! Run: hag run <devpost-url>\n');
     return { success: true, message: 'Setup complete.' };
-  } finally {
-    rl.close();
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : String(err) };
   }
 }

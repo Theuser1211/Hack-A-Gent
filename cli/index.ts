@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { getConfig } from './config-manager.js';
-import { createContext, formatDuration } from './context.js';
+import { createContext } from './context.js';
 import { formatError, printError } from './errors.js';
-import { banner, success as logSuccess, error as logError, info, dim, showWelcome } from './output.js';
+import { success as logSuccess, error as logError, info, dim, showVersion, setVerbose } from './output.js';
 import type { CLIArgs, CLIResult, CommandName } from './types.js';
 
 // Feature commands live under features/commands/<name>.ts (kept out of the
@@ -149,87 +149,97 @@ function getVersion(): string {
   return '0.1.0';
 }
 
-function showHelp(): void {
+function showSimpleHelp(): void {
   console.log(`
-  Hack-A-Gent — Autonomous Software Engineering Organization CLI
-  
+  Hack-A-Gent — Autonomous Hackathon Teammate
+
   Usage:
-    hackagent <command> [options] [args]
-    hag <command> [options] [args]        (shorthand)
+    hag                          Interactive entry point (paste URL, answer a few questions)
+    hag run <url|file|text>      Build a hackathon submission from a URL, file, or description
+    hag resume <projectId>       Resume a paused build
+    hag explain [projectId]      Show decision traces and debug analysis
+    hag setup                    Interactive setup wizard
+    hag doctor                   System diagnostics
+    hag providers                Show configured provider status
+    hag models                   List available models from configured provider
+    hag --help                   Show all commands (public + internal)
+    hag --version                Show version
 
-  Commands:
-    run <input>          Run full hackathon pipeline (Devpost URL, file, or text)
-                          --demo           Demo mode: compilation + simulation only
-                          --simulate-only  Simulation only: no execution/deploy
-                          --resume         Resume from saved snapshot
-    simulate <input>     Run simulation only (alias for --simulate-only)
-                          --demo           Demo simulation mode
-    resume <projectId>   Resume a paused execution
-    status [projectId]   Show project status / list projects
-    memory query <text>  Search organizational memory
-    memory stats         Show memory statistics
-    memory clear         Clear session memory
-    benchmark list       List available benchmarks
-    benchmark run [id]   Run benchmark suite [--adversarial] [--seed N]
-    replay <runId>       Deterministic replay of a past run
-    config               Configure LLM providers, API keys, and deploy tokens
-                          --provider <name>   Provider: nvidia, openai, anthropic, gemini, openrouter, custom
-                          --api-key <key>      API key for the provider
-                          --base-url <url>     Custom endpoint URL (for NVIDIA NIMs, local models, etc.)
-                          --model <name>       Model name (optional)
-                          --show               Show current configuration
-                          --clear              Clear saved configuration
-                          --github-token <tok> GitHub personal access token
-                          --vercel-token <tok> Vercel deployment token
-                          --netlify-token <tok>Netlify deployment token
-    setup                Interactive first-time setup wizard
-    deploy <projectId>   Deploy a built project
-    test <projectId>     Run browser tests [--url <url>]
-    explain [projectId]  Show decision traces and debug analysis
-    health               System health check
-    chat                 Interactive conversational mode
-    doctor               System diagnostics — check Node, git, config, provider
-    models               List available models from configured provider
-    providers            Show configured provider status
-    version              Show version information
-    help                 Show this help message
+  Examples:
+    hag
+    hag run https://devpost.com/software/example
+    hag setup
+    hag doctor
 
-  Global Flags:
-    --seed <N>           Set deterministic seed
+  Flags:
+    --seed <N>           Set deterministic seed (default: 42)
     --json               Output raw JSON
     --quiet              Minimal output
     --verbose            Verbose logging
     --dry-run            Simulate without executing
+    --debug              Show full error stack traces
+  `);
+}
+
+/** Detailed help shown on --help: includes all commands (public and internal). */
+function showDetailedHelp(): void {
+  console.log(`
+  Hack-A-Gent — Autonomous Hackathon Teammate
+
+  Usage:
+    hackagent <command> [options]
+    hag <command> [options]
+
+  Public Commands:
+    run <url|file|text>      Build a hackathon submission from a URL, file, or description
+    resume <projectId>       Resume a paused build
+    explain [projectId]      Show decision traces and debug analysis
+    setup                    Interactive first-time setup wizard
+    doctor                   System diagnostics
+    providers                Show configured provider status
+    models                   List available models from configured provider
+
+  Internal / Advanced Commands:
+    config                   Configure LLM provider, API keys, deploy tokens
+    status [projectId]       Show project status / list projects
+    memory                   Search organizational memory, show stats
+    benchmark                Run benchmark suite, list benchmarks, measure projects
+    replay <runId>           Deterministic replay of a past run
+    deploy <projectId>       Deploy a built project
+    test <projectId>         Run browser tests
+    health                   System health check
+    chat                     Interactive conversational mode
+    simulate <input>         Run simulation only
+    hack-agent               Internal pipeline runner
+    version                  Show version
+
+  Intelligence (Hackathon Features):
+    analyze <url|file|text>     Full competition analysis
+    inspect <url|file|text>     Verbose analysis with risks + winners
+    opportunities <url|text>    Scoring opportunities + MVP focus
+    sponsors <url|text>         Sponsor API breakdown
+    timeline <url|text>         Timeline and milestone analysis
+    strategy <url|text>         Winning strategy generator
+    compare <a> <b>             Diff two competitions
+    categories list             Benchmark categories
+    docs generate               Generate project documentation
+    knowledge update/search     Knowledge base operations
+
+  Global Flags:
+    --seed <N>           Set deterministic seed (default: 42)
+    --json               Output raw JSON
+    --quiet              Minimal output
+    --verbose            Verbose logging
+    --dry-run            Simulate without executing
+    --debug              Show full error stack traces
 
   Examples:
-    hackagent run https://devpost.com/software/example
-    hackagent run spec.txt
-    hackagent run "Build a chatbot"
-    hackagent resume my-project
-    hackagent memory query "React dashboard with charts"
-    hackagent benchmark run --adversarial --seed 42
-    hackagent replay run-2026-01-15
-    hackagent chat
-    hackagent analyze https://devpost.com/software/example
-    hackagent categories list
-    hackagent docs generate
-
-  Intelligence Engine (Hackathon Intelligence):
-    analyze <url|file|text>     Full 20+ dimension analysis (terminal)
-    inspect <url|file|text>     Same, but verbose (risks + winners playbook)
-    opportunities <url|file|text>  Scoring opportunities + MVP focus (why)
-    sponsors <url|file|text>    Sponsor & API breakdown (why it matters)
-    timeline <url|file|text>    Timeline, milestones, completion probability
-    strategy <url|file|text>    Winning strategy + differentiators
-    compare <a> <b>             Diff two hackathons (competitiveness Δ)
-    (all support --json and --out <file>)
-
-  Knowledge Base (Hackathon Intelligence):
-    knowledge update [--url <devpost|github> ...] [--no-prev]   Seed + augment KB
-    knowledge search <query> [--category <c>] [--source <s>] [--limit n]
-    knowledge stats [--json]                                    Totals + breakdown
-    knowledge explain <id|title> [--json]                        Full entry + evidence
-    knowledge export [--format json|md] [--out <file>]           Export the KB
+    hag
+    hag run https://devpost.com/software/example
+    hag setup
+    hag memory query "React dashboard"
+    hag benchmark list
+    hag analyze https://devpost.com/software/example
   `);
 }
 
@@ -241,9 +251,9 @@ async function ensureConfig(command: CommandName): Promise<boolean> {
   if (config?.llm.apiKey) return true;
 
   if (command === 'run') {
-    banner();
-    console.log('  No AI provider is configured.');
-    console.log('  Let\'s get you set up.\n');
+    console.log();
+    info('No AI provider configured.');
+    console.log('  Setting up now...\n');
     const { setupCommand } = await import('./commands/setup.js');
     const result = await setupCommand(createContext(42), {
       command: 'setup' as CommandName,
@@ -264,41 +274,42 @@ async function ensureConfig(command: CommandName): Promise<boolean> {
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv);
+  const seed = typeof args.flags.seed === 'number' ? args.flags.seed : 42;
+  const ctx = createContext(seed);
 
   if (args.command === 'help' || args.command === undefined) {
     const rawArgs = process.argv.slice(2);
     const unknownCommand = typeof args.flags.unknownCommand === 'string';
     if (rawArgs.length === 0) {
-      showWelcome(getVersion());
-      const config = getConfig();
-      if (!config?.llm.apiKey) {
-        console.log();
-        info('No AI provider configured — run hag setup to get started');
-        console.log();
-      }
+      // `hag` with no args launches the interactive entry point
+      showVersion(getVersion());
+      const { runInteractiveEntry } = await import('./interactive.js');
+      const result = await runInteractiveEntry(ctx);
+      process.exitCode = result.success ? 0 : 1;
+      return;
+    } else if (unknownCommand) {
+      showSimpleHelp();
     } else {
-      showHelp();
+      showDetailedHelp();
     }
     process.exitCode = unknownCommand ? 1 : 0;
     return;
   }
 
-  const seed = typeof args.flags.seed === 'number' ? args.flags.seed : 42;
-  const ctx = createContext(seed);
-
   process.on('SIGINT', () => {
-    console.log('\n  Interrupted.');
+    console.log('\n  Interrupted. Use `hag resume` to continue where you left off.');
     process.exitCode = 130;
-    process.exit(); // forced exit on SIGINT is fine (user wants to quit)
+    process.exit();
   });
   process.on('SIGTERM', () => {
-    console.log('\n  Terminated.');
+    console.log('\n  Terminated. Use `hag resume` to continue where you left off.');
     process.exitCode = 143;
     process.exit();
   });
   ctx.outputFormat = args.flags.json === true ? 'json' : args.flags.quiet === true ? 'quiet' : 'pretty';
   ctx.verbose = args.flags.verbose === true;
   ctx.dryRun = args.flags['dry-run'] === true;
+  setVerbose(ctx.verbose);
 
   if (!(await ensureConfig(args.command))) {
     process.exitCode = 1;
@@ -427,7 +438,7 @@ async function main(): Promise<void> {
       }
     }
   } catch (err) {
-    const debug = args.flags.debug === true;
+    const debug = args.flags.debug === true || ctx.verbose;
     if (debug) {
       result = { success: false, message: err instanceof Error ? `Fatal error: ${err.message}` : `Fatal error: ${String(err)}` };
       console.error('  Stack:', err instanceof Error ? err.stack : '');
@@ -462,6 +473,9 @@ async function main(): Promise<void> {
   }
 
   process.exitCode = result.success ? 0 : 1;
+
+  // We no longer force exit. The process will exit naturally when the event loop is empty.
+  // process.exit(process.exitCode);
 }
 
 main().catch((err) => {
