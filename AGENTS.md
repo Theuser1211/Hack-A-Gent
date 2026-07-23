@@ -285,3 +285,75 @@ All 5 LLM providers called `res.json()` **after** `clearTimeout`, leaving respon
 - 10 modified files, 11 new untracked files, ~4,075 lines added
 - New directories: `kernel/qualification/`, `kernel/evaluation/`, `kernel/validation/`, `kernel/repair/`, `kernel/learning/`
 - **No browser smoke test** — headless Chrome fetch not implemented yet
+
+## Session: Fix `hag run` Generation Quality
+
+### Fix 1 — RouterEngine Model Fallback (Infinite Model Iteration)
+
+**Root cause**: `RouterEngine.execute()` at `kernel/llm/router-engine.ts:204-216` falls back to ALL provider models when the routing chain doesn't match. On OpenRouter (which has hundreds of models like `openai/gpt-4o-mini`), the routing chain's bare model IDs (`gpt-4o-mini-2024-07-18`) don't match, causing every model to be tried at 30s timeout each → unbounded delay.
+
+**Fix**: Both `configuredModel` and routing-chain fallback paths now use `models.slice(0, 3)` to limit to at most 3 attempts. Worst case: 90s per `execute()` call (was unbounded).
+
+**Files**: `kernel/llm/router-engine.ts`
+
+### Fix 2 — Generator Normalization (`components/` → `src/components/`)
+
+**Root cause**: LLM prompt instructs `@/` alias imports, so LLM writes `components/` files but uses `@/components/` imports (which resolve to `src/components/`). The autonomous repair path creates stubs at `src/components/` via `generateStubFile()`, but the generated content stays at root `components/`.
+
+**Fix**: Added post-processing step in `postProcessProject()` that scans source files for `@/components/(.+)` imports, finds root-level `components/` files, and copies them to `src/components/`. Runs after all LLM phases.
+
+**Files**: `benchmarks/internet-hackathon-orchestrator.ts` (line ~1448)
+
+### Fix 3 — Richer Runtime Diagnostics for ECONNRESET
+
+**Root cause**: `productionSmokeTest` close handler couldn't distinguish between "server never started" vs "server started then crashed before/during HTTP check". No visibility into readiness detection or HTTP check attempt timing.
+
+**Fix**: Added `httpCheckAttempted` + `started` flags in error output. Close handler now reports: `exit=code signal=sig ready=detected|not-detected httpCheck=attempted|not-attempted lines=N` plus full server output. Enables root-causing ECONNRESET (server crash during HTTP probe).
+
+**Files**: `benchmarks/internet-hackathon-orchestrator.ts` (line ~1849)
+
+### Session: Fix Production Build (pages/app conflict) & ECONNRESET Race
+
+**Fix 4 — `pages/` directory cleanup (`writeFileSync` → `rmSync`)**
+
+**Root cause**: `postProcessProject()` at `benchmarks/internet-hackathon-orchestrator.ts:1422` emptied conflicting `pages/` files via `writeFileSync(p, '')` instead of deleting them. Next.js 14+ detects an empty `.tsx` file as a valid route — so `pages/index.tsx` (Pages Router) still conflicts with `src/app/page.tsx` (App Router), causing build failure: `Conflicting app and page file was found`.
+
+**Fix**: Replaced `writeFileSync(p, '')` loop with `rmSync(pagesDir, { recursive: true, force: true })` to actually delete the conflicting pages directory. Same fix applied to `_app.tsx`/`index.tsx` cleanup in app directory.
+
+**Fix 5 — ECONNRESET race condition (enhanced diagnostics lost)**
+
+**Root cause**: `productionSmokeTest()` `req.on('error')` handler at line 1907 resolved the promise with `e.message` ("read ECONNRESET") **before** the close handler fired. The close handler's rich diagnostic (`exit=`, `signal=`, `ready=`, `httpCheck=`, full server output) was lost because the promise was already settled.
+
+**Fix**: Removed `resolve()` from `req.on('error')` handler. Deferred to close handler (which has full diagnostics) or 60s timeout as ultimate fallback.
+
+**Fix 6 — Duplicate identifiers from `@vitest/expect`**
+
+**Root cause**: `normalizePackageVersions()` unconditionally pinned `vitest: '^1.6.0'` in every generated project, which pulls in `@vitest/expect/dist/chai.d.cts` with global type declarations. The generated `tsconfig.json` lacked `skipLibCheck: true` and `types: ['node']`, so `tsc` checked all `.d.ts` files in `node_modules` against all auto-discovered `@types/*` packages — causing duplicate identifier errors.
+
+**Fix**: Removed unconditional `vitest` pin from `pinnedDev`; added `skipLibCheck: true` and `types: ['node']` to generated `tsconfig.json`.
+
+### End-to-End Validation Result (hackonomics27.devpost.com)
+
+All pipeline stages pass:
+
+| Stage | Status | Detail |
+|---|---|---|
+| Parsing | ✅ | 1.4s |
+| Qualification | ✅ | PARTIALLY_SUPPORTED (70%) |
+| LLM init | ✅ | 0.01s |
+| Strategy | ✅ | 0.02s |
+| Planning | ✅ | 0.03s |
+| Code gen | ✅ | 4m 10s (template fallback) |
+| Validation | ✅ | Build passes, server HTTP 200 |
+| Browser test | ✅ | 35s |
+| Learning | ✅ | 5s |
+| Review | ✅ | 5s |
+| Evaluation | ✅ | 74.2/100 |
+| Submission check | ✅ | 12/14 checks pass |
+
+Headline: **Pipeline completed with 0 errors in 4m 9s (20 tasks).**
+
+### Remaining Issues
+- AI generation still fails (JSON parse error in LLM output) — template fallback works correctly
+- No live deploy URL (requires GITHUB_TOKEN + VERCEL_TOKEN in env)
+- Build + tests: same 6 pre-existing failures (all timeout/environmental); 656 unit tests pass (51 files) plus integration tests

@@ -10,6 +10,22 @@ import * as fs from 'node:fs';
 import * as http from 'node:http';
 import * as path from 'node:path';
 
+/** Kill entire process tree. On Windows, `server.kill()` only kills the
+ * immediate shell child — grandchildren survive and keep the event loop
+ * alive via inherited pipe handles. */
+function killProcessTree(child: ChildProcess): void {
+  if (child.pid === undefined) return;
+  try { child.kill('SIGTERM'); } catch { /* already dead */ }
+  if (process.platform === 'win32') {
+    try {
+      const killer = spawn('taskkill', ['/F', '/T', '/PID', String(child.pid)], { stdio: 'ignore', windowsHide: true });
+      killer.unref();
+    } catch { /* taskkill not available */ }
+  } else {
+    try { process.kill(-child.pid, 'SIGTERM'); } catch { try { child.kill('SIGTERM'); } catch { /* already dead */ } }
+  }
+}
+
 export interface BrowserValidationResult {
   success: boolean;
   serverStarted: boolean;
@@ -156,7 +172,7 @@ export async function validateWithBrowser(
 
   return new Promise<BrowserValidationResult>((resolve) => {
     const timer = setTimeout(() => {
-      server.kill();
+      killProcessTree(server);
       result.errors.push(result.serverStarted ? 'Timeout waiting for response' : 'Server did not start');
       result.duration = Date.now() - startTime;
       resolve(result);
@@ -203,14 +219,14 @@ export async function validateWithBrowser(
               result.success = result.http200 && result.hasContent && result.errors.length === 0;
 
               clearTimeout(timer);
-              server.kill();
+              killProcessTree(server);
               result.duration = Date.now() - startTime;
               resolve(result);
             });
           } else {
             result.errors.push(`HTTP ${res.statusCode}`);
             clearTimeout(timer);
-            server.kill();
+            killProcessTree(server);
             result.duration = Date.now() - startTime;
             resolve(result);
           }
@@ -219,7 +235,7 @@ export async function validateWithBrowser(
         req.on('error', (e: Error) => {
           result.errors.push(e.message);
           clearTimeout(timer);
-          server.kill();
+          killProcessTree(server);
           result.duration = Date.now() - startTime;
           resolve(result);
         });

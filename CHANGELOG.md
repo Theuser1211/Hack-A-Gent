@@ -1,6 +1,32 @@
 # Changelog
 
-## v1.0.0 (2026-07-07)
+## v1.1.0 (2026-07-23)
+
+### Added
+- `hag doctor --routing` — adaptive routing diagnostics with ranked model table, persistence status, and demotion/reason summaries
+- Reusable, audited prompt template library (`kernel/prompts/templates.ts`) — 9 canonical templates (planner, architect, frontend/backend/database builders, repair, judge, reporting, validation) with structured output contracts, anti-hallucination rules, and deterministic rendering
+- `PromptEngine.assembleFromTemplate()` — assemble provider-ready messages from registered prompt templates
+- Request/response diagnostic logging in `CustomEndpointProvider` — REQUEST, TIMING, and ABORT FIRED blocks with elapsed times and stage tracking
+- `class` → `className` auto-fix pattern in autonomous repair engine
+- Process tree cleanup in browser validator — kills orphaned grandchildren on Windows via `taskkill /F /T`
+
+### Changed
+- `withRetry` converted from recursive to iterative `for` loop — eliminates stack growth on deep retry chains (identical behavior)
+- Qualification engine softened: unknown technologies default to `partial` (template fallback) instead of `unsupported` (hard rejection) — prevents false-positive rejections on normal Devpost hackathons
+- `seed` parameter added to `PromptEngine`, and all internal state uses `createDeterministicUuid` / seeded ordering
+- Test suite: 69 test files pass (1 file regression from timeout), 1068 tests pass (3 pre-existing failures in benchmarks.test.ts — SyntaxError, timeout, history)
+- Pre-existing false-positive rejection test (`pipeline-false-positives.test.ts`) now passes consistently
+
+### Fixed
+- `repo-detector.ts`: normalize Windows paths in `walkDir()` (`.replace(/\\/g, '/')`), add depth limit of 10 to prevent infinite recursion on symlink loops
+- `build-executor.ts`: remove `2>nul` shell redirects (cross-platform), add `getPythonCmd()` with python3/python fallback
+- `dev-server-executor.ts`: remove `2>nul` shell redirects, add `getPythonCmd()` with python3/python fallback, add missing `execSync` import
+- `provider-types.ts`: recursive `withRetry` → iterative `for` loop (no functional change, eliminates stack frames on retry)
+- `model-performance-tracker.ts`: guard for missing `models` key in loaded JSON (`if (!parsed.models) parsed.models = {}`)
+- `browser-validator.ts`: replace `server.kill()` with `killProcessTree()` that uses `taskkill /F /T` on Windows to kill orphan grandchild processes
+
+### Removed
+- `2>nul` shell redirects from `build-executor.ts` and `dev-server-executor.ts` (Windows-incompatible)
 
 ### Added
 - 6 LLM provider integrations (NVIDIA NIMs, OpenAI, Anthropic, Gemini, OpenRouter, Custom)

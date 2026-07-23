@@ -279,34 +279,36 @@ export async function withRetry<T>(
   config: RetryConfig = DEFAULT_RETRY_CONFIG,
   attempt: number = 0,
 ): Promise<T> {
-  try {
-    return await fn();
-  } catch (err) {
-    if (attempt >= config.maxRetries) throw err;
+  for (let i = attempt; i <= config.maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (i >= config.maxRetries) throw err;
 
-    const isAbortError =
-      (err instanceof DOMException && err.name === 'AbortError') ||
-      (err instanceof Error && err.name === 'AbortError');
-    if (isAbortError) throw err;
+      const isAbortError =
+        (err instanceof DOMException && err.name === 'AbortError') ||
+        (err instanceof Error && err.name === 'AbortError');
+      if (isAbortError) throw err;
 
-    const status =
-      err instanceof Response ? err.status : ((err as any)?.status ?? (err as any)?.statusCode ?? 0);
+      const status =
+        err instanceof Response ? err.status : ((err as any)?.status ?? (err as any)?.statusCode ?? 0);
 
-    if (status !== 0 && !isRetryable(status)) throw err;
+      if (status !== 0 && !isRetryable(status)) throw err;
 
-    const retryAfter = (err as any)?.retryAfter;
-    let delay: number;
-    if (retryAfter) {
-      delay = parseInt(retryAfter) * 1000;
-      delay = Math.min(delay, config.maxDelayMs);
-    } else {
-      delay = Math.min(config.baseDelayMs * Math.pow(2, attempt), config.maxDelayMs);
+      const retryAfter = (err as any)?.retryAfter;
+      let delay: number;
+      if (retryAfter) {
+        delay = parseInt(retryAfter) * 1000;
+        delay = Math.min(delay, config.maxDelayMs);
+      } else {
+        delay = Math.min(config.baseDelayMs * Math.pow(2, i), config.maxDelayMs);
+      }
+      const jitter = config.useJitter ? delay * (0.5 + ((Date.now() % 1000) / 2000)) : delay;
+
+      await sleep(jitter);
     }
-    const jitter = config.useJitter ? delay * (0.5 + ((Date.now() % 1000) / 2000)) : delay;
-
-    await sleep(jitter);
-    return withRetry(fn, config, attempt + 1);
   }
+  throw new Error('withRetry: unexpected exit');
 }
 
 export interface StreamChunk {

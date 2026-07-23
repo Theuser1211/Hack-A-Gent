@@ -1,5 +1,5 @@
-import { writeFileSync, readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
-import { execSync, spawn } from 'node:child_process';
+import { writeFileSync, readFileSync, existsSync, readdirSync, mkdirSync, rmSync, statSync } from 'node:fs';
+import { execSync, spawn, type ChildProcess } from 'node:child_process';
 import * as http from 'node:http';
 import * as path from 'node:path';
 
@@ -102,6 +102,38 @@ export interface PipelineResult {
   retryAttempts?: number;
   /** Per-task retry log */
   retryLog?: Array<{ taskId: string; taskDesc: string; attempt: number; maxRetries: number; outcome: string }>;
+}
+
+/** Kill entire process tree. On Windows, `server.kill()` only kills the
+ * immediate shell child — grandchildren (npm, next, etc.) survive and
+ * keep the event loop alive via inherited pipe handles. */
+function killProcessTree(child: ChildProcess): void {
+  if (child.pid === undefined) return;
+  try { child.kill('SIGTERM'); } catch { /* already dead */ }
+  if (process.platform === 'win32') {
+    try {
+      const killer = spawn('taskkill', ['/F', '/T', '/PID', String(child.pid)], { stdio: 'ignore', windowsHide: true });
+      killer.unref();
+    } catch { /* taskkill not available */ }
+  } else {
+    try { process.kill(-child.pid, 'SIGTERM'); } catch { try { child.kill('SIGTERM'); } catch { /* already dead */ } }
+  }
+}
+
+function freePort(port: number): void {
+  if (process.platform !== 'win32') return;
+  try {
+    const result = execSync(`netstat -ano | findstr ":${port} "`, { timeout: 5000, shell: 'cmd.exe', windowsHide: true });
+    const lines = result.toString().split('\n').filter(l => l.includes('LISTENING'));
+    for (const line of lines) {
+      const match = line.match(/(\d+)\s*$/);
+      if (match) {
+        try {
+          execSync(`taskkill /F /T /PID ${match[1]}`, { timeout: 3000, stdio: 'ignore', windowsHide: true });
+        } catch { /* process already dead */ }
+      }
+    }
+  } catch { /* port is free */ }
 }
 
 export class InternetHackathonOrchestrator {
@@ -883,6 +915,12 @@ export class InternetHackathonOrchestrator {
   private async generateScaffoldFiles(plan: InternetExecutionPlan): Promise<Array<{ path: string; content: string }>> {
     const projectName = plan.projectName;
     const title = projectName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const tagline = this.devpostData?.problemStatement
+      ? (this.devpostData.problemStatement.length > 120
+        ? this.devpostData.problemStatement.slice(0, 117) + '...'
+        : this.devpostData.problemStatement)
+      : 'Built for this hackathon. Modern, responsive, and production-ready.';
+    const stackTags = this.devpostData?.recommendedStack?.slice(0, 5) ?? [];
     return [
       {
         path: 'package.json',
@@ -890,9 +928,9 @@ export class InternetHackathonOrchestrator {
           name: projectName,
           version: '0.1.0',
           private: true,
-          scripts: { dev: 'next dev', build: 'next build', start: 'next start' },
-          dependencies: { next: '^14.0.0', react: '^18.2.0', 'react-dom': '^18.2.0' },
-          devDependencies: { typescript: '^5.3.0', '@types/react': '^18.2.0', '@types/node': '^20.0.0' },
+          scripts: { dev: 'next dev', build: 'next build', start: 'next start', lint: 'echo lint: no linter configured', typecheck: 'tsc --noEmit', test: 'echo test: no tests configured' },
+          dependencies: { next: '^14.2.0', react: '^18.3.1', 'react-dom': '^18.3.1' },
+          devDependencies: { typescript: '^5.5.0', '@types/react': '^18.3.3', '@types/node': '^20.14.0', tailwindcss: '^3.4.0', postcss: '^8.4.0', autoprefixer: '^10.4.0' },
         }, null, 2),
       },
       {
@@ -906,6 +944,8 @@ export class InternetHackathonOrchestrator {
             jsx: 'preserve',
             strict: true,
             noEmit: true,
+            skipLibCheck: true,
+            types: ['node'],
             paths: { '@/*': ['./src/*'] },
           },
           include: ['next-env.d.ts', '**/*.ts', '**/*.tsx'],
@@ -913,92 +953,261 @@ export class InternetHackathonOrchestrator {
         }, null, 2),
       },
       {
+        path: 'postcss.config.js',
+        content: `module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } };\n`,
+      },
+      {
+        path: 'tailwind.config.js',
+        content: `/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ['./src/**/*.{ts,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        primary: { 50: '#faf5ff', 100: '#f3e8ff', 200: '#e9d5ff', 300: '#d8b4fe', 400: '#c084fc', 500: '#a855f7', 600: '#9333ea', 700: '#7e22ce', 800: '#6b21a8', 900: '#581c87' },
+      },
+    },
+  },
+  plugins: [],
+};
+`,
+      },
+      {
         path: '.gitignore',
         content: ['node_modules/', '.next/', '.env', '.env.local', 'dist/', 'build/', '.DS_Store', '*.log'].join('\n') + '\n',
       },
       {
         path: 'src/app/globals.css',
-        content: `*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #1a1a2e; background: #f8f9fa; }
-.container { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
-nav { background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; padding: 1rem 1.5rem; display: flex; gap: 1.5rem; align-items: center; }
-nav a { color: #a0c4ff; text-decoration: none; font-weight: 500; }
-nav a:hover { color: white; }
-main { min-height: calc(100vh - 120px); }
-footer { background: #e9ecef; padding: 1rem; text-align: center; color: #666; font-size: 0.9rem; margin-top: 2rem; }
-h1 { font-size: 1.8rem; margin-bottom: 0.75rem; color: #1a1a2e; }
-h2 { font-size: 1.3rem; margin-bottom: 0.5rem; color: #16213e; }
-p { margin-bottom: 1rem; color: #444; }
-.card { background: white; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e0e0e0; }
-button, .btn { background: #1a1a2e; color: white; border: none; padding: 0.5rem 1.25rem; border-radius: 6px; cursor: pointer; font-size: 0.95rem; font-weight: 500; transition: background 0.15s; }
-button:hover { background: #2d2d4a; }
-input, textarea { width: 100%; padding: 0.5rem; border: 1px solid #d0d0d0; border-radius: 6px; font-size: 0.95rem; }
-input:focus, textarea:focus { outline: none; border-color: #1a1a2e; box-shadow: 0 0 0 2px rgba(26,26,46,0.1); }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
-.tag { display: inline-block; background: #e8f0fe; color: #1a1a2e; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.85rem; margin: 0.15rem; }\n`,
+        content: `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html { scroll-behavior: smooth; }
+body { @apply antialiased; }
+`,
       },
       {
         path: 'src/app/layout.tsx',
         content: `import './globals.css';
 
-export const metadata = { title: '${title}', description: 'Built for hackathon' };
+export const metadata = { title: '${title}', description: '${title} — Built for hackathon submission' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <nav>
-          <strong style={{fontSize:'1.1rem',color:'white'}}>${title}</strong>
-          <a href="/">Home</a>
+      <body className="bg-white text-slate-900 antialiased">
+        <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <span className="text-xl font-bold text-slate-900">${title}</span>
+              <div className="hidden sm:flex items-center gap-6">
+                <a href="#features" className="text-slate-600 hover:text-slate-900 transition-colors text-sm font-medium">Features</a>
+                <a href="#how-it-works" className="text-slate-600 hover:text-slate-900 transition-colors text-sm font-medium">How It Works</a>
+                <a href="#get-started" className="bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium">Get Started</a>
+              </div>
+            </div>
+          </div>
         </nav>
         {children}
-        <footer>
-          Built for <strong>${title}</strong> &mdash; Hackathon Project
+        <footer className="bg-slate-900 text-slate-400 py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid md:grid-cols-3 gap-8">
+              <div>
+                <h3 className="text-white font-semibold text-lg mb-3">${title}</h3>
+                <p className="text-sm text-slate-500 leading-relaxed">Built with Next.js, TypeScript, and Tailwind CSS for hackathon submission.</p>
+              </div>
+              <div>
+                <h3 className="text-white font-semibold text-lg mb-3">Quick Links</h3>
+                <ul className="space-y-2 text-sm">
+                  <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+                  <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
+                  <li><a href="/" className="hover:text-white transition-colors">Home</a></li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-white font-semibold text-lg mb-3">Tech Stack</h3>
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full">Next.js</span>
+                  <span className="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full">TypeScript</span>
+                  <span className="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full">Tailwind CSS</span>
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-slate-800 mt-12 pt-8 text-center text-sm text-slate-600">
+              &copy; ${new Date().getFullYear()} ${title}. Built for hackathon submission.
+            </div>
+          </div>
         </footer>
       </body>
     </html>
   );
-}\n`,
+}
+`,
       },
       {
         path: 'src/app/page.tsx',
         content: `export default function Home() {
   return (
-    <main className="container">
-      <h1>${title}</h1>
-      <p>Built for submission. Edit <code>src/app/page.tsx</code> to add your content.</p>
-      <div className="grid">
-        <div className="card">
-          <h2>Getting Started</h2>
-          <p>Run <code>npm run dev</code> to start the dev server at <strong>localhost:3000</strong>.</p>
+    <div className="min-h-screen bg-white">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-400/20 via-transparent to-transparent pointer-events-none" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40">
+          <div className="text-center max-w-4xl mx-auto">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight">
+              ${title}
+            </h1>
+            <p className="mt-6 text-lg sm:text-xl text-purple-200/90 max-w-2xl mx-auto leading-relaxed">
+              ${tagline}
+            </p>
+            <div className="mt-10 flex flex-wrap gap-4 justify-center">
+              <a href="#features" className="inline-flex items-center rounded-lg bg-white text-slate-900 px-8 py-3.5 font-semibold hover:bg-purple-50 transition-all shadow-lg shadow-purple-900/20">
+                Explore Features
+                <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </a>
+              <a href="#how-it-works" className="inline-flex items-center rounded-lg border border-white/30 text-white px-8 py-3.5 font-semibold hover:bg-white/10 transition-all">
+                Learn More
+              </a>
+            </div>
+          </div>
         </div>
-        <div className="card">
-          <h2>Project Structure</h2>
-          <p style={{marginBottom:'0.5rem'}}><code>src/app/</code> &mdash; Pages and layouts</p>
-          <p style={{marginBottom:'0.5rem'}}><code>src/app/api/</code> &mdash; API routes</p>
-          <p><code>src/components/</code> &mdash; React components</p>
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-400/50 to-transparent" />
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-20 sm:py-24 lg:py-28">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">Key Features</h2>
+            <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
+              Everything you need to build an outstanding submission
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="group rounded-xl border border-slate-200 bg-white p-8 hover:shadow-lg hover:border-purple-200 transition-all">
+              <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center text-2xl mb-5 group-hover:scale-110 transition-transform">🎯</div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-3">Smart Analytics</h3>
+              <p className="text-slate-600 leading-relaxed">Real-time data processing with AI-powered insights and intelligent recommendations.</p>
+            </div>
+            <div className="group rounded-xl border border-slate-200 bg-white p-8 hover:shadow-lg hover:border-purple-200 transition-all">
+              <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center text-2xl mb-5 group-hover:scale-110 transition-transform">⚡</div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-3">Real-time Sync</h3>
+              <p className="text-slate-600 leading-relaxed">Live data synchronization with instant updates and team collaboration features.</p>
+            </div>
+            <div className="group rounded-xl border border-slate-200 bg-white p-8 hover:shadow-lg hover:border-purple-200 transition-all">
+              <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center text-2xl mb-5 group-hover:scale-110 transition-transform">🔒</div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-3">Secure Platform</h3>
+              <p className="text-slate-600 leading-relaxed">Enterprise-grade security with end-to-end encryption and data protection.</p>
+            </div>
+          </div>
         </div>
-        <div className="card">
-          <h2>Tech Stack</h2>
-          <span className="tag">Next.js 14</span>
-          <span className="tag">TypeScript</span>
-          <span className="tag">App Router</span>
+      </section>
+
+      {/* How It Works Section */}
+      <section id="how-it-works" className="py-20 sm:py-24 lg:py-28 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">How It Works</h2>
+            <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
+              Get started in three simple steps
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-2xl font-bold mx-auto mb-5">1</div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-3">Connect</h3>
+              <p className="text-slate-600 leading-relaxed">Set up your environment and connect your data sources securely.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-2xl font-bold mx-auto mb-5">2</div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-3">Build</h3>
+              <p className="text-slate-600 leading-relaxed">Leverage powerful tools and APIs to build your solution.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-2xl font-bold mx-auto mb-5">3</div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-3">Submit</h3>
+              <p className="text-slate-600 leading-relaxed">Deploy your project and submit with confidence.</p>
+            </div>
+          </div>
         </div>
-      </div>
-    </main>
+      </section>
+
+      {/* CTA Section */}
+      <section id="get-started" className="py-20 sm:py-24 lg:py-28 bg-gradient-to-r from-purple-600 to-indigo-600">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Ready to Get Started?</h2>
+          <p className="text-lg text-purple-100/90 mb-10 max-w-2xl mx-auto leading-relaxed">
+            Join the hackathon and build something amazing with ${title}
+          </p>
+          <a href="/" className="inline-flex items-center rounded-lg bg-white text-purple-700 px-10 py-4 font-semibold text-lg hover:bg-purple-50 transition-all shadow-xl shadow-purple-900/20">
+            Start Building
+            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+          </a>
+        </div>
+      </section>
+    </div>
   );
-}\n`,
+}
+`,
+      },
+      {
+        path: 'src/app/loading.tsx',
+        content: `export default function Loading() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+        <p className="text-slate-500 text-sm font-medium">Loading...</p>
+      </div>
+    </div>
+  );
+}
+`,
+      },
+      {
+        path: 'src/app/error.tsx',
+        content: `'use client';
+
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="text-center max-w-md mx-auto px-4">
+        <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-6">
+          <span className="text-3xl">⚠️</span>
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-3">Something went wrong</h2>
+        <p className="text-slate-600 mb-8 leading-relaxed">
+          {error.message || 'An unexpected error occurred. Please try again.'}
+        </p>
+        <button
+          onClick={reset}
+          className="inline-flex items-center rounded-lg bg-slate-900 text-white px-6 py-3 font-semibold hover:bg-slate-800 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    </div>
+  );
+}
+`,
+      },
+      {
+        path: 'src/components/index.ts',
+        content: `export {};
+`,
       },
       {
         path: 'README.md',
         content: `# ${title}
 
-Built with Hack-A-Gent for hackathon submission.
+${this.devpostData?.problemStatement ?? 'Built for hackathon submission.'}
 
 ## Tech Stack
 
 - Next.js 14 (App Router)
 - TypeScript
+- Tailwind CSS
+${stackTags.map(s => `- ${s}`).join('\n')}
 
 ## Getting Started
 
@@ -1015,9 +1224,15 @@ Open [http://localhost:3000](http://localhost:3000) to view the project.
 - \`src/app/api/\` — API routes
 - \`src/components/\` — React components
 
+## Scripts
+
+- \`npm run dev\` — Start development server
+- \`npm run build\` — Production build
+- \`npm run start\` — Start production server
+
 ## Deployment
 
-This project is ready to deploy on Vercel.
+Deploy on Vercel for free.
 `,
       },
     ];
@@ -1025,30 +1240,7 @@ This project is ready to deploy on Vercel.
 
   private generateFrontendFiles(node: TaskNode, plan: InternetExecutionPlan): Array<{ path: string; content: string }> {
     const desc = node.description.toLowerCase();
-    if (desc.includes('layout'))
-      return [{
-        path: 'src/app/layout.tsx',
-        content: `import './globals.css';
-
-export const metadata = { title: '${plan.projectName}', description: 'Hackathon project' };
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body>
-        <nav style={{background:'#1a1a2e',color:'white',padding:'0.75rem 1.5rem',display:'flex',gap:'1.5rem',alignItems:'center'}}>
-          <strong>{'${plan.projectName}'}</strong>
-          <a href="/" style={{color:'#a0c4ff',textDecoration:'none'}}>Home</a>
-        </nav>
-        {children}
-        <footer style={{background:'#e9ecef',padding:'1rem',textAlign:'center',marginTop:'2rem',color:'#666',fontSize:'0.85rem'}}>
-          Hackathon Project
-        </footer>
-      </body>
-    </html>
-  );
-}\n`,
-      }];
+    const navTitle = plan.projectName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     if (desc.includes('auth'))
       return [{
         path: 'src/components/AuthForm.tsx',
@@ -1068,19 +1260,38 @@ export default function AuthForm({ mode = 'signin' }: { mode?: 'signin' | 'signu
     if (desc.includes('styling'))
       return [{
         path: 'src/app/globals.css',
-        content: 'body { margin: 0; font-family: system-ui, sans-serif; } main { max-width: 960px; margin: 0 auto; padding: 2rem; }\n',
+        content: `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html { scroll-behavior: smooth; }
+body { @apply antialiased; }
+`,
       }];
-    return [{
-      path: 'src/app/page.tsx',
-      content: `export default function Home() {
+    if (desc.includes('layout') || desc.includes('navigation')) {
+      return [{
+        path: 'src/components/NavBar.tsx',
+        content: `'use client';
+
+export default function NavBar() {
   return (
-    <main style={{maxWidth:'960px',margin:'0 auto',padding:'2rem'}}>
-      <h1>${plan.projectName}</h1>
-      <p>Hackathon project built with Next.js.</p>
-    </main>
+    <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          <span className="text-xl font-bold text-slate-900">${navTitle}</span>
+          <div className="hidden sm:flex items-center gap-6">
+            <a href="#features" className="text-slate-600 hover:text-slate-900 transition-colors text-sm font-medium">Features</a>
+            <a href="#how-it-works" className="text-slate-600 hover:text-slate-900 transition-colors text-sm font-medium">How It Works</a>
+            <a href="#get-started" className="bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium">Get Started</a>
+          </div>
+        </div>
+      </div>
+    </nav>
   );
 }\n`,
-    }];
+      }];
+    }
+    return [];
   }
 
   private generateBackendFiles(node: TaskNode, plan: InternetExecutionPlan): Array<{ path: string; content: string }> {
@@ -1111,7 +1322,8 @@ CREATE TABLE IF NOT EXISTS items (
 export async function POST(req: Request) {
   const body = await req.json();
   if (!body.email || !body.password) {
-    return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
+    return NextResponse.json({ error: 'Email and password required' },
+      { status: 400 });
   }
   // In production, validate credentials against your database
   return NextResponse.json({ token: 'demo-token', user: { email: body.email } });
@@ -1180,7 +1392,6 @@ export async function POST(req: Request) {
           typescript: '^5.5.0',
           '@types/react': '^18.3.3',
           '@types/node': '^20.14.0',
-          vitest: '^1.6.0',
         };
         for (const [k, v] of Object.entries(pinned)) {
           pkg.dependencies[k] = v;
@@ -1396,15 +1607,7 @@ export async function POST(req: Request) {
       const appDir = path.join(projectDir, 'src', 'app');
       const pagesDir = path.join(projectDir, 'pages');
       if (existsSync(appDir) && existsSync(path.join(appDir, 'page.tsx')) && existsSync(pagesDir)) {
-        const removeDir = (dir: string) => {
-          if (!existsSync(dir)) return;
-          for (const entry of readdirSync(dir, { withFileTypes: true })) {
-            const p = path.join(dir, entry.name);
-            if (entry.isDirectory()) removeDir(p);
-            else { try { writeFileSync(p, ''); } catch (e) { debug(`[scaffold] placeholder write skipped (non-fatal): ${e instanceof Error ? e.message : e}`); } }
-          }
-        };
-        removeDir(pagesDir);
+        try { rmSync(pagesDir, { recursive: true, force: true }); } catch { /* ignore */ }
       }
 
       for (const [k, v] of Object.entries(pkg.devDependencies)) {
@@ -1417,13 +1620,53 @@ export async function POST(req: Request) {
           for (const bad of ['_app.tsx', '_app.jsx', 'index.tsx', 'index.jsx']) {
             const badPath = path.join(appDir, bad);
             if (existsSync(badPath)) {
-              try { writeFileSync(badPath, ''); } catch (e) { debug(`[scaffold] redundant file write skipped (non-fatal): ${e instanceof Error ? e.message : e}`); }
+              try { rmSync(badPath, { force: true }); } catch { /* ignore */ }
             }
           }
         }
       }
 
       writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
+
+      const srcComponentsDir = path.join(projectDir, 'src', 'components');
+      const rootComponentsDir = path.join(projectDir, 'components');
+      if (existsSync(rootComponentsDir) && existsSync(path.join(projectDir, 'src'))) {
+        const needed: string[] = [];
+        const scanForComponentImports = (dir: string) => {
+          if (!existsSync(dir)) return;
+          for (const entry of readdirSync(dir, { withFileTypes: true })) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+              if (entry.name === 'node_modules' || entry.name === '.next') continue;
+              scanForComponentImports(fullPath);
+            } else if (/\.(tsx?|jsx?)$/.test(entry.name)) {
+              try {
+                const content = readFileSync(fullPath, 'utf-8');
+                for (const m of content.matchAll(/['"]@\/components\/([^'"]+)['"]/g)) {
+                  needed.push(m[1]!.replace(/\.\w+$/, ''));
+                }
+              } catch { /* skip unreadable */ }
+            }
+          }
+        };
+        scanForComponentImports(path.join(projectDir, 'src'));
+        if (!existsSync(srcComponentsDir)) {
+          try { mkdirSync(srcComponentsDir, { recursive: true }); } catch { /* ignore */ }
+        }
+        for (const name of [...new Set(needed)]) {
+          const srcTarget = path.join(srcComponentsDir, `${name}.tsx`);
+          if (existsSync(srcTarget)) continue;
+          for (const ext of ['.tsx', '.ts', '.jsx', '.js']) {
+            const rootSource = path.join(rootComponentsDir, `${name}${ext}`);
+            if (existsSync(rootSource)) {
+              try {
+                writeFileSync(srcTarget, readFileSync(rootSource, 'utf-8'));
+              } catch { /* ignore */ }
+              break;
+            }
+          }
+        }
+      }
     } catch { /* leave unchanged */ }
   }
 
@@ -1520,7 +1763,7 @@ export async function POST(req: Request) {
 
     return new Promise<{ started: boolean; http200: boolean; error?: string }>((resolve) => {
       const timeout = setTimeout(() => {
-        server.kill();
+        killProcessTree(server);
         resolve({ started, http200, error: started ? 'Timeout waiting for HTTP 200' : 'Server did not start within 30s' });
       }, 30000);
 
@@ -1532,17 +1775,17 @@ export async function POST(req: Request) {
             if (res.statusCode === 200) {
               http200 = true;
               clearTimeout(timeout);
-              server.kill();
+              killProcessTree(server);
               resolve({ started: true, http200: true });
             } else {
               clearTimeout(timeout);
-              server.kill();
+              killProcessTree(server);
               resolve({ started: true, http200: false, error: `HTTP ${res.statusCode}` });
             }
           });
           req.on('error', (e: Error) => {
             clearTimeout(timeout);
-            server.kill();
+            killProcessTree(server);
             resolve({ started: true, http200: false, error: e.message });
           });
           req.setTimeout(5000, () => { req.destroy(); });
@@ -1560,9 +1803,43 @@ export async function POST(req: Request) {
 
       server.on('close', () => {
         clearTimeout(timeout);
-        if (!http200) resolve({ started, http200: false, error: started ? 'Server closed before HTTP check' : 'Server failed to start' });
+        resolve({ started, http200, error: started ? 'Server closed before HTTP check' : 'Server failed to start' });
       });
     });
+  }
+
+  private qualityGateCheck(projectDir: string, result: GeneratedProjectValidation): void {
+    const pagePath = path.join(projectDir, 'src', 'app', 'page.tsx');
+    if (!existsSync(pagePath)) return;
+    try {
+      const content = readFileSync(pagePath, 'utf-8');
+      const templatePatterns = [
+        { pattern: /Built for submission\. Edit/, label: 'Template placeholder text' },
+        { pattern: /Getting Started[\s\S]*Project Structure/, label: 'Next.js starter template' },
+        { pattern: /Hackathon project built with Next\.js/, label: 'Generic placeholder' },
+        { pattern: /lorem ipsum/i, label: 'Lorem ipsum text' },
+        { pattern: /coming soon/i, label: 'Coming soon placeholder' },
+        { pattern: /Edit src\/app\/page\.tsx/, label: 'Edit instruction in page' },
+      ];
+      for (const tp of templatePatterns) {
+        if (tp.pattern.test(content)) {
+          const msg = `Quality gate: ${tp.label} detected in page.tsx`;
+          result.errors.push(msg);
+          result.checks.push({ name: 'Quality gate', passed: false, error: msg });
+          return;
+        }
+      }
+      const hasHero = /<h1[^>]*>/.test(content) && content.includes('Hero');
+      const hasCTA = /href="#get-started"/.test(content) || /Start Building/.test(content) || /Get Started/.test(content);
+      const hasFeatures = /Features/.test(content) || /Key Features/.test(content);
+      if (!hasHero && !hasCTA && !hasFeatures) {
+        const msg = 'Quality gate: page.tsx lacks hero section, CTA, and features — looks like a blank template';
+        result.errors.push(msg);
+        result.checks.push({ name: 'Quality gate', passed: false, error: msg });
+      } else {
+        result.checks.push({ name: 'Quality gate', passed: true });
+      }
+    } catch { /* skip unreadable */ }
   }
 
   public async validateGeneratedProject(projectDir: string): Promise<GeneratedProjectValidation> {
@@ -1635,7 +1912,9 @@ export async function POST(req: Request) {
         output = execSync(command, { cwd: projectDir, stdio: 'pipe', timeout: timeoutMs, encoding: 'utf-8', windowsHide: true });
         result.checks.push({ name, passed: true, durationMs: Date.now() - checkStart });
       } catch (err) {
-        output = String((err as { stdout?: string }).stdout ?? (err as Error).message ?? err);
+        const execErr = err as { stdout?: string; stderr?: string };
+        output = String(execErr.stdout ?? '') + '\n' + String(execErr.stderr ?? '');
+        if (!output.trim()) output = String((err as Error).message ?? err);
         const errorMsg = `${name} failed: ${output.slice(0, 500)}`;
         result.errors.push(errorMsg);
         result.checks.push({ name, passed: false, error: output.slice(0, 400), durationMs: Date.now() - checkStart });
@@ -1654,6 +1933,8 @@ export async function POST(req: Request) {
     } else {
       result.checks.push({ name: 'Runtime validation (start)', passed: true });
     }
+
+    this.qualityGateCheck(projectDir, result);
 
     result.errors = Array.from(new Set(result.errors));
     result.valid = result.errors.length === 0;
@@ -1804,9 +2085,11 @@ export async function POST(req: Request) {
       try {
         execSync('npm run build', { cwd: projectDir, stdio: 'pipe', timeout: 300000, windowsHide: true });
       } catch (err) {
-        return { started: false, http200: false, error: `Production build failed: ${String((err as { stdout?: string }).stdout ?? err)}` };
+        return { started: false, http200: false, error: `Production build failed: ${String((err as { stdout?: string; stderr?: string }).stdout ?? '')}\n${String((err as { stderr?: string }).stderr ?? '')}` };
       }
     }
+
+    freePort(3099);
 
     const server = spawn('npm', ['run', 'start'], {
       cwd: projectDir,
@@ -1818,31 +2101,34 @@ export async function POST(req: Request) {
     let output = '';
     let started = false;
     let http200 = false;
+    let httpCheckAttempted = false;
 
     return new Promise<{ started: boolean; http200: boolean; error?: string }>((resolve) => {
       const timeout = setTimeout(() => {
-        server.kill();
+        killProcessTree(server);
         resolve({ started, http200: false, error: started ? 'Timeout waiting for HTTP 200' : 'Production server did not start within 60s' });
       }, 60000);
 
       const tryHttpCheck = () => {
+        httpCheckAttempted = true;
         const req = http.get('http://localhost:3099', (res: http.IncomingMessage) => {
           if (res.statusCode === 200) {
+            res.resume();
             http200 = true;
             clearTimeout(timeout);
-            server.kill();
+            killProcessTree(server);
             resolve({ started: true, http200: true });
           } else {
+            res.resume();
             clearTimeout(timeout);
-            server.kill();
+            killProcessTree(server);
             resolve({ started: true, http200: false, error: `HTTP ${res.statusCode}` });
           }
         });
-        req.on('error', (e: Error) => {
-          if (!started) return;
-          clearTimeout(timeout);
-          server.kill();
-          resolve({ started: true, http200: false, error: e.message });
+        req.on('error', (_e: Error) => {
+          killProcessTree(server);
+          // Don't resolve — close handler will fire with rich diagnostic
+          // (exit code, signal, server output), or 60s timeout catches worst case
         });
         req.setTimeout(5000, () => { req.destroy(); });
       };
@@ -1872,9 +2158,17 @@ export async function POST(req: Request) {
         resolve({ started: false, http200: false, error: err.message });
       });
 
-      server.on('close', () => {
+      server.on('close', (code: number | null, signal: string | null) => {
         clearTimeout(timeout);
-        if (!http200) resolve({ started, http200: false, error: started ? 'Production server closed before HTTP check' : 'Production server failed to start' });
+        const allOutput = output;
+        const lines = allOutput.split('\n').filter(l => l.trim());
+        const lastOut = lines.slice(-6).join('\n');
+        const detailSegments: string[] = [`exit=${code ?? 'unknown'}`, `signal=${signal ?? 'none'}`];
+        detailSegments.push(`ready=${started ? 'detected' : 'not-detected'}`);
+        detailSegments.push(`httpCheck=${httpCheckAttempted ? 'attempted' : 'not-attempted'}`);
+        detailSegments.push(`lines=${lines.length}`);
+        const detail = detailSegments.join(' ') + (allOutput ? `\n\nfull output:\n${allOutput}` : '');
+        resolve({ started, http200, error: `Production server closed before HTTP check (${detail})` });
       });
 
       setTimeout(() => {

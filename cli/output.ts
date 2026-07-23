@@ -199,18 +199,15 @@ export function divider(): void {
 
 /**
  * Prompt the user for input. Returns null if stdin is not a TTY (non-interactive).
- */
-/**
- * Prompt the user for input. Returns null if stdin is not a TTY (non-interactive).
  * Readline is cleaned up after a single answer or if the interface closes.
  */
 export function ask(question: string): Promise<string | null> {
   if (!isTTY) return Promise.resolve(null);
-  
+
   return new Promise((resolve) => {
     let resolved = false;
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    
+
     const cleanup = (): void => {
       rl.close();
       rl.removeAllListeners();
@@ -225,10 +222,9 @@ export function ask(question: string): Promise<string | null> {
 
     rl.on('SIGINT', () => finish(null));
     rl.on('close', () => finish(null));
-    
+
     rl.question(`  ${color('?', 'cyan')} ${question}`, (answer) => {
-      const trimmed = typeof answer === 'string' ? answer.trim() : '';
-      finish(trimmed || null);
+      finish(answer.trim());
     });
   });
 }

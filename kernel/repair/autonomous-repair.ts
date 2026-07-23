@@ -379,6 +379,21 @@ export async function autonomousRepair(context: RepairContext): Promise<RepairRe
         } catch { /* skip */ }
       }
 
+      // Pattern 5: `class` instead of `className` in JSX
+      if (error.message.includes('class') && (error.message.includes('DetailedHTMLProps') || error.message.includes('HTMLAttributes'))) {
+        try {
+          let content = fs.readFileSync(fullPath, 'utf-8');
+          const original = content;
+          content = content.replace(/\bclass="/g, 'className="');
+          content = content.replace(/\bclass='/g, "className='");
+          content = content.replace(/\bclass=\{/g, 'className={');
+          if (content !== original) {
+            applyFix(fullPath, content);
+            fixed = true;
+          }
+        } catch { /* skip */ }
+      }
+
       if (fixed) {
         attempts.push({
           file,

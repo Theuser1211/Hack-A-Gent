@@ -10,7 +10,7 @@ import { RouterEngine } from '../../kernel/llm/router-engine.js';
 import { qualifyHackathon } from '../../kernel/qualification/hackathon-qualifier.js';
 import { validateWithBrowser } from '../../kernel/validation/browser-validator.js';
 import { formatDuration } from '../context.js';
-import { parseDevpostUrl, WinningStrategyGenerator, HackathonPipelineOrchestrator } from '../devpost-parser.js';
+import { parseDevpostUrl, normalizeUrl, WinningStrategyGenerator, HackathonPipelineOrchestrator } from '../devpost-parser.js';
 import { CompetitionIntelligenceAgent } from '../agents/index.js';
 import { DecisionStore } from '../decisions.js';
 import { OrganizationalMemory } from '../learning/organizational-memory.js';
@@ -784,17 +784,27 @@ function makeFallbackConfidence(): import('../pipeline/types.js').DevpostParseRe
 }
 
 export async function parseInput(input: string): Promise<ParsedInput | null> {
-  const cleanInput = input.trim();
-  if (cleanInput.startsWith('http://') || cleanInput.startsWith('https://')) {
-    if (cleanInput.includes('devpost.com')) {
-      try {
-        return await parseDevpostUrl(cleanInput);
-      } catch (err) {
-        throw new Error(`Failed to fetch Devpost URL: ${err instanceof Error ? err.message : String(err)}. Ensure the URL is a valid Devpost software page.`);
-      }
-    }
+  const trimmed = input.trim();
+  if (!trimmed) {
+    throw new Error('No URL provided. Expected a web address like:\n  https://example.devpost.com');
+  }
 
-    // Non-Devpost URL — use as context
+  // Try as Devpost URL — normalize bare hostname if needed
+  const looksLikeDevpost = trimmed.includes('devpost.com');
+  const hasScheme = /^https?:\/\//i.test(trimmed);
+  const urlToTry = looksLikeDevpost && !hasScheme ? normalizeUrl(trimmed) : trimmed;
+
+  if (urlToTry.includes('devpost.com')) {
+    try {
+      return await parseDevpostUrl(urlToTry);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Failed to fetch Devpost URL: ${msg}`);
+    }
+  }
+
+  // Non-Devpost URL — use as context
+  if (/^https?:\/\//i.test(trimmed)) {
     return {
       title: `Project from ${input}`,
       problemStatement: `Build a solution based on ${input}`,

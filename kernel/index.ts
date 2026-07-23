@@ -3,7 +3,6 @@ export * from './events/index.js';
 export * from './state/index.js';
 export * from './tasks/index.js';
 export * from './memory/index.js';
-export * from './agents/index.js';
 export * from './workspace/index.js';
 export * from './recovery/index.js';
 export * from './planning/index.js';

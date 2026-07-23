@@ -100,7 +100,8 @@ function listFiles(dir: string): string[] {
   return results;
 }
 
-function walkDir(root: string, current: string, results: string[]): void {
+function walkDir(root: string, current: string, results: string[], depth: number = 0): void {
+  if (depth > 10) return;
   let entries;
   try {
     entries = readdirSync(current, { withFileTypes: true });
@@ -108,10 +109,10 @@ function walkDir(root: string, current: string, results: string[]): void {
     return;
   }
   for (const entry of entries) {
-    const relativePath = path.relative(root, path.join(current, entry.name));
+    const relativePath = path.relative(root, path.join(current, entry.name)).replace(/\\/g, '/');
     if (entry.isDirectory()) {
       if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === '.next' || entry.name === 'dist' || entry.name === '.cache') continue;
-      walkDir(root, path.join(current, entry.name), results);
+      walkDir(root, path.join(current, entry.name), results, depth + 1);
     } else {
       results.push(relativePath);
     }

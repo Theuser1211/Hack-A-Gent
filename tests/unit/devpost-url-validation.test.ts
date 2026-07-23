@@ -1,4 +1,39 @@
 import { describe, it, expect } from 'vitest';
+import { normalizeUrl } from '../../cli/pipeline/parsing.js';
+
+describe('normalizeUrl', () => {
+  it('prepends https:// to bare hostname', () => {
+    expect(normalizeUrl('ai-yes-competition-30441.devpost.com')).toBe('https://ai-yes-competition-30441.devpost.com');
+  });
+
+  it('prepends https:// to hostname with www', () => {
+    expect(normalizeUrl('www.ai-yes-competition-30441.devpost.com')).toBe('https://www.ai-yes-competition-30441.devpost.com');
+  });
+
+  it('keeps https:// URL as-is', () => {
+    expect(normalizeUrl('https://ai-yes-competition-30441.devpost.com')).toBe('https://ai-yes-competition-30441.devpost.com');
+  });
+
+  it('keeps http:// URL as-is', () => {
+    expect(normalizeUrl('http://ai-yes-competition-30441.devpost.com')).toBe('http://ai-yes-competition-30441.devpost.com');
+  });
+
+  it('prepends https:// to devpost.com/software/example', () => {
+    expect(normalizeUrl('devpost.com/software/example')).toBe('https://devpost.com/software/example');
+  });
+
+  it('prepends https:// to www.devpost.com/software/example', () => {
+    expect(normalizeUrl('www.devpost.com/software/example')).toBe('https://www.devpost.com/software/example');
+  });
+
+  it('returns empty string for empty input', () => {
+    expect(normalizeUrl('')).toBe('');
+  });
+
+  it('trims and normalizes whitespace-padded input', () => {
+    expect(normalizeUrl('  ai-yes-competition-30441.devpost.com  ')).toBe('https://ai-yes-competition-30441.devpost.com');
+  });
+});
 
 describe('Devpost URL Validation', () => {
   function isValidDevpostHostname(hostname: string): boolean {

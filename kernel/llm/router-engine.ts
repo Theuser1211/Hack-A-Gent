@@ -8,6 +8,7 @@ import type {
   LLMResponse,
   ModelCapability,
 } from './llm-types.js';
+import type { ModelPerformanceTracker } from '../routing/model-performance-tracker.js';
 
 export interface RouterConfig {
   degraded_threshold: number;
@@ -18,6 +19,7 @@ export interface RouterConfig {
   warn_at_pct: number;
   configuredProvider?: string;
   configuredModel?: string;
+  perfTracker?: ModelPerformanceTracker;
 }
 
 const DEFAULT_CONFIG: RouterConfig = {
@@ -204,16 +206,24 @@ export class RouterEngine {
       if (configuredModel) {
         const configuredModelExists = models.some(m => m.model_id === configuredModel);
         modelsToTry = configuredModelExists
-          ? [configuredModel, ...models.filter(m => m.model_id !== configuredModel).map(m => m.model_id)]
-          : models.map(m => m.model_id);
+          ? [configuredModel, ...models.filter(m => m.model_id !== configuredModel).map(m => m.model_id).slice(0, 2)]
+          : models.slice(0, 3).map(m => m.model_id);
       } else {
         const entry = this.routingTable[taskType];
         const chain = entry
           ? [entry.preferred, entry.fallback, entry.emergency]
           : ['gemini-2.5-flash', 'gpt-4o-mini-2024-07-18', 'claude-haiku-3-5-20241022'];
         const chainModels = chain.filter(id => models.some(m => m.model_id === id));
-        modelsToTry = chainModels.length > 0 ? chainModels : models.map(m => m.model_id);
+        if (chainModels.length > 0) {
+          modelsToTry = chainModels;
+        } else {
+          const pt = this.config.perfTracker;
+          const candidate = pt ? pt.getRanked(models) : models;
+          modelsToTry = candidate.slice(0, 3).map(m => m.model_id);
+        }
       }
+
+      const pt = this.config.perfTracker;
 
       for (const modelId of modelsToTry) {
         if (triedModels.has(modelId)) continue;
@@ -227,10 +237,12 @@ export class RouterEngine {
 
         try {
           const response = await provider.execute(actualRequest);
+          const latencyMs = Date.now() - startTime;
+          pt?.recordSuccess(providerId, modelId, latencyMs);
           const cost = this.estimateCost(modelId, response.usage.prompt_tokens, response.usage.completion_tokens);
           this.projectCost += cost;
           return {
-            response: { ...response, latency_ms: Date.now() - startTime },
+            response: { ...response, latency_ms: latencyMs },
             decision: {
               model_id: modelId,
               provider: providerId as ProviderId,
@@ -243,6 +255,15 @@ export class RouterEngine {
           };
         } catch (err) {
           lastError = err instanceof Error ? err : new Error(String(err));
+          if (pt) {
+            const isAbort = (err instanceof DOMException && err.name === 'AbortError') ||
+              (err instanceof Error && err.name === 'AbortError');
+            if (isAbort) {
+              pt.recordTimeout(providerId, modelId);
+            } else {
+              pt.recordFailure(providerId, modelId);
+            }
+          }
           if (health) {
             health.consecutive_failures++;
             health.failed_requests++;

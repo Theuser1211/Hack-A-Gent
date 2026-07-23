@@ -15,6 +15,19 @@ export interface BuildExecutor {
 }
 
 export class DefaultBuildExecutor implements BuildExecutor {
+  private _pythonCmd: string | null = null;
+
+  private getPythonCmd(): string {
+    if (this._pythonCmd) return this._pythonCmd;
+    try {
+      execSync('python3 --version', { stdio: 'ignore' });
+      this._pythonCmd = 'python3';
+    } catch {
+      this._pythonCmd = 'python';
+    }
+    return this._pythonCmd;
+  }
+
   detectProjectType(projectPath: string): ProjectType {
     const hasPackageJson = fs.existsSync(path.join(projectPath, 'package.json'));
     const hasRequirementsTxt = fs.existsSync(path.join(projectPath, 'requirements.txt'));
@@ -28,11 +41,12 @@ export class DefaultBuildExecutor implements BuildExecutor {
 
   async installDependencies(projectPath: string): Promise<BuildCommandResult> {
     const projectType = this.detectProjectType(projectPath);
+    const py = this.getPythonCmd();
     const cmd =
       projectType === 'node'
         ? 'npm install'
         : projectType === 'python'
-          ? 'pip install -r requirements.txt 2>nul || pip install .'
+          ? `${py} -m pip install -r requirements.txt || ${py} -m pip install .`
           : 'echo "Unknown project type — skipping dependency install"';
 
     return this.runCommand(cmd, projectPath, 'Dependency Installation');
@@ -40,11 +54,12 @@ export class DefaultBuildExecutor implements BuildExecutor {
 
   async runBuild(projectPath: string): Promise<BuildCommandResult> {
     const projectType = this.detectProjectType(projectPath);
+    const py = this.getPythonCmd();
     const cmd =
       projectType === 'node'
         ? this.getNodeBuildCommand(projectPath)
         : projectType === 'python'
-          ? 'python -m build 2>nul || python setup.py build 2>nul || echo "No build step configured"'
+          ? `${py} -m build || ${py} setup.py build || echo "No build step configured"`
           : 'echo "Unknown project type — skipping build"';
 
     return this.runCommand(cmd, projectPath, 'Build');
@@ -52,11 +67,12 @@ export class DefaultBuildExecutor implements BuildExecutor {
 
   async runLint(projectPath: string): Promise<BuildCommandResult> {
     const projectType = this.detectProjectType(projectPath);
+    const py = this.getPythonCmd();
     const cmd =
       projectType === 'node'
         ? 'npx eslint . --no-error-on-unmatched-pattern 2>&1 || npx tsc --noEmit 2>&1 || echo "Lint check completed"'
         : projectType === 'python'
-          ? 'python -m flake8 . 2>nul || python -m pylint . 2>nul || echo "No linter configured"'
+          ? `${py} -m flake8 . 2>&1 || ${py} -m pylint . 2>&1 || echo "No linter configured"`
           : 'echo "Unknown project type — skipping lint"';
 
     return this.runCommand(cmd, projectPath, 'Lint');
@@ -64,11 +80,12 @@ export class DefaultBuildExecutor implements BuildExecutor {
 
   async runTests(projectPath: string): Promise<BuildCommandResult> {
     const projectType = this.detectProjectType(projectPath);
+    const py = this.getPythonCmd();
     const cmd =
       projectType === 'node'
         ? 'npx jest --passWithNoTests 2>&1 || npx vitest run 2>&1 || npm test 2>&1 || echo "No test framework configured"'
         : projectType === 'python'
-          ? 'python -m pytest . 2>nul || python -m unittest discover 2>nul || echo "No test framework configured"'
+          ? `${py} -m pytest . 2>&1 || ${py} -m unittest discover 2>&1 || echo "No test framework configured"`
           : 'echo "Unknown project type — skipping tests"';
 
     return this.runCommand(cmd, projectPath, 'Tests');
