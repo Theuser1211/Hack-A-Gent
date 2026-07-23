@@ -1,6 +1,6 @@
 {
   "name": "hag-cli",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Autonomous hackathon engineering CLI — generate complete projects from Devpost URLs",
   "keywords": [
     "ai",

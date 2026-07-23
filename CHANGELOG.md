@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.1.1 (2026-07-23)
+
+### Added
+- URL normalization — bare Devpost hostnames auto-prepend `https://` (`hag run competition.devpost.com` works without URL prefix)
+- GitHub token onboarding — `hag setup` prompts for GitHub token with skip option; `hag doctor` shows GitHub check (pass/warn)
+- Routing persistence — `model-performance-tracker` records per-model success/failure across sessions; `hag doctor --routing` shows persistence status
+- `config-manager.getGitHubToken()` / `requireGitHubToken()` — exports with actionable error messages
+- 24 URL validation tests in `tests/unit/devpost-url-validation.test.ts`
+
+### Changed
+- `cli/pipeline/parsing.ts`: `normalizeUrl()` prepends `https://` to bare hostnames; `parseDevpostUrl()` uses normalized URL
+- `cli/commands/run.ts`: `parseInput()` restructured — normalizes Devpost URLs, always tries parsing when `devpost.com` present, rejects empty input
+- `cli/commands/setup.ts`: GitHub token prompt in wizard
+- `cli/commands/doctor.ts`: GitHub token diagnostic check
+- ECONNRESET race condition fixed in production smoke test
+- Test suite: 70 test files pass (2 file regression from timeout), 1076 tests pass (3 pre-existing failures)
+- Package version: 1.1.0 → 1.1.1
+
 ## v1.1.0 (2026-07-23)
 
 ### Added
