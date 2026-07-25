@@ -16,13 +16,16 @@ const SAMPLE_HTML = `<!doctype html>
 <meta property="og:description" content="Build AI that helps people. Sponsored by OpenAI and Vercel.">
 </head><body>
 <h1>AI for Good Hack 2027</h1>
-<p>Hosted by Acme Foundation. Build AI that helps people. Judging criteria:</p>
+<p>Hosted by Acme Foundation. Build AI that helps people.</p>
+<h2>Judging Criteria</h2>
 <ul>
 <li>Innovation — 40%</li>
 <li>Technical — 35%</li>
 <li>Design — 25%</li>
 </ul>
 <p>Must integrate OpenAI and deploy on Vercel. Submission deadline Jan 15, 2027.</p>
+<h2>Sponsors</h2>
+<p>OpenAI and Vercel are sponsoring this hackathon.</p>
 </body></html>`;
 
 let tmp: string;
@@ -66,6 +69,35 @@ describe('devpost parser', () => {
       { name: 'B', weight: 20, inferred: false },
     ]);
     expect(out.reduce((s, c) => s + c.weight, 0)).toBe(100);
+  });
+
+  it('returns empty sponsors for pages without a sponsor section', () => {
+    const noSponsorHtml = `<!doctype html>
+<html><head>
+<meta property="og:title" content="AI for Good Hack 2027">
+<meta property="og:description" content="Build AI that helps people.">
+</head><body>
+<h1>AI for Good Hack 2027</h1>
+<p>Hosted by Acme Foundation. Build AI that helps people.</p>
+<p>Must use AWS, Google, and Meta APIs.</p>
+</body></html>`;
+    const d = extractDevpostData(noSponsorHtml, 'https://devpost.com/software/x');
+    expect(d.sponsorAPIs).toEqual([]);
+  });
+
+  it('does not match sponsors from navigation or footer badges', () => {
+    const navFooterHtml = `<!doctype html>
+<html><head>
+<meta property="og:title" content="Hackathon">
+<meta property="og:description" content="A hackathon.">
+</head><body>
+<nav><a href="/">Home</a> <a href="/aws">AWS</a> <a href="/google">Google</a></nav>
+<h1>My Hackathon</h1>
+<p>Build something great.</p>
+<footer>Powered by Meta, Microsoft Azure</footer>
+</body></html>`;
+    const d = extractDevpostData(navFooterHtml, 'https://devpost.com/software/x');
+    expect(d.sponsorAPIs).toEqual([]);
   });
 });
 

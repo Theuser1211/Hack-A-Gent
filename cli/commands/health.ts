@@ -32,7 +32,7 @@ export async function healthCommand(ctx: CLIContext, _args: CLIArgs): Promise<CL
     try {
       const data = JSON.parse(readFileSync(path.join(ctx.stateDir, f), 'utf-8'));
       return { projectName: data.projectName, phase: data.phase, updatedAt: data.updatedAt };
-    } catch {
+    } catch { // failed to parse state file — return defaults
       return { projectName: f, phase: 'unknown', updatedAt: 'unknown' };
     }
   });

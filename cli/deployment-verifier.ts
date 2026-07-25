@@ -100,7 +100,7 @@ export function isRealDeploymentUrl(url: string): boolean {
     if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') return false;
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
     return true;
-  } catch {
+  } catch { // invalid URL — not a valid deploy URL
     return false;
   }
 }

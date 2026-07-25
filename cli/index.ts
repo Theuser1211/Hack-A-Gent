@@ -7,14 +7,16 @@ import { getConfig } from './config-manager.js';
 import { createContext } from './context.js';
 import { formatError, printError } from './errors.js';
 import { success as logSuccess, error as logError, info, dim, showVersion, setVerbose } from './output.js';
-import type { CLIArgs, CLIResult, CommandName } from './types.js';
+import type { CLIArgs, CLIContext, CLIResult, CommandName } from './types.js';
 
 // Feature commands live under features/commands/<name>.ts (kept out of the
 // refactored cli/ production files). Register them here only. The
 // command functions live in features/, so this stays isolated from the
 // files the other engineer is actively refactoring.
-/* eslint-disable @typescript-eslint/no-explicit-any */
-const FEATURE_COMMANDS: Record<string, { mod: () => Promise<any>; fn: string }> = {
+interface FeatureModule {
+  [key: string]: (ctx: CLIContext, args: CLIArgs) => CLIResult | Promise<CLIResult>;
+}
+const FEATURE_COMMANDS: Record<string, { mod: () => Promise<FeatureModule>; fn: string }> = {
   analyze: { mod: () => import('../features/commands/intelligence.js'), fn: 'analyzeCommand' },
   inspect: { mod: () => import('../features/commands/intelligence.js'), fn: 'inspectCommand' },
   opportunities: { mod: () => import('../features/commands/intelligence.js'), fn: 'opportunitiesCommand' },
@@ -26,7 +28,6 @@ const FEATURE_COMMANDS: Record<string, { mod: () => Promise<any>; fn: string }> 
   docs: { mod: () => import('../features/commands/docs.js'), fn: 'docsCommand' },
   knowledge: { mod: () => import('../features/commands/knowledge.js'), fn: 'knowledgeCommand' },
 };
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 const VALID_COMMANDS: string[] = [
   'run',
@@ -426,7 +427,12 @@ async function main(): Promise<void> {
         if (feature) {
           try {
             const mod = await feature.mod();
-            result = await mod[feature.fn](ctx, args);
+            const featureFn = mod[feature.fn];
+            if (!featureFn) {
+              result = { success: false, message: `Feature command "${name}" has no function "${feature.fn}"` };
+              break;
+            }
+            result = await featureFn(ctx, args);
             break;
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);

@@ -11,6 +11,17 @@ import { qualifyHackathon } from '../../kernel/qualification/hackathon-qualifier
 import { validateWithBrowser } from '../../kernel/validation/browser-validator.js';
 import { formatDuration } from '../context.js';
 import { parseDevpostUrl, normalizeUrl, WinningStrategyGenerator, HackathonPipelineOrchestrator } from '../devpost-parser.js';
+import { generateQuestions, runInterview } from '../interview/index.js';
+import type { InterviewResult } from '../interview/types.js';
+import { adaptStrategyToGeneration, buildCodeGenContext } from '../pipeline/strategy-adapter.js';
+import { validateRuntime } from '../pipeline/runtime-validation.js';
+import { validateChallenge, type ChallengeValidationResult } from '../pipeline/challenge-validation.js';
+import { planImprovements } from '../improvement/improvement-planner.js';
+import { executeImprovement } from '../improvement/improvement-executor.js';
+import type { JudgeResult, ImprovementAction } from '../improvement/improvement-types.js';
+import { generatePackage } from '../submission/package-generator.js';
+import { checkReadiness } from '../submission/readiness-check.js';
+import type { PipelineContext } from '../pipeline/types.js';
 import { CompetitionIntelligenceAgent } from '../agents/index.js';
 import { DecisionStore } from '../decisions.js';
 import { OrganizationalMemory } from '../learning/organizational-memory.js';
@@ -19,10 +30,10 @@ import { formatError, printError } from '../errors.js';
 import {
   log, success, error, warn, info, dim, labeled, divider, debug,
   pipelineHeader, pipelineFooter, stageStart, stageDone, stageFail,
-  stageSkipped, stageRecovered, showReadiness,
+  stageSkipped, stageRecovered,
   showCompletionScreen, showErrorSummary, color,
 } from '../output.js';
-import { SubmissionAssistant } from '../submission-assistant.js';
+
 import { UserMemory } from '../user-memory.js';
 import { initializeProviders } from '../provider-init.js';
 import { resumeCommand } from './resume.js';
@@ -41,10 +52,7 @@ export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIRes
 
   Options:
     --seed <N>           Set deterministic seed (default: 42)
-    --demo               Demo mode: compilation + simulation only
-    --simulate-only      Simulation only: no execution/deploy
     --resume             Resume from saved snapshot
-    --research           Use the experimental Phase12 research subsystem
     --json               Output raw JSON
     --quiet              Minimal output
     --verbose            Verbose logging
@@ -78,42 +86,39 @@ export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIRes
 
   const seed = typeof args.flags.seed === 'number' ? args.flags.seed : ctx.seed;
   const dryRun = args.flags['dry-run'] === true || ctx.dryRun;
-  const demoMode = args.flags.demo === true;
 
-  pipelineHeader(demoMode ? 'Demo Surface Pipeline' : 'Full Pipeline');
+  pipelineHeader('Full Pipeline');
 
   const t0 = Date.now();
 
-  stageStart('Parsing input');
+  stageStart('Challenge Analysis');
   let parsed: ParsedInput | null;
   try {
     parsed = await parseInput(input);
   } catch (err) {
-    stageFail('Parsing input');
+    stageFail('Challenge Analysis');
     const suggestion = formatError(err, 'Input parsing');
     printError(suggestion);
     return { success: false, message: suggestion.what };
   }
   if (!parsed) {
-    stageFail('Parsing input', 'Cannot parse input');
+    stageFail('Challenge Analysis', 'Cannot parse input');
     printError(formatError(new Error('Cannot parse input'), `Input: ${input}`));
     return { success: false, message: `Cannot parse input: ${input}` };
   }
-  stageDone('Parsing input', Date.now() - t0);
+  stageDone('Challenge Analysis', Date.now() - t0);
   labeled('title', `"${parsed.title}"`);
 
-  // Qualification gate — check if this hackathon is viable before committing resources
-  stageStart('Qualifying hackathon');
+  // Qualification gate — internal check before committing resources
   const qualResult = qualifyHackathon({
     title: parsed.title,
     description: parsed.problemStatement,
     techStack: parsed.recommendedStack,
     judgingCriteria: parsed.judgingCriteria,
     constraints: parsed.constraints,
-    sponsorAPIs: [], // Will be populated from Devpost if available
+    sponsorAPIs: [],
     deliverables: parsed.submissionRequirements,
   });
-  stageDone('Qualifying hackathon', Date.now() - t0);
 
   const qualIcon = qualResult.status === 'SUPPORTED' ? '\u2713' :
                    qualResult.status === 'PARTIALLY_SUPPORTED' ? '\u25C9' : '\u2717';
@@ -140,124 +145,26 @@ export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIRes
     info(`Partial support: ${qualResult.partialRequirements.join(', ')} — using templates where needed`);
   }
 
-  if (demoMode) {
-    return runDemoSurfacePipeline(ctx, parsed, seed, dryRun);
+  // Challenge Validation — verify parsed data comes from proper HTML sections
+  const validation = parsed.rawText
+    ? validateChallenge(parsed.rawText, parsed as Parameters<typeof validateChallenge>[1])
+    : null;
+  if (validation) {
+    stageStart('Challenge Validation');
+    for (const check of validation.checks) {
+      if (check.passed) {
+        debug(`${color('\u2713', 'green')} ${check.message}`);
+      } else {
+        warn(`${color('\u2717', 'red')} ${check.message}`);
+      }
+    }
+    if (!validation.valid) {
+      warn('Some validation checks failed — review warnings above. Pipeline continuing with best-effort.');
+    }
+    stageDone('Challenge Validation', Date.now() - t0);
   }
 
   return runFullPipeline(ctx, parsed, seed, dryRun, args);
-}
-
-async function runDemoSurfacePipeline(
-  ctx: CLIContext,
-  parsed: ParsedInput,
-  seed: number,
-  dryRun: boolean,
-): Promise<CLIResult> {
-  const executionTime = Date.now();
-
-  stageStart('Demo Surface Compilation');
-  const { DemoSurfaceCompiler } = await import('../../benchmarks/demo-surface-compiler.js');
-  const compiler = new DemoSurfaceCompiler(seed + 13000);
-  const plan = compiler.compile({
-    title: parsed.title,
-    problemStatement: parsed.problemStatement,
-    judgingCriteria: parsed.judgingCriteria,
-    technologies: parsed.recommendedStack,
-    constraints: parsed.constraints,
-  });
-  ctx.demoSurfacePlan = plan;
-  stageDone('Demo Surface Compilation', Date.now() - executionTime);
-
-  if (dryRun) {
-    pipelineFooter();
-    divider();
-    success('Demo Surface Plan (dry run)');
-    labeled('Project', `"${parsed.title}"`);
-    labeled('Win Score', `${plan.winScore}/100`);
-    labeled('Steps', String(plan.executionSteps.length));
-    labeled('Target', plan.deployTarget);
-    info('Next: run `hag run <input>` without --dry-run to execute.');
-    log('');
-    return {
-      success: true,
-      message: `Demo surface plan generated (score ${plan.winScore}/100)`,
-      data: {
-        plan: {
-          winScore: plan.winScore,
-          wowMoment: plan.wowMoment,
-          executionSteps: plan.executionSteps.length,
-          deployTarget: plan.deployTarget,
-          winScoreBreakdown: plan.winScoreBreakdown,
-          criticalPath: plan.criticalPath,
-        },
-      },
-      metrics: { durationMs: Date.now() - executionTime, winScore: plan.winScore, steps: plan.executionSteps.length },
-      traceId: createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12),
-    };
-  }
-
-  stageStart('Simulation Preview');
-  const { HackathonSimulationEngine } = await import('../../benchmarks/hackathon-simulation-engine.js');
-  const simEngine = new HackathonSimulationEngine(seed + 14000);
-  const simResult = simEngine.simulate({
-    devpost: {
-      specId: 'sim-' + createDeterministicUuid(seed, 0).slice(0, 8),
-      title: parsed.title,
-      problemStatement: parsed.problemStatement,
-      judgingCriteria: parsed.judgingCriteria,
-      techStackHints: parsed.recommendedStack,
-      constraints: parsed.constraints,
-      implicitGoals: [],
-      submissionRequirements: parsed.submissionRequirements,
-      rawText: parsed.rawText,
-      source: 'text',
-      parsedAt: new Date().toISOString(),
-    },
-    strategyMode: 'fast-win',
-    seed,
-  });
-  ctx.simulationResult = simResult;
-  stageDone('Simulation Preview', Date.now() - executionTime);
-
-  const finalOutput = compiler.produceFinalOutput(plan, plan.deployTarget);
-  ctx.finalDemoOutput = finalOutput;
-
-  pipelineFooter();
-
-  divider();
-  showCompletionScreen({
-    status: 'succeeded',
-    project: `"${parsed.title}"`,
-    duration: formatDuration(Date.now() - executionTime),
-    details: [
-      { label: 'Deploy Target', value: plan.deployTarget },
-    ],
-    nextSteps: [
-      'Run `hag run <input>` for the full pipeline (build, test, deploy)',
-    ],
-  });
-
-  return {
-    success: true,
-    message: `Demo mode complete for "${parsed.title}" — predicted score ${simResult.finalJudgeVerdict.total}/100`,
-    data: {
-      demoSurfacePlan: {
-        winScore: plan.winScore,
-        wowMoment: plan.wowMoment,
-        executionSteps: plan.executionSteps,
-        deployTarget: plan.deployTarget,
-        finalOutput,
-      },
-      simulation: {
-        winner: simResult.winnerStrategy.name,
-        predictedScore: simResult.finalJudgeVerdict.total,
-        failures: simResult.failureTimeline.length,
-        repairs: simResult.repairTimeline.length,
-      },
-    },
-    metrics: { durationMs: Date.now() - executionTime, winScore: plan.winScore, predictedScore: simResult.finalJudgeVerdict.total },
-    traceId: createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12),
-  };
 }
 
 async function runFullPipeline(
@@ -289,29 +196,7 @@ async function runFullPipeline(
     stageSkipped('LLM generation (no provider configured — using templates)');
   }
 
-  // Generate the winning strategy from the competition analysis (production path).
-  // --research runs the experimental Phase12 strategy-competition subsystem instead.
-  const useResearch = args.flags.research === true || args.flags.experimental === true;
-  let strategyReport: import('../../benchmarks/phase-12-orchestrator.js').Phase12Report | null = null;
-  if (useResearch) {
-    const { Phase12Orchestrator } = await import('../../benchmarks/phase-12-orchestrator.js');
-    const phase12 = new Phase12Orchestrator(seed, ctx.memory);
-    ctx.phase12orchestrator = phase12;
-    stageStart('Running strategy competition (research)');
-    strategyReport = await phase12.runProject({
-      title: parsed.title,
-      problemStatement: parsed.problemStatement,
-      judgingCriteria: parsed.judgingCriteria,
-      constraints: parsed.constraints,
-      techStack: parsed.recommendedStack,
-      preferredStack: parsed.recommendedStack,
-    });
-    stageDone('Running strategy competition (research)', Date.now() - t0);
-    labeled('winner', strategyReport.strategyCompetition.winner.name);
-    labeled('candidates', String(strategyReport.strategyCompetition.candidates.length));
-  }
-
-  stageStart('Generating winning strategy');
+  stageStart('Winning Strategy');
   const runId = createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12);
   const decisionStore = new DecisionStore(ctx.dataDir, runId);
   const memory = new OrganizationalMemory(ctx.dataDir);
@@ -328,7 +213,7 @@ async function runFullPipeline(
     scratch: {},
   });
   if (intelResult.status !== 'completed') {
-    stageFail('Generating winning strategy', intelResult.summary);
+    stageFail('Winning Strategy', intelResult.summary);
     printError(formatError(new Error(intelResult.summary)));
     return { success: false, message: intelResult.summary };
   }
@@ -345,10 +230,31 @@ async function runFullPipeline(
     checkpoints: [],
     context: { analysisId: competitionAnalysis.analysisId },
   });
+  // Run interactive interview to collect user preferences (only when LLM is online)
+  let interviewResult: InterviewResult | null = null;
+  if (routerEngine) {
+    stageStart('Dynamic Interview');
+    try {
+      const questions = generateQuestions(competitionAnalysis);
+      if (questions.length > 0) {
+        interviewResult = await runInterview(questions, undefined, competitionAnalysis);
+        if (interviewResult.autoGeneratedIdea) {
+          dim(`Auto-generated idea: ${interviewResult.autoGeneratedIdea.slice(0, 80)}...`);
+        }
+      }
+    } catch (err) {
+      warn(`Interview skipped: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    stageDone('Dynamic Interview', Date.now() - t0);
+  }
+
   const strategyGenerator = new WinningStrategyGenerator();
-  const winningStrategy = strategyGenerator.generate(competitionAnalysis);
+  const winningStrategy = strategyGenerator.generate(competitionAnalysis, interviewResult ?? undefined);
   stageDone('Winning strategy', Date.now() - t0);
   debug(`Strategy: ${winningStrategy.projectName}`);
+
+  // Build and inject code generation context from enriched strategy
+  const codeGenCtx = buildCodeGenContext(competitionAnalysis, winningStrategy);
 
   if (dryRun) {
     pipelineFooter();
@@ -375,12 +281,12 @@ async function runFullPipeline(
   ctx.orchestrator = internetOrch;
 
   internetOrch.setDevpostData(parsed);
+  internetOrch.setStrategyContext(codeGenCtx);
+  internetOrch.setGenerationInput(adaptStrategyToGeneration(winningStrategy, interviewResult?.optimizationBudget));
 
-  stageStart('Planning project');
   const reqs = await internetOrch.extractRequirements(parsed);
-  stageDone('Planning project', Date.now() - t0);
 
-  stageStart('Generating code');
+  stageStart('Project Generation');
   const executionPlan = await internetOrch.createExecutionPlan(parsed, reqs);
   const taskCount = executionPlan.taskGraph.getAllNodes().length;
   // Pipeline execution happens within generation now
@@ -391,28 +297,26 @@ async function runFullPipeline(
     const result = await internetOrch.executeFullPipeline();
     const elapsed = Date.now() - executionTime;
 
-    stageDone('Generating code', Date.now() - t0);
+    stageDone('Project Generation', Date.now() - t0);
 
     const projectDir = path.resolve(ctx.workspaceRoot, projectName);
 
-    stageStart('Validating project');
+    // Auto Repair — attempt to fix TypeScript build errors
+    stageStart('Auto Repair');
+    let buildValid = true;
     const validation = await internetOrch.validateGeneratedProject(projectDir);
-
     if (!validation.valid) {
-      stageFail('Validating project');
       log('');
       log('  Auto-repair:');
-
       const typecheckOk = internetOrch.typecheckAndRepair(projectDir);
-
       if (typecheckOk) {
         const revalidation = await internetOrch.validateGeneratedProject(projectDir);
         if (revalidation.valid) {
-          validation.valid = true;
           const fixedCount = validation.errors.length;
+          validation.valid = true;
           validation.errors = [];
           log(`  ${color('\u2713', 'green')} Fixed ${fixedCount} issue${fixedCount === 1 ? '' : 's'}`);
-          stageRecovered('Validating project');
+          stageDone('Auto Repair', Date.now() - t0);
         } else {
           const fixedErrors = validation.errors.length;
           validation.errors = [...new Set([...validation.errors, ...revalidation.errors])];
@@ -422,6 +326,8 @@ async function runFullPipeline(
           for (const err of revalidation.errors) {
             log(`  ${color('\u2022', 'red')} ${err}`);
           }
+          buildValid = false;
+          stageFail('Auto Repair');
         }
       } else {
         log(`  ${color('\u2717', 'red')} Could not auto-repair`);
@@ -430,9 +336,11 @@ async function runFullPipeline(
         for (const err of validation.errors) {
           log(`  ${color('\u2022', 'red')} ${err}`);
         }
+        buildValid = false;
+        stageFail('Auto Repair');
       }
 
-      if (!validation.valid) {
+      if (!buildValid) {
         showCompletionScreen({
           status: 'failed',
           project: `"${parsed.title}"`,
@@ -451,12 +359,22 @@ async function runFullPipeline(
         });
         return {
           success: false,
-          message: `Pipeline blocked by ${validation.errors.length} validation issue${validation.errors.length === 1 ? '' : 's'}`,
+          message: `Pipeline blocked by ${validation.errors.length} build issue${validation.errors.length === 1 ? '' : 's'}`,
           data: { errors: validation.errors, validationChecks: validation.checks, projectName },
         };
       }
     } else {
-      stageDone('Validating project', Date.now() - t0);
+      stageDone('Auto Repair', Date.now() - t0);
+    }
+
+    // Runtime Validation — detect framework, start server, verify health
+    stageStart('Runtime Validation');
+    const rtResult = await validateRuntime(projectDir);
+    if (rtResult.healthOk) {
+      stageDone('Runtime Validation', Date.now() - t0);
+    } else {
+      warn(`Runtime validation: ${rtResult.error ?? 'unknown error'}`);
+      stageDone('Runtime Validation', Date.now() - t0);
     }
 
     stageStart('Browser validation');
@@ -470,27 +388,7 @@ async function runFullPipeline(
     const orchestrator = new HackathonPipelineOrchestrator(seed);
     orchestrator.init(competitionAnalysis, winningStrategy);
 
-    // Post-project learning cycle — record real failures + update run stats.
-    stageStart('Learning from build');
-    if (useResearch && strategyReport) {
-      // The experimental orchestrator is already initialized in the strategy stage.
-      const learningOutput = await ctx.phase12orchestrator!.runPostProject({
-        projectName,
-        projectDescription: parsed.problemStatement,
-        strategy: strategyReport.strategyCompetition.winner.plan,
-        techStack: parsed.recommendedStack,
-        judgeCriteria: parsed.judgingCriteria,
-        constraints: parsed.constraints,
-        uxResults: result.uxResults ?? [],
-        deploySuccess: result.deployUrl !== null,
-        taskCompletionRate: result.completionRate ?? 0.8,
-        errors: result.errors,
-        failurePatterns: result.failurePatterns ?? [],
-        judgeScore: result.judgeScore ?? 0.7,
-        demoAvailable: result.deployUrl !== null,
-      });
-
-    }
+    // Post-project learning cycle — record failures + update run stats (internal)
     updateRunStats(ctx.dataDir, validation.valid, result.judgeScore ?? 0);
     for (const err of result.errors) {
       recordFailure(ctx.dataDir, { errorType: 'unknown', errorMessage: err, projectName, phase: 'building' });
@@ -498,10 +396,9 @@ async function runFullPipeline(
     for (const err of validation.errors) {
       recordFailure(ctx.dataDir, { errorType: 'typescript', errorMessage: err, projectName, phase: 'testing' });
     }
-    stageDone('Learning from build', Date.now() - t0);
 
     // Self-review, optimization, quality checks, report generation
-    stageStart('Reviewing project');
+    stageStart('Internal Judge');
     const finalReport = orchestrator.completePipeline({
       features: result.uxResults?.map(u => u.journeyName) ?? ['Project scaffold', 'Core features', 'Deployment'],
       errors: result.errors,
@@ -511,7 +408,7 @@ async function runFullPipeline(
       testPassRate: result.completionRate ?? 0.8,
       durationMs: elapsed,
     });
-    stageDone('Reviewing project', Date.now() - t0);
+    stageDone('Internal Judge', Date.now() - t0);
 
     // Run scaffolding generation (silent — only shows if files were actually needed)
     const generatedFiles = orchestrator.generateScaffolding(projectDir, args.flags.force === true);
@@ -522,22 +419,53 @@ async function runFullPipeline(
     // Record pipeline benchmarks (silent)
     const benchmarkComparisons = orchestrator.benchmark(ctx.dataDir);
 
-    // Real evaluation — analyze actual generated code
-    stageStart('Evaluating project');
+    // Real evaluation — analyze actual generated code (silent, integrated into judge)
     const evalProjectDir = path.resolve(process.cwd(), projectName);
     let realEval = null;
     try {
       if (existsSync(evalProjectDir)) {
         realEval = evaluateProject(evalProjectDir);
-        stageDone('Evaluating generated project');
-        log(formatEvaluationResult(realEval));
-      } else {
-        stageDone('Evaluating generated project');
-        info('Project directory not found — skipping real evaluation');
       }
-    } catch (evalErr) {
-      stageFail('Evaluating generated project');
-      info(`Evaluation error: ${evalErr instanceof Error ? evalErr.message : String(evalErr)}`);
+    } catch { /* evaluation is non-critical */ }
+
+    // Improvement pass — one targeted action from the internal judge report
+    stageStart('Improvement Pass');
+    let improvedAction: ImprovementAction | null = null;
+    try {
+      const judgeResult: JudgeResult = {
+        scores: {
+          innovation: finalReport.innovationScore,
+          technicalDepth: finalReport.technicalDepthScore,
+          feasibility: finalReport.feasibilityScore,
+          presentation: finalReport.presentationScore,
+          completeness: finalReport.completenessScore,
+          maintainability: finalReport.maintainabilityScore,
+          judgeAlignment: finalReport.judgeAlignmentScore,
+          overall: finalReport.judgeScorePrediction,
+        },
+        strengths: [],
+        weaknesses: finalReport.knownWeaknesses,
+      };
+      const actions = planImprovements(judgeResult, evalProjectDir);
+      const sorted = actions.sort((a, b) => {
+        const pOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+        return (pOrder[a.priority] ?? 99) - (pOrder[b.priority] ?? 99);
+      });
+      const action = sorted[0];
+      if (action) {
+        const ok = await executeImprovement(action, evalProjectDir);
+        if (ok) {
+          improvedAction = action;
+          info(`${color('\u2713', 'green')} ${action.type} — ${action.target}`);
+          stageDone('Improvement Pass', Date.now() - t0);
+        } else {
+          stageDone('Improvement Pass', Date.now() - t0);
+        }
+      } else {
+        stageDone('Improvement Pass', Date.now() - t0);
+      }
+    } catch (improveErr) {
+      stageDone('Improvement Pass', Date.now() - t0);
     }
 
     // Record run results for learning (single pass — uses real eval when available)
@@ -545,24 +473,50 @@ async function runFullPipeline(
     const pipelineScore = realEval?.totalScore ?? 0;
     updateRunStats(ctx.dataDir, pipelineSuccess, pipelineScore);
 
-    // Submission readiness check
-    stageStart('Checking submission');
-    const submissionCheck = new SubmissionAssistant();
-    const submissionReport = submissionCheck.assess({
-      projectDir: existsSync(evalProjectDir) ? evalProjectDir : path.resolve(ctx.workspaceRoot, projectName),
-      projectName,
-      deployUrl: result.deployUrl,
-      errors: result.errors,
-      sponsorAPIs: competitionAnalysis.sponsorAPIs.map(s => s.name ?? String(s)),
-      judgingCriteria: competitionAnalysis.judgingCriteria.map(c => c.name ?? String(c)),
-      submissionRequirements: parsed.submissionRequirements,
-      completedFeatures: result.uxResults?.map(u => u.journeyName) ?? [],
-      pipelinePhase: result.phase,
-    });
-    stageDone('Checking submission');
-
-    if (!submissionReport.ready) {
-      showReadiness(submissionReport);
+    // Submission package — generate submission docs + run readiness check
+    stageStart('Submission Package');
+    let generatedFiles2: Array<{ file: string; path: string }> = [];
+    try {
+      const pkgContext: PipelineContext = {
+        seed,
+        startedAt: t0,
+        stages: {},
+        analysis: competitionAnalysis,
+        strategy: winningStrategy,
+        executionResult: {
+          features: result.uxResults?.map(u => u.journeyName) ?? ['Project scaffold', 'Core features', 'Deployment'],
+          errors: result.errors,
+          deployUrl: result.deployUrl,
+          taskCount,
+          buildSuccess: validation.valid,
+          testPassRate: result.completionRate ?? 0.8,
+          criteriaCount: competitionAnalysis.judgingCriteria.length,
+          featureCount: result.uxResults?.length ?? 0,
+          errorCount: result.errors.length,
+          durationMs: elapsed,
+        },
+        reviewFeedback: null,
+        feedbackConverged: true,
+        feedbackIterations: 1,
+        qualityChecks: finalReport.qualityChecks,
+        report: finalReport,
+      };
+      const pkgResult = generatePackage(evalProjectDir, pkgContext);
+      generatedFiles2 = pkgResult.files;
+      for (const f of pkgResult.files) {
+        debug(`Generated ${f.file} (${f.contentLength} bytes)`);
+      }
+      const readiness = checkReadiness(evalProjectDir);
+      for (const c of readiness.checks) {
+        if (c.status === 'fail') {
+          warn(`${c.name}: ${c.message}`);
+        } else if (c.status === 'warn') {
+          info(`${c.name}: ${c.message}`);
+        }
+      }
+      stageDone('Submission Package', Date.now() - t0);
+    } catch (pkgErr) {
+      stageDone('Submission Package', Date.now() - t0);
     }
 
     // Record run in user memory for future preference reuse
@@ -625,7 +579,7 @@ async function runFullPipeline(
           errors: result.errors,
           taskCount,
           durationMs: elapsed,
-          decisionTraces: useResearch && strategyReport ? strategyReport.decisionTraces : [],
+          decisionTraces: [],
           reviewScores: {
             innovation: finalReport.innovationScore,
             technicalDepth: finalReport.technicalDepthScore,
@@ -663,7 +617,7 @@ async function runFullPipeline(
         validationErrors: validation.errors,
         validationChecks: validation.checks,
         strategy: winningStrategy.projectName,
-        predictedReward: useResearch && strategyReport ? strategyReport.rewardPrediction.predicted : undefined,
+        predictedReward: undefined,
         memoryUpdated: formatLearningSummary(ctx.dataDir).split('\n').find(l => l.includes('Total runs'))?.replace(/\D/g, '') ?? '0',
         competitionAnalysis: {
           criteriaCount: competitionAnalysis.judgingCriteria.length,

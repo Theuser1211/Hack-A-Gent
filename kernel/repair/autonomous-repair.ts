@@ -100,7 +100,7 @@ function readFileWithContext(filePath: string, line: number, contextLines: numbe
     });
     return `File: ${filePath}\nLines ${start + 1}-${end} of ${lines.length}:\n${numbered.join('\n')}`;
   } catch {
-    return `File: ${filePath} (could not read)`;
+    return `File: ${filePath} (could not read)`; // file deleted or permission denied
   }
 }
 
@@ -154,7 +154,7 @@ function applyFix(filePath: string, content: string): boolean {
     fs.writeFileSync(filePath, content, 'utf-8');
     return true;
   } catch {
-    return false;
+    return false; // write failed
   }
 }
 

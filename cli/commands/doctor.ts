@@ -41,7 +41,7 @@ export async function doctorCommand(_ctx: CLIContext, args: CLIArgs): Promise<CL
     const gitVersion = execSync('git --version', { encoding: 'utf-8', timeout: 5000 }).trim();
     checks.push({ name: 'Git', status: 'pass', message: gitVersion });
     data.gitVersion = gitVersion;
-  } catch {
+  } catch { // git not installed — non-critical
     checks.push({ name: 'Git', status: 'warn', message: 'not found (optional for most commands)' });
   }
 
@@ -123,7 +123,7 @@ function showRoutingReport(): CLIResult {
   let raw: string;
   try {
     raw = readFileSync(storePath, 'utf-8');
-  } catch {
+  } catch { // routing data file doesn't exist yet
     info('Adaptive routing has not collected any data yet.');
     return { success: true, message: 'No routing data' };
   }
@@ -131,7 +131,7 @@ function showRoutingReport(): CLIResult {
   let parsed: { models?: Record<string, { attempts: number; successes: number; failures: number; timeouts: number; emaLatencyMs: number; consecutiveTimeouts: number; demotedUntil: number | null; lastAttempt: number | null; lastSuccess: number | null }> };
   try {
     parsed = JSON.parse(raw);
-  } catch {
+  } catch { // corrupted JSON — show partial info
     info('Routing data file is corrupted.');
     return { success: true, message: 'Corrupted routing data' };
   }

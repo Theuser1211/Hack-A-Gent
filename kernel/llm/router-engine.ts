@@ -268,9 +268,9 @@ export class RouterEngine {
             health.consecutive_failures++;
             health.failed_requests++;
             if (health.consecutive_failures >= this.config.unhealthy_threshold) {
-              (health as any).status = 'unhealthy';
+              health.status = 'unhealthy';
             } else if (health.consecutive_failures >= this.config.degraded_threshold) {
-              (health as any).status = 'degraded';
+              health.status = 'degraded';
             }
           }
         }

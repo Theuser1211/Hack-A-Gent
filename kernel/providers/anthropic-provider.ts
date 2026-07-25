@@ -107,6 +107,7 @@ export class AnthropicProvider implements LLMProvider {
         total_requests: this.health.total_requests + 1,
       };
     } catch {
+      // health check request failed
       this.health = {
         ...this.health,
         status: 'unhealthy',
@@ -298,9 +299,8 @@ export class AnthropicProvider implements LLMProvider {
                 totalOutput = usage.output_tokens ?? totalOutput;
               }
             }
-            if (event.type === 'message_stop' || (event as any).stop_reason) {
-              const stopReason = (event as any).stop_reason ?? 'stop';
-              onChunk({ content: '', finish_reason: stopReason });
+            if (event.type === 'message_stop') {
+              onChunk({ content: '', finish_reason: 'stop' });
             }
           } catch {
             // skip malformed chunks

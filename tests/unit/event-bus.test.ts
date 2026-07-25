@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { EventBus } from '../../kernel/events/event-bus.js';
 import { createEvent } from '../../kernel/events/event-envelope.js';
@@ -36,9 +36,10 @@ describe('EventBus', () => {
 
     await bus.publish(createEvent({ type: 'TEST_EVENT', source: 'test', target: 'test-agent' }));
 
-    await new Promise((r) => setTimeout(r, 100));
-    expect(received).toHaveLength(1);
-    expect(received[0]).toBe('TEST_EVENT');
+    await vi.waitFor(() => {
+      expect(received).toHaveLength(1);
+      expect(received[0]).toBe('TEST_EVENT');
+    });
   });
 
   it('supports wildcard broadcast target', async () => {
@@ -52,10 +53,11 @@ describe('EventBus', () => {
 
     await bus.publish(createEvent({ type: 'BROADCAST_EVENT', source: 'test', target: '*' }));
 
-    await new Promise((r) => setTimeout(r, 100));
-    expect(received).toHaveLength(2);
-    expect(received).toContain('agent-1');
-    expect(received).toContain('agent-2');
+    await vi.waitFor(() => {
+      expect(received).toHaveLength(2);
+      expect(received).toContain('agent-1');
+      expect(received).toContain('agent-2');
+    });
   });
 
   it('filters events by subscriber filter', async () => {
@@ -86,9 +88,10 @@ describe('EventBus', () => {
       }),
     );
 
-    await new Promise((r) => setTimeout(r, 100));
-    expect(received).toHaveLength(1);
-    expect(received[0]).toBe('included');
+    await vi.waitFor(() => {
+      expect(received).toHaveLength(1);
+      expect(received[0]).toBe('included');
+    });
   });
 
   it('sends failed events to dead letter queue after max retries', async () => {
@@ -107,11 +110,11 @@ describe('EventBus', () => {
       }),
     );
 
-    await new Promise((r) => setTimeout(r, 500));
-
-    const dlq = bus.getDeadLetterQueue();
-    const count = await dlq.count();
-    expect(count).toBeGreaterThanOrEqual(1);
+    await vi.waitFor(async () => {
+      const dlq = bus.getDeadLetterQueue();
+      const count = await dlq.count();
+      expect(count).toBeGreaterThanOrEqual(1);
+    }, { timeout: 5000, interval: 100 });
   });
 
   it('unsubscribe removes only the matching subscription when multiple exist for same pattern', async () => {
@@ -129,9 +132,10 @@ describe('EventBus', () => {
 
     await bus.publish(createEvent({ type: 'SHARED_EVENT', source: 'test', target: 'agent-2' }));
 
-    await new Promise((r) => setTimeout(r, 100));
-    expect(received1).toHaveLength(0);
-    expect(received2).toHaveLength(1);
+    await vi.waitFor(() => {
+      expect(received1).toHaveLength(0);
+      expect(received2).toHaveLength(1);
+    });
   });
 
   it('unsubscribes handlers', async () => {
@@ -144,8 +148,9 @@ describe('EventBus', () => {
 
     await bus.publish(createEvent({ type: 'UNSUB_EVENT', source: 'test', target: 'temp-agent' }));
 
-    await new Promise((r) => setTimeout(r, 100));
-    expect(received).toHaveLength(0);
+    await vi.waitFor(() => {
+      expect(received).toHaveLength(0);
+    }, { timeout: 200, interval: 20 });
   });
 
   it('replays events from JSONL store', async () => {
@@ -161,18 +166,16 @@ describe('EventBus', () => {
       );
     }
 
-    await new Promise((r) => setTimeout(r, 200));
-
-    // Replay
-    const replayed: number[] = [];
-    for await (const event of bus.replay()) {
-      if (event.type === 'REPLAY_TEST') {
-        replayed.push(event.payload.index as number);
+    await vi.waitFor(async () => {
+      const replayed: number[] = [];
+      for await (const event of bus.replay()) {
+        if (event.type === 'REPLAY_TEST') {
+          replayed.push(event.payload.index as number);
+        }
       }
-    }
-
-    expect(replayed).toHaveLength(3);
-    expect(replayed).toEqual(expect.arrayContaining([0, 1, 2]));
+      expect(replayed).toHaveLength(3);
+      expect(replayed).toEqual(expect.arrayContaining([0, 1, 2]));
+    }, { timeout: 3000, interval: 100 });
   });
 
   it('acknowledge sends rejected events to DLQ', async () => {
@@ -210,21 +213,21 @@ describe('EventBus', () => {
     await bus.publish(createEvent({ type: 'TYPE_Y', source: 'test', target: 'multi-agent' }));
     await bus.publish(createEvent({ type: 'TYPE_Z', source: 'test', target: 'multi-agent' }));
 
-    await new Promise((r) => setTimeout(r, 100));
-    expect(received).toEqual(['TYPE_X', 'TYPE_Y']);
+    await vi.waitFor(() => {
+      expect(received).toEqual(['TYPE_X', 'TYPE_Y']);
+    });
   });
 
   it('replays with filters', async () => {
     await bus.publish(createEvent({ type: 'TYPE_A', source: 'src1', target: '*' }));
     await bus.publish(createEvent({ type: 'TYPE_B', source: 'src2', target: '*' }));
 
-    await new Promise((r) => setTimeout(r, 100));
-
-    const types: string[] = [];
-    for await (const event of bus.replay({ eventTypes: ['TYPE_A'] })) {
-      types.push(event.type);
-    }
-
-    expect(types).toEqual(['TYPE_A']);
+    await vi.waitFor(async () => {
+      const types: string[] = [];
+      for await (const event of bus.replay({ eventTypes: ['TYPE_A'] })) {
+        types.push(event.type);
+      }
+      expect(types).toEqual(['TYPE_A']);
+    }, { timeout: 3000, interval: 100 });
   });
 });

@@ -102,6 +102,7 @@ export class GeminiProvider implements LLMProvider {
         total_requests: this.health.total_requests + 1,
       };
     } catch {
+      // health check request failed
       this.health = {
         ...this.health,
         status: 'unhealthy',

@@ -269,7 +269,7 @@ Return a JSON object with the following structure:
 
         const request: LLMRequest = {
           model_id: modelId,
-          provider: this.router.selectModel(this.taskType, adjustedPrompt.length).provider as any,
+          provider: this.router.selectModel(this.taskType, adjustedPrompt.length).provider,
           messages: [
             {
               role: 'system',

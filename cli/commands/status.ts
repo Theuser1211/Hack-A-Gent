@@ -15,7 +15,7 @@ export async function statusCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
     if (existsSync(statePath)) {
       try {
         state = JSON.parse(readFileSync(statePath, 'utf-8')) as ProjectStateSnapshot;
-      } catch {
+      } catch { // corrupted state file — return error
         return { success: false, message: `Failed to parse state for project: ${projectId}` };
       }
     } else {
@@ -47,7 +47,7 @@ export async function statusCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
           phase: data.phase,
           updatedAt: data.updatedAt,
         };
-      } catch {
+      } catch { // unreadable state file — return placeholder
         return {
           projectId: f.replace('.state.json', ''),
           projectName: f.replace('.state.json', ''),
@@ -115,7 +115,7 @@ export async function statusCommand(ctx: CLIContext, args: CLIArgs): Promise<CLI
 function readdirSync(dir: string): string[] {
   try {
     return fsReaddirSync(dir);
-  } catch {
+  } catch { // directory not readable — return empty
     return [];
   }
 }

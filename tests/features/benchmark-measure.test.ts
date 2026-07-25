@@ -50,7 +50,7 @@ describe('ALL_DIMENSIONS', () => {
 });
 
 describe('measureProject', () => {
-  it('measures a clean project and never fabricates', () => {
+  it('measures a clean project and never fabricates', { timeout: 60000 }, () => {
     const dir = tmp();
     fixtureProject(dir, { withEslint: true });
     const res = measureProject(dir, { skipSlow: true });

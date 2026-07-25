@@ -65,7 +65,7 @@ export class ApiKeyManager {
       this.getKey(provider);
       return true;
     } catch {
-      return false;
+      return false; // key not found
     }
   }
 
@@ -290,12 +290,15 @@ export async function withRetry<T>(
         (err instanceof Error && err.name === 'AbortError');
       if (isAbortError) throw err;
 
+      const errRecord: Record<string, unknown> | undefined =
+        typeof err === 'object' && err !== null ? (err as Record<string, unknown>) : undefined;
+
       const status =
-        err instanceof Response ? err.status : ((err as any)?.status ?? (err as any)?.statusCode ?? 0);
+        err instanceof Response ? err.status : Number(errRecord?.status ?? errRecord?.statusCode ?? 0);
 
       if (status !== 0 && !isRetryable(status)) throw err;
 
-      const retryAfter = (err as any)?.retryAfter;
+      const retryAfter = typeof errRecord?.retryAfter === 'string' ? errRecord.retryAfter : undefined;
       let delay: number;
       if (retryAfter) {
         delay = parseInt(retryAfter) * 1000;

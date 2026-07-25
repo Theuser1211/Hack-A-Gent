@@ -8,3 +8,7 @@ export * from './orchestrator.js';
 export * from './scaffolding.js';
 export * from './optimizer.js';
 export * from './benchmarking.js';
+export * from './strategy-adapter.js';
+export * from './spec-pipeline.js';
+export * from './runtime-validation.js';
+export * from './challenge-validation.js';

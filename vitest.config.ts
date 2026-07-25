@@ -4,9 +4,11 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    pool: 'forks',
     include: ['tests/**/*.test.ts'],
     testTimeout: 30000,
     hookTimeout: 10000,
+    retry: 0,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],

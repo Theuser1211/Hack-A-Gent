@@ -28,6 +28,7 @@ import { RemoteProjectState, type ProjectPhase, type DeploymentSnapshot, type Pr
 import { TaskGraph, type TaskNode, type TaskCategory } from './task-graph.js';
 import type { UXEvaluationResult } from './ux-evaluation-agent.js';
 import { KNOWN_PACKAGE_VERSIONS, KNOWN_PACKAGE_VERSIONS_FALLBACK, LLM_GENERATION_SYSTEM_PROMPT, LLM_TASK_DESCRIPTIONS } from './orchestrator-templates.js';
+import type { CodeGenContext, GenerationInput } from '../cli/pipeline/strategy-adapter.js';
 
 export type OrchestratorPhase =
   | 'initializing'
@@ -163,6 +164,8 @@ export class InternetHackathonOrchestrator {
   private taskRetries = new Map<string, number>();
   private taskRetryLog: Array<{ taskId: string; taskDesc: string; attempt: number; maxRetries: number; reason: string; outcome: 'retry' | 'skip' | 'blocked' }> = [];
   private onPhaseChange: ((phase: OrchestratorPhase, data?: Record<string, unknown>) => void) | null = null;
+  private codeGenContext: CodeGenContext | null = null;
+  private generationInput: GenerationInput | null = null;
 
   constructor(workspaceRoot: string, stateDir?: string, seed = 42, routerEngine?: RouterEngine) {
     this.seed = seed;
@@ -228,6 +231,14 @@ export class InternetHackathonOrchestrator {
     this.devpostData = data;
   }
 
+  setStrategyContext(ctx: CodeGenContext): void {
+    this.codeGenContext = ctx;
+  }
+
+  setGenerationInput(input: GenerationInput): void {
+    this.generationInput = input;
+  }
+
   /**
    * Restore orchestrator state from a previously persisted snapshot so a run
    * can be resumed instead of restarted. Restores the execution plan, task
@@ -266,7 +277,7 @@ export class InternetHackathonOrchestrator {
       void projectDir;
       return true;
     } catch {
-      return false;
+      return false; // resume from snapshot failed
     }
   }
 
@@ -2220,12 +2231,29 @@ export async function POST(req: Request) {
 
     const systemPrompt = LLM_GENERATION_SYSTEM_PROMPT;
 
-    const userPrompt = `Project: ${this.devpostData.title}
+    const strategySection = this.codeGenContext
+      ? `\nSTRATEGY:\nProject name: ${this.codeGenContext.strategyName}\nOne-liner: ${this.codeGenContext.oneLiner}\nUI direction: ${this.codeGenContext.uiScaffold.designLanguage} (layout: ${this.codeGenContext.uiScaffold.layout})\nKey screens: ${this.codeGenContext.uiScaffold.keyScreens.join(', ')}\nSponsor APIs to prioritize: ${this.codeGenContext.sponsorApis.join(', ') || 'none'}\nFeature priority: ${this.codeGenContext.taskOrder.filter(f => ['core', 'sponsor'].includes(f.category)).map(f => f.feature).join('; ')}\n`
+      : '';
+
+    const gi = this.generationInput;
+
+    const projectName = gi?.projectName ?? this.devpostData.title;
+    const criteriaDisplay = gi
+      ? gi.sponsorApis.map(a => `${a} integration`).concat(gi.featurePriority.slice(0, 3)).join(', ')
+      : this.devpostData.judgingCriteria.join(', ');
+    const techStackDisplay = gi
+      ? `Frontend: ${gi.frontend}, Backend: ${gi.backend}, Database: ${gi.database}, Deployment: ${gi.deployment}`
+      : techStack;
+    const constraintsDisplay = gi
+      ? `Optimization budget: ${gi.optimizationBudget}, Differentiators: ${gi.differentiators.join(', ')}`
+      : this.devpostData.constraints.join(', ');
+
+    const userPrompt = `Project: ${projectName}
 Problem: ${this.devpostData.problemStatement}
-Judging Criteria: ${this.devpostData.judgingCriteria.join(', ')}
-Tech Stack: ${techStack}
-Constraints: ${this.devpostData.constraints.join(', ')}
-${requiredSection}
+Judging Criteria: ${criteriaDisplay}
+Tech Stack: ${techStackDisplay}
+Constraints: ${constraintsDisplay}
+${requiredSection}${strategySection}
 For package.json use these exact versions: next@^14.2.0, react@^18.3.1, react-dom@^18.3.1, @types/react@^18.3.3, @types/node@^20.14.0, typescript@^5.5.0
 
 Task: ${taskDescriptions[fileType]}
@@ -2233,7 +2261,7 @@ ${fileType === 'scaffold' ? 'Include: package.json, tsconfig.json, next.config.j
 ${fileType === 'frontend' && context.specificTask ? `Focus on: ${context.specificTask}` : ''}
 ${fileType === 'backend' && context.specificTask ? `Focus on: ${context.specificTask}` : ''}
 
-Generate real, working code that scores highly on: ${this.devpostData.judgingCriteria.join(', ')}.`;
+Generate real, working code that scores highly on: ${criteriaDisplay}.`;
 
     try {
       const request: LLMRequest = {

@@ -69,6 +69,36 @@ export interface CompetitionAnalysis {
   };
 }
 
+export interface TechnologyStack {
+  frontend: string;
+  backend: string;
+  database: string;
+  deployment: string;
+  testing: string;
+  styling: string;
+}
+
+export interface UIDirection {
+  designLanguage: string;
+  layout: string;
+  keyScreens: string[];
+  responsiveBreakpoints: string;
+  componentLibrary: string;
+}
+
+export interface FeaturePriority {
+  feature: string;
+  weight: number;
+  effort: 'low' | 'medium' | 'high';
+  category: 'core' | 'sponsor' | 'polish';
+}
+
+export interface RoadmapPhase {
+  phase: string;
+  tasks: string[];
+  estimatedMinutes: number;
+}
+
 // Phase 2: Winning Strategy Types
 export interface WinningStrategy {
   projectName: string;
@@ -81,6 +111,10 @@ export interface WinningStrategy {
   risks: Array<{ risk: string; mitigation: string }>;
   recommendedStack: string[];
   estimatedJudgeScore: number;
+  technologyStack: TechnologyStack;
+  uiDirection: UIDirection;
+  featurePriority: FeaturePriority[];
+  roadmap: RoadmapPhase[];
 }
 
 export interface FinalReport {

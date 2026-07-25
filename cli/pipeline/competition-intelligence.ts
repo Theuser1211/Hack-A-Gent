@@ -125,29 +125,41 @@ export class CompetitionIntelligence {
 
   /**
    * Extract sponsor APIs from the parsed input.
-   * Only returns sponsors that were mentioned in the page (confirmed from parsing).
-   * Does NOT assume Google → Gemini or Microsoft → Azure without evidence.
+   * Only returns sponsors explicitly mentioned in a sponsors section of the page.
+   * Does NOT infer sponsors from navigation, footer badges, OG meta tags, or other page chrome.
    */
   private findSponsorAPIs(input: DevpostParseResult): Array<CompetitionAnalysis['sponsorAPIs'][0]> {
-    // Check if we found any sponsor mentions in the HTML (from the parser)
     const confirmedSponsors = input.confidence?.sponsorAPIs ?? unknownField([]);
-    const text = input.rawText || input.problemStatement;
-    const lcText = text.toLowerCase();
 
-    const names =
-      confirmedSponsors.confidence === 'confirmed' && confirmedSponsors.value.length > 0
-        ? confirmedSponsors.value
-        : SPONSOR_NAMES.filter(n => lcText.includes(n.toLowerCase()));
+    // If the parser confirmed sponsors, trust it.
+    if (confirmedSponsors.confidence === 'confirmed' && confirmedSponsors.value.length > 0) {
+      return confirmedSponsors.value.map(name => ({
+        name,
+        provider: name,
+        description: this.describeSponsorAPI(name),
+        strategicValue: this.inferSponsorPriority(name, input.rawText) as 'must_use' | 'should_use' | 'nice_to_have',
+      }));
+    }
 
-    if (names.length === 0) {
+    // Otherwise, only detect sponsors if the page has an explicit sponsor section.
+    const rawText = input.rawText || input.problemStatement;
+    const lcText = rawText.toLowerCase();
+
+    // Check for an explicit sponsor section heading or "sponsored by" text.
+    const hasSponsorHeading = /<h[234][^>]*>\s*(?:sponsors?|partners?|supported\s*by)\s*</i.test(rawText);
+    const hasSponsoredBy = /sponsored\s+by\s+[A-Z]/i.test(lcText);
+    if (!hasSponsorHeading && !hasSponsoredBy) {
       return [];
     }
+
+    const names = SPONSOR_NAMES.filter(n => lcText.includes(n.toLowerCase()));
+    if (names.length === 0) return [];
 
     return names.map(name => ({
       name,
       provider: name,
       description: this.describeSponsorAPI(name),
-      strategicValue: this.inferSponsorPriority(name, text) as 'must_use' | 'should_use' | 'nice_to_have',
+      strategicValue: this.inferSponsorPriority(name, rawText) as 'must_use' | 'should_use' | 'nice_to_have',
     }));
   }
 
@@ -181,13 +193,14 @@ export class CompetitionIntelligence {
   private inferSponsorPriority(name: string, text: string): string {
     const lc = text.toLowerCase();
     const nameLc = name.toLowerCase();
-    // Check if the sponsor prize requires using their tech
-    if (new RegExp(`${nameLc}.*(?:required|must|mandatory|need to use)`, 'i').test(lc) ||
-        new RegExp(`(?:required|must|mandatory).*${nameLc}`, 'i').test(lc)) {
+    // Check if the sponsor prize requires using their tech (within same sentence)
+    const mustRe = new RegExp(`${nameLc}[^.]*(?:required|must|mandatory|need to use)`, 'i');
+    const mustRe2 = new RegExp(`(?:required|must|mandatory)[^.]*${nameLc}`, 'i');
+    if (mustRe.test(lc) || mustRe2.test(lc)) {
       return 'must_use';
     }
-    // Check if explicitly mentioned as a sponsor prize
-    if (new RegExp(`${nameLc}.*prize|prize.*${nameLc}`, 'i').test(lc)) {
+    // Check if explicitly mentioned as a sponsor prize (within same sentence)
+    if (new RegExp(`(?:${nameLc}[^.]*prize|prize[^.]*${nameLc})`, 'i').test(lc)) {
       return 'should_use';
     }
     return 'nice_to_have';
@@ -271,7 +284,7 @@ export class CompetitionIntelligence {
   }
 
   private extractOrganizer(text: string): ExtractedField<string> {
-    const m = text.match(/(?:hosted by|organized by|presented by|by)\s+([A-Z][A-Za-z0-9\s]+?)(?:\.|!|\n|$)/i);
+    const m = text.match(/(?:hosted by|organized by|presented by)\s+([A-Z][A-Za-z0-9&.']+(?:\s+[A-Z][A-Za-z0-9&.']+){0,2})/i);
     if (m && m[1]!.trim().length > 1 && !m[1]!.includes('Devpost')) {
       return { value: m[1]!.trim(), confidence: 'inferred', source: 'text pattern match' };
     }

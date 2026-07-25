@@ -138,7 +138,7 @@ function extractTextBetween(html: string, pattern: RegExp): string | null {
 
 function extractTechnologies(html: string): string[] {
   const techTags = html.match(
-    /<span[^>]*class=["'][^"']*?(?:tech|tag|label|badge)[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi,
+    /<span[^>]*class=["'][^"']*?\b(?:tech|tag|label|badge)\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi,
   );
   if (!techTags) return [];
   return techTags.map((t) => t.replace(/<[^>]*>/g, '').trim());
@@ -146,12 +146,21 @@ function extractTechnologies(html: string): string[] {
 
 function extractListItems(html: string, keyword: RegExp): string[] {
   const matchIndex = html.search(keyword);
-  // search() returns -1 when not found — guard against slicing from -1
   if (matchIndex < 0) return [];
 
-  const start = Math.max(0, matchIndex - 500);
-  const end = matchIndex + 1000;
-  const section = html.slice(start, end);
+  const beforeText = html.slice(0, matchIndex);
+  const headingTags = beforeText.match(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi);
+  const sectionStart = headingTags && headingTags.length > 0
+    ? beforeText.lastIndexOf(headingTags[headingTags.length - 1]!) + headingTags[headingTags.length - 1]!.length
+    : Math.max(0, matchIndex - 500);
+
+  const afterText = html.slice(matchIndex);
+  const nextHeadingMatch = afterText.search(/<h[1-6][^>]*>/i);
+  const sectionEnd = nextHeadingMatch >= 0
+    ? matchIndex + nextHeadingMatch
+    : Math.min(html.length, matchIndex + 1000);
+
+  const section = html.slice(sectionStart, sectionEnd);
   if (!section) return [];
 
   const items = section.match(/<li[^>]*>([\s\S]*?)<\/li>/gi);
@@ -239,7 +248,7 @@ function extractOrganizer(html: string, fallbackText: string): string | null {
   return null;
 }
 
-function extractSponsorMentions(html: string): string[] {
+export function extractSponsorMentions(html: string): string[] {
   // Look for the Devpost sidebar prize/sponsor section
   const sponsorPatterns = [
     /<div[^>]*class=["'][^"']*?(?:prize|sponsor|reward)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi,
@@ -270,7 +279,7 @@ function extractSponsorMentions(html: string): string[] {
   // A number followed by "prize" is a strong signal of sponsor prizes
   if (mentions.size === 0) {
     // Check for common Devpost sidebar patterns
-    const prizeSection = html.match(/<div[^>]*(?:sidebar|aside)[^>]*>([\s\S]*?)(?:<\/div>\s*<\/div>)/i);
+    const prizeSection = html.match(/<div[^>]*(?:sidebar|aside)[^>]*>([\s\S]*?)(?:<\/div>\s*<\/div>|<\/div>)/i);
     if (prizeSection) {
       const prizeText = prizeSection[1]!;
       for (const sponsor of knownSponsors) {
