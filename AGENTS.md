@@ -100,6 +100,16 @@ Turn Hack-A-Gent into a production-quality CLI that any developer can install gl
 - `tests/unit/challenge-validation.test.ts` — 24 tests covering all validation checks
 - All test SAMPLE_HTML updated with proper `<h2>Judging Criteria</h2>` and `<h2>Sponsors</h2>` headings
 
+### Session: QA — 6 Parser Bugs Fixed (ai-yes-competition-30441.devpost.com)
+- **Bug (judging criteria)**: `parseJudgingCriteria` received `stripHtml` output (one line), losing `<li>` structure. Fixed by passing raw HTML section; added `extractCriteriaFromLis()` for `<strong>` name + percentage detection. 5 new regression tests.
+- **Bug 1 (organizer)**: "Hosted by"/"Organized by" pattern not present on page. Added fallback: extract organization name from `hackathons?organization=` sidebar link.
+- **Bug 2 (themes)**: False positives from footer text ("social", "security", "privacy"); missing "Beginner Friendly" and "Machine Learning/AI". Added `extractThemesFromTags()` — parses Devpost `hackathons?themes[]=` tag links; keyword fallback for non-Devpost pages.
+- **Bug 3 (prizes)**: `\$[\d,]+` regex returned nothing for non-cash prizes. Added fallback: extract prize descriptions (certificates, trophies, swag) from Prizes section.
+- **Bug 4 (rules)**: `extractSectionText` only matches h2/h3/h4; "Who can participate" used h6. Added fallback: regex for `<h5>/<h6>Who can participate</h6><ul>` with `<li>` extraction.
+- **Bug 5 (deadlines)**: Time and timezone missing from deadline regex. Extended regex to capture `@ HH:MMam/pm` and `GMT+5:30` timezone offsets.
+- **QA process**: Playwright as ground truth — extracted HTML, DOM queries for each field, compared against parser output. 9 new regression tests (62 total).
+- **Status**: AI YES page parser output now matches ground truth for all 9 fields.
+
 ### Earlier Work (v1.0.0–v1.0.2)
 - Core stability: CustomEndpointProvider API key fix, `buildExecutionPlan()` replacement, RouterEngine wiring, import path fixes
 - `process.exit()` → `process.exitCode` for Windows compatibility

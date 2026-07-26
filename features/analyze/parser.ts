@@ -131,7 +131,7 @@ function extractSectionText(html: string, sectionNames: string[]): string {
   const bodyMatch = html.match(/<body[\s>][\s\S]*?<\/body>/i);
   const bodyContent = bodyMatch ? bodyMatch[0] : html;
   const pattern = sectionNames.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-  const headingRe = new RegExp(`<h[234][^>]*>\\s*(?:${pattern})[^<]*<\\/h[234]>`, 'i');
+  const headingRe = new RegExp(`<h[234][^>]*>\\s*.*?(?:${pattern})[^<]*<\\/h[234]>`, 'i');
   const sectionMatch = bodyContent.match(headingRe);
   if (!sectionMatch) return '';
   const afterHeading = bodyContent.slice(sectionMatch.index! + sectionMatch[0].length);
@@ -167,11 +167,30 @@ function detectSponsors(html: string): SponsorAPI[] {
       });
     }
   }
-  // Dedupe by name
-  const seen = new Set<string>();
+
+  // Fallback: extract sponsor names from image alt text in the sponsor section
+  const altRe = /<img[^>]+alt="([^"]+)"[^>]*>/gi;
+  let altM: RegExpExecArray | null;
+  const seen = new Set<string>(found.map(s => s.name.toLowerCase()));
+  while ((altM = altRe.exec(sectionText)) !== null) {
+    const name = altM[1]!.trim();
+    if (name && !seen.has(name.toLowerCase()) && !/sponsor|logo/i.test(name)) {
+      seen.add(name.toLowerCase());
+      found.push({
+        name,
+        category: 'custom',
+        mustUse: false,
+        strategicValue: 1,
+        notes: '',
+      });
+    }
+  }
+
+  // Filter by seen set
+  const seen2 = new Set<string>();
   return found.filter((s) => {
-    if (seen.has(s.name)) return false;
-    seen.add(s.name);
+    if (seen2.has(s.name)) return false;
+    seen2.add(s.name);
     return true;
   });
 }
@@ -340,7 +359,12 @@ export function extractDevpostData(html: string, url: string, seed = 42): Parsed
 
   const title = metaContent(html, 'og:title') || metaContent(html, 'title') || stripHtml(html.match(/<title>([^<]*)<\/title>/i)?.[1] ?? '').slice(0, 120);
   const tagline = metaContent(html, 'og:description') || '';
-  const rawText = stripHtml(html);
+  // Normalize Devpost currency spans before stripping HTML:
+  // Devpost uses $<span data-currency-value="">32,585</span> which stripHtml
+  // turns into "$ 32,585" with a space, breaking the prize regex.
+  // We rewrite it to $32,585 before stripping.
+  const htmlForPrizes = html.replace(/\$<span[^>]*data-currency[^>]*>([^<]*)<\/span>/gi, '$$$1');
+  const rawText = stripHtml(htmlForPrizes);
   const description = (tagline || rawText.slice(0, 600)).slice(0, 800);
 
   const sponsors = detectSponsors(html);
@@ -362,7 +386,7 @@ export function extractDevpostData(html: string, url: string, seed = 42): Parsed
   }
   const organizer = rawOrganizer && !rawOrganizer.includes('Devpost') ? rawOrganizer.replace(/\.+$/, '').trim() : 'Unknown';
 
-  // Cash prizes (dollar amounts)
+  // Cash prizes (dollar amounts) — text already has normalized currency spans
   const prizeMatches = rawText.match(/\$[\d,]+(?:\s+(?:USD|prize|award|pool|fund|grant))?/gi) ?? [];
   let prizes = [...new Set(prizeMatches.filter(m => {
     const num = parseInt(m.replace(/[^0-9]/g, ''), 10);

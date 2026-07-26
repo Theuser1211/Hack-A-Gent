@@ -774,6 +774,62 @@ describe('Bug 32 — deadlines with time and timezone', () => {
   });
 });
 
+// ─── Bug 33: section text matching heading with prefix text ─────────────
+
+describe('Bug 33 — section text matches heading with prefix words', () => {
+  it('extracts sponsors from "Hackathon Sponsors" heading', () => {
+    const html = '<html><body><h3 class="subheader">Hackathon Sponsors</h3><a href="https://example.com"><img alt="CodeCrafters" src="x.png"></a></body></html>';
+    const d = extractDevpostData(html, 'https://volthacks.devpost.com/');
+    const names = d.sponsorAPIs.map(s => s.name);
+    expect(names).toContain('CodeCrafters');
+  });
+
+  it('extracts sponsors from "Hackathon partners" heading', () => {
+    const html = '<html><body><h2>Event Partners</h2><a href="#"><img alt="Dialogate" src="x.png"></a></body></html>';
+    const d = extractDevpostData(html, 'https://volthacks.devpost.com/');
+    const names = d.sponsorAPIs.map(s => s.name);
+    expect(names).toContain('Dialogate');
+  });
+});
+
+// ─── Bug 34: prize currency span normalization ──────────────────────────
+
+describe('Bug 34 — Devpost currency span dollar amounts', () => {
+  it('extracts dollar amounts from $<span> pattern', () => {
+    const html = '<html><body><h2>Prizes</h2><span data-currency="true">$<span data-currency-value="">32,585</span></span> in prizes</body></html>';
+    const d = extractDevpostData(html, 'https://volthacks.devpost.com/');
+    expect(d.prizes).toContain('$32,585');
+  });
+
+  it('extracts individual prize amounts from $<span> pattern', () => {
+    const html = '<html><body><h2>Prizes</h2><span data-currency="true">$<span data-currency-value="">1,020</span></span> in cash</body></html>';
+    const d = extractDevpostData(html, 'https://volthacks.devpost.com/');
+    expect(d.prizes).toContain('$1,020');
+  });
+});
+
+// ─── Bug 35: sponsor names from image alt text ──────────────────────────
+
+describe('Bug 35 — sponsor names from img alt in sponsor section', () => {
+  it('extracts image alt text as custom sponsors', () => {
+    const html = '<html><body><h3>Sponsors</h3><a href="https://example.com"><img alt="Featherless.ai" src="x.png"></a><a href="#"><img alt="Tin Computer" src="y.png"></a></body></html>';
+    const d = extractDevpostData(html, 'https://volthacks.devpost.com/');
+    const names = d.sponsorAPIs.map(s => s.name);
+    expect(names).toContain('Featherless.ai');
+    expect(names).toContain('Tin Computer');
+  });
+
+  it('dedupes sponsors between known and alt-text', () => {
+    const html = '<html><body><h3>Sponsors</h3><a href="#"><img alt="Vercel" src="x.png"></a><a href="#"><img alt="Netlify" src="y.png"></a></body></html>';
+    const d = extractDevpostData(html, 'https://volthacks.devpost.com/');
+    const names = d.sponsorAPIs.map(s => s.name);
+    expect(names).toContain('Vercel');
+    expect(names).toContain('Netlify');
+    // Not duplicated
+    expect(names.filter(n => n === 'Vercel').length).toBe(1);
+  });
+});
+
 // ─── Dead code: hasSectionHeading removed ──────────────────────────────
 
 describe('challenge-validation — no dead exports', () => {
