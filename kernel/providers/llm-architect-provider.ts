@@ -15,6 +15,20 @@ import type {
 } from '../planning/architect-types.js';
 import type { PlannerOutput } from '../planning/planner-types.js';
 import type { PromptEngine } from '../prompts/prompt-engine.js';
+import { extractJSON } from './json-extractor.js';
+import {
+  RecommendedStackSchema,
+  FolderStructureSchema,
+  DatabaseSchemaSchema,
+  RequestSchemaArraySchema,
+  ComponentArraySchema,
+  BackendModuleArraySchema,
+  MilestoneArraySchema,
+  ExecutionGraphSchema,
+  SkillRequirementArraySchema,
+  ArchitectureRiskArraySchema,
+  HumanCheckpointArraySchema,
+} from './llm-output-schemas.js';
 
 export class LLMArchitectProvider implements ArchitectProvider {
   private router: RouterEngine;
@@ -50,7 +64,7 @@ export class LLMArchitectProvider implements ArchitectProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    return JSON.parse(response.content) as RecommendedStack;
+    return extractJSON(response.content, { schema: RecommendedStackSchema, provider: response.provider, model: response.model_id, stage: 'selectStack' }) as RecommendedStack;
   }
 
   async designFolderStructure(plan: PlannerOutput, stack: RecommendedStack): Promise<FolderStructure> {
@@ -75,7 +89,7 @@ export class LLMArchitectProvider implements ArchitectProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    return JSON.parse(response.content) as FolderStructure;
+    return extractJSON(response.content, { schema: FolderStructureSchema, provider: response.provider, model: response.model_id, stage: 'designFolderStructure' }) as FolderStructure;
   }
 
   async designDatabaseSchema(
@@ -103,7 +117,7 @@ export class LLMArchitectProvider implements ArchitectProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    return JSON.parse(response.content) as { engine: string; tables: Table[] };
+    return extractJSON(response.content, { schema: DatabaseSchemaSchema, provider: response.provider, model: response.model_id, stage: 'designDatabaseSchema' }) as { engine: string; tables: Table[] };
   }
 
   async defineApiContracts(plan: PlannerOutput, stack: RecommendedStack): Promise<RequestSchema[]> {
@@ -128,8 +142,10 @@ export class LLMArchitectProvider implements ArchitectProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    const parsed = JSON.parse(response.content);
-    return Array.isArray(parsed) ? (parsed as RequestSchema[]) : ((parsed.endpoints ?? []) as RequestSchema[]);
+    const parsed4 = extractJSON(response.content, { provider: response.provider, model: response.model_id, stage: 'defineApiContracts' });
+    const endpoints = Array.isArray(parsed4) ? parsed4 : ((parsed4 as Record<string, unknown>).endpoints ?? []);
+    const validated4 = RequestSchemaArraySchema.safeParse(endpoints);
+    return (validated4.success ? validated4.data : endpoints) as RequestSchema[];
   }
 
   async defineFrontendModules(plan: PlannerOutput, stack: RecommendedStack): Promise<Component[]> {
@@ -154,8 +170,10 @@ export class LLMArchitectProvider implements ArchitectProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    const parsed = JSON.parse(response.content);
-    return Array.isArray(parsed) ? (parsed as Component[]) : ((parsed.components ?? []) as Component[]);
+    const parsed5 = extractJSON(response.content, { provider: response.provider, model: response.model_id, stage: 'defineFrontendModules' });
+    const components = Array.isArray(parsed5) ? parsed5 : ((parsed5 as Record<string, unknown>).components ?? []);
+    const validated5 = ComponentArraySchema.safeParse(components);
+    return (validated5.success ? validated5.data : components) as Component[];
   }
 
   async defineBackendModules(
@@ -192,16 +210,16 @@ export class LLMArchitectProvider implements ArchitectProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    const parsed = JSON.parse(response.content);
-    return Array.isArray(parsed)
-      ? (parsed as Array<{
-          name: string;
-          description: string;
-          endpoints: string[];
-          dependencies: string[];
-          environment_variables: Array<{ name: string; description: string; required: boolean }>;
-        }>)
-      : ((parsed.modules ?? []) as typeof parsed);
+    const parsed6 = extractJSON(response.content, { provider: response.provider, model: response.model_id, stage: 'defineBackendModules' });
+    const modules = Array.isArray(parsed6) ? parsed6 : ((parsed6 as Record<string, unknown>).modules ?? []);
+    const validated6 = BackendModuleArraySchema.safeParse(modules);
+    return (validated6.success ? validated6.data : modules) as Array<{
+      name: string;
+      description: string;
+      endpoints: string[];
+      dependencies: string[];
+      environment_variables: Array<{ name: string; description: string; required: boolean }>;
+    }>;
   }
 
   async planMilestones(plan: PlannerOutput): Promise<
@@ -236,18 +254,18 @@ export class LLMArchitectProvider implements ArchitectProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    const parsed = JSON.parse(response.content);
-    return Array.isArray(parsed)
-      ? (parsed as Array<{
-          id: string;
-          name: string;
-          description: string;
-          due_offset_hours: number;
-          tasks: Array<{ id: string; description: string; estimated_hours: number; depends_on: string[] }>;
-          deliverables: string[];
-          verification?: string;
-        }>)
-      : ((parsed.milestones ?? []) as typeof parsed);
+    const parsed7 = extractJSON(response.content, { provider: response.provider, model: response.model_id, stage: 'planMilestones' });
+    const milestones = Array.isArray(parsed7) ? parsed7 : ((parsed7 as Record<string, unknown>).milestones ?? []);
+    const validated7 = MilestoneArraySchema.safeParse(milestones);
+    return (validated7.success ? validated7.data : milestones) as Array<{
+      id: string;
+      name: string;
+      description: string;
+      due_offset_hours: number;
+      tasks: Array<{ id: string; description: string; estimated_hours: number; depends_on: string[] }>;
+      deliverables: string[];
+      verification?: string;
+    }>;
   }
 
   async buildExecutionGraph(
@@ -275,7 +293,7 @@ export class LLMArchitectProvider implements ArchitectProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    return JSON.parse(response.content) as { nodes: ExecutionNode[]; entryPoint: string };
+    return extractJSON(response.content, { schema: ExecutionGraphSchema, provider: response.provider, model: response.model_id, stage: 'buildExecutionGraph' }) as { nodes: ExecutionNode[]; entryPoint: string };
   }
 
   async identifySkills(plan: PlannerOutput, stack: RecommendedStack): Promise<SkillRequirement[]> {
@@ -300,8 +318,10 @@ export class LLMArchitectProvider implements ArchitectProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    const parsed = JSON.parse(response.content);
-    return Array.isArray(parsed) ? (parsed as SkillRequirement[]) : ((parsed.skills ?? []) as SkillRequirement[]);
+    const parsed9 = extractJSON(response.content, { provider: response.provider, model: response.model_id, stage: 'identifySkills' });
+    const skills = Array.isArray(parsed9) ? parsed9 : ((parsed9 as Record<string, unknown>).skills ?? []);
+    const validated9 = SkillRequirementArraySchema.safeParse(skills);
+    return (validated9.success ? validated9.data : skills) as SkillRequirement[];
   }
 
   async assessArchitectureRisks(plan: PlannerOutput): Promise<ArchitectureBlueprint['risks']> {
@@ -326,10 +346,10 @@ export class LLMArchitectProvider implements ArchitectProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    const parsed = JSON.parse(response.content);
-    return Array.isArray(parsed)
-      ? (parsed as ArchitectureBlueprint['risks'])
-      : ((parsed.risks ?? []) as ArchitectureBlueprint['risks']);
+    const parsed10 = extractJSON(response.content, { provider: response.provider, model: response.model_id, stage: 'assessArchitectureRisks' });
+    const archRisks = Array.isArray(parsed10) ? parsed10 : ((parsed10 as Record<string, unknown>).risks ?? []);
+    const validated10 = ArchitectureRiskArraySchema.safeParse(archRisks);
+    return (validated10.success ? validated10.data : archRisks) as ArchitectureBlueprint['risks'];
   }
 
   async identifyCheckpoints(plan: PlannerOutput, milestones: Array<unknown>): Promise<HumanCheckpoint[]> {
@@ -354,7 +374,9 @@ export class LLMArchitectProvider implements ArchitectProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    const parsed = JSON.parse(response.content);
-    return Array.isArray(parsed) ? (parsed as HumanCheckpoint[]) : ((parsed.checkpoints ?? []) as HumanCheckpoint[]);
+    const parsed11 = extractJSON(response.content, { provider: response.provider, model: response.model_id, stage: 'identifyCheckpoints' });
+    const checkpoints = Array.isArray(parsed11) ? parsed11 : ((parsed11 as Record<string, unknown>).checkpoints ?? []);
+    const validated11 = HumanCheckpointArraySchema.safeParse(checkpoints);
+    return (validated11.success ? validated11.data : checkpoints) as HumanCheckpoint[];
   }
 }
