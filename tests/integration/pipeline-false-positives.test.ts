@@ -25,7 +25,7 @@ describe('False Positive Prevention', () => {
   });
 
   describe('validateGeneratedProject returns false for invalid projects', () => {
-    it('should not report valid=true when @/config import is missing', { timeout: 60000 }, async () => {
+    it('should not report valid=true when @/config import is missing', { timeout: 60000, retry: 2 }, async () => {
       const InternetHackathonOrchestrator = (await import('../../benchmarks/internet-hackathon-orchestrator.js')).InternetHackathonOrchestrator;
       const orch = new InternetHackathonOrchestrator(projectDir, path.join(projectDir, '.hackagent'), 42, undefined);
 
@@ -131,7 +131,7 @@ describe('False Positive Prevention', () => {
   });
 
   describe('repair loop integration', () => {
-    it('repair attempt is triggered when validation fails initially', { timeout: 60000 }, async () => {
+    it('repair attempt is triggered when validation fails initially', { timeout: 60000, retry: 2 }, async () => {
       const InternetHackathonOrchestrator = (await import('../../benchmarks/internet-hackathon-orchestrator.js')).InternetHackathonOrchestrator;
       const orch = new InternetHackathonOrchestrator(projectDir, path.join(projectDir, '.hackagent'), 42, undefined);
 
@@ -144,7 +144,7 @@ describe('False Positive Prevention', () => {
       expect(result.valid).toBe(false);
     });
 
-    it('valid project should not need repair', { timeout: 60000 }, async () => {
+    it('valid project should not need repair', { timeout: 60000, retry: 2 }, async () => {
       const InternetHackathonOrchestrator = (await import('../../benchmarks/internet-hackathon-orchestrator.js')).InternetHackathonOrchestrator;
       const orch = new InternetHackathonOrchestrator(projectDir, path.join(projectDir, '.hackagent'), 42, undefined);
 

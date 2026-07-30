@@ -44,7 +44,7 @@ function countLines(filePath: string): number {
     const content = fs.readFileSync(filePath, 'utf-8');
     return content.split('\n').length;
   } catch {
-    return 0;
+    return 0; // unreadable file
   }
 }
 
@@ -97,7 +97,7 @@ function hasTestFramework(projectDir: string): boolean {
       allDeps['cypress']
     );
   } catch {
-    return false;
+    return false; // cannot read package.json
   }
 }
 
@@ -463,7 +463,7 @@ export function evaluateProject(projectDir: string): EvaluationResult {
         });
         return true;
       } catch {
-        return false;
+        return false; // typecheck failed
       }
     })(),
     hasTests: hasTestFiles(projectDir),

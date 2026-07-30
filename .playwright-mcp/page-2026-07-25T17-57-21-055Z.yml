@@ -1,0 +1,1065 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e4]:
+      - list:
+        - listitem [ref=e5]:
+          - link "" [ref=e6] [cursor=pointer]:
+            - /url: "#"
+        - listitem [ref=e8]:
+          - link [ref=e10] [cursor=pointer]:
+            - /url: https://devpost.com
+            - img "Devpost" [ref=e11]
+        - text:  
+        - listitem [ref=e12]:
+          - list [ref=e13]:
+            - listitem [ref=e14]:
+              - link "Log in" [ref=e15] [cursor=pointer]:
+                - /url: https://secure.devpost.com/users/login?ref=top-nav-login
+            - listitem [ref=e16]:
+              - link "Sign up" [ref=e17] [cursor=pointer]:
+                - /url: https://secure.devpost.com/users/register?ref_content=signup_global_nav&ref_feature=signup&ref_medium=button
+        - listitem [ref=e19]:
+          - generic [ref=e20]: 
+      - list [ref=e22]:
+        - generic [ref=e23]:
+          - link "Join a hackathon" [ref=e24] [cursor=pointer]:
+            - /url: "#join-a-hackathon"
+            - generic [ref=e26]: 
+            - text: 
+          - text:   
+          - link "Host a hackathon" [ref=e27] [cursor=pointer]:
+            - /url: "#host-a-hackathon"
+            - text: Host a hackathon
+            - generic [ref=e28]: 
+            - text: 
+          - text:      
+          - link "Resources" [ref=e29] [cursor=pointer]:
+            - /url: "#resources"
+            - text: Resources
+            - generic [ref=e30]: 
+            - text: 
+    - text:                  
+  - banner [ref=e31]:
+    - heading [level=1] [ref=e34]:
+      - link [ref=e35] [cursor=pointer]:
+        - /url: https://developerweek-2026-hackathon.devpost.com/
+        - img "DeveloperWeek 2026 Hackathon" [ref=e36]
+    - navigation [ref=e40]:
+      - link "Descend" [ref=e42] [cursor=pointer]:
+        - /url: "#"
+      - list [ref=e43]:
+        - listitem [ref=e44]:
+          - link "Overview" [ref=e45] [cursor=pointer]:
+            - /url: https://developerweek-2026-hackathon.devpost.com/
+  - generic [ref=e47]:
+    - generic [ref=e48]:
+      - heading "DeveloperWeek 2026 Hackathon" [level=1] [ref=e49]
+      - heading "Join the nation's largest challenge-driven in-person and online hackathon @ DeveloperWeek 2026!" [level=3] [ref=e50]
+      - generic [ref=e51]:
+        - generic [ref=e53]:
+          - paragraph [ref=e55]:
+            - strong [ref=e56]: This hackathon has ended
+          - generic [ref=e57]:
+            - link "Find more hackathons" [ref=e58] [cursor=pointer]:
+              - /url: https://devpost.com/hackathons
+            - link "View the winners" [ref=e59] [cursor=pointer]:
+              - /url: https://developerweek-2026-hackathon.devpost.com/project-gallery
+        - generic [ref=e60]:
+          - heading "Who can participate" [level=6] [ref=e61]
+          - list [ref=e62]:
+            - listitem [ref=e63]: "- Above legal age of majority in country of residence"
+            - listitem [ref=e64]:
+              - text: "- All countries/territories, excluding"
+              - generic "Brazil, Crimea, Cuba, Iran, North Korea, Quebec, Russia" [ref=e65]:
+                - text: standard exceptions
+                - generic [ref=e66]: 
+          - link "View full rules" [ref=e68] [cursor=pointer]:
+            - /url: /rules
+    - generic [ref=e70]:
+      - generic [ref=e71]:
+        - paragraph [ref=e73]:
+          - link "View schedule" [ref=e74] [cursor=pointer]:
+            - /url: https://developerweek-2026-hackathon.devpost.com/details/dates
+        - generic [ref=e76]:
+          - generic [ref=e77]: 
+          - strong [ref=e79]: Feb 2 – 20, 2026
+      - table [ref=e81]:
+        - rowgroup [ref=e82]:
+          - row [ref=e83]:
+            - cell [ref=e84]:
+              - generic [ref=e85]:
+                - generic [ref=e86]: 
+                - link "San Jose Convention Center + Online" [ref=e88] [cursor=pointer]:
+                  - /url: https://maps.google.com/?q=150%20W%20San%20Carlos%20St%2C%20San%20Jose%2C%20CA%2095113%2C%20USA
+            - cell "Public" [ref=e89]:
+              - generic [ref=e90]:
+                - generic [ref=e91]: 
+                - generic [ref=e92]: Public
+          - row [ref=e93]:
+            - cell [ref=e94]:
+              - link "$23,000 in cash" [ref=e95] [cursor=pointer]:
+                - /url: "#prizes"
+                - strong [ref=e96]:
+                  - generic [ref=e97]: $23,000
+                - text: in cash
+            - cell [ref=e98]:
+              - strong [ref=e99]: "1803"
+              - text: participants
+      - generic [ref=e100]:
+        - generic [ref=e101]:
+          - generic [ref=e102]: 
+          - link "DevNetwork" [ref=e104] [cursor=pointer]:
+            - /url: https://devpost.com/hackathons?organization=DevNetwork
+        - generic [ref=e106]:
+          - generic [ref=e107]: 
+          - generic [ref=e108]:
+            - link "DevOps" [ref=e109] [cursor=pointer]:
+              - /url: https://devpost.com/hackathons?themes%5B%5D=DevOps
+            - link "Enterprise" [ref=e111] [cursor=pointer]:
+              - /url: https://devpost.com/hackathons?themes%5B%5D=Enterprise
+            - link "IoT" [ref=e113] [cursor=pointer]:
+              - /url: https://devpost.com/hackathons?themes%5B%5D=IoT
+  - main [ref=e119]:
+    - generic [ref=e120]:
+      - generic [ref=e121]:
+        - article [ref=e122]:
+          - paragraph [ref=e123]: Join the nation's largest challenge-driven hackathon @ DeveloperWeek 2026!
+          - heading "DEVELOPERWEEK 2026 HACKATHON" [level=4] [ref=e124]
+          - paragraph [ref=e125]: Join the largest challenge-driven in-person & online hackathon, co-located with DeveloperWeek 2026!
+          - paragraph [ref=e126]: Our hackathons regularly attract over 800+ participants -- and we are inviting the international developer community to converge in-person & online this year for the DeveloperWeek 2026 Hackathon!
+          - paragraph [ref=e127]:
+            - generic [ref=e128]:
+              - strong [ref=e129]: In Person
+              - strong [ref=e130]: "& Awards"
+              - text: "- San Jose Convention Center - February 18-20, 2026"
+          - paragraph [ref=e131]:
+            - generic [ref=e132]:
+              - strong [ref=e133]: Online
+              - text: "- Feb 2 - Feb 20, 2026"
+          - paragraph [ref=e134]: 1. Create a DevPost account and click Register on the DevPost DeveloperWeek 2026 Hackathon page.
+          - paragraph [ref=e135]: 2. DeveloperWeek 2026 Hackathon Kicks off February 2, 2026!
+          - paragraph [ref=e136]:
+            - link "Watch the Kick Off Talks here." [ref=e137] [cursor=pointer]:
+              - /url: https://app.events.ringcentral.com/events/developerweek-hackathon-2026-kickoff-talk/replay
+          - paragraph [ref=e138]:
+            - generic [ref=e139]:
+              - text: Check out the full DeveloperWeek 2026 Hackathon
+              - link "schedule!" [ref=e140] [cursor=pointer]:
+                - /url: https://www.developerweek.com/events/hackathon/
+          - paragraph [ref=e141]:
+            - generic [ref=e142]:
+              - text: 3. Review full Hackathon Instructions
+              - link "here!" [ref=e143] [cursor=pointer]:
+                - /url: https://docs.google.com/document/d/e/2PACX-1vT7tOhkiqrzXh4SxEn6Dur61CdwkYrazQ7birNLt_GDpWSxfdDymuY4KC2fhZ-OJGARFexe0RlRzNJQ/pub
+          - paragraph [ref=e144]: "* All Hackathon Attendees must be pre-registered on both: Eventbrite & Devpost."
+        - article [ref=e145]:
+          - heading "Requirements" [level=3] [ref=e147]
+          - generic [ref=e149]:
+            - paragraph [ref=e150]:
+              - text: View the Full Set of Instructions
+              - link "here!" [ref=e151] [cursor=pointer]:
+                - /url: https://docs.google.com/document/d/e/2PACX-1vT7tOhkiqrzXh4SxEn6Dur61CdwkYrazQ7birNLt_GDpWSxfdDymuY4KC2fhZ-OJGARFexe0RlRzNJQ/pub
+            - list [ref=e152]:
+              - listitem [ref=e153]: Registration - Must register on Devpost prior to Hackathon.
+              - listitem [ref=e154]: This is an in-person & online hackathon. Teams will be formed on Devpost.com at the DeveloperWeek 2026 Hackathon. From Devpost, participants can message each other to form teams, participate in chat boards, and communicate with sponsors.
+              - listitem [ref=e155]: Teams can build apps from scratch (Mobile App / Web App).
+              - listitem [ref=e156]: Teams can solve no challenges (build whatever you want) or can submit to as many challenges as they want.
+              - listitem [ref=e157]: There will be two rounds of judging. During Round 1, judges will review all team projects and fill out a scoring sheet on each to determine the Overall Hackathon Winner. Round 2 is the Sponsor Round of judging. Each sponsor will judge the teams working on their Challenge(s) and determine a winner(s). The sponsors choose their own prize winners.
+              - listitem [ref=e158]: "Round 1 judging will be based on: 1) PROGRESS: How much progress you make on your submission; 2) CONCEPT: Does your submission solve a real problem?; and 3) FEASIBILITY: Could your submission grow/evolve to become a startup or be a profitable business."
+        - article [ref=e159]:
+          - heading "Prizes" [level=3] [ref=e161]
+          - generic [ref=e164]:
+            - generic [ref=e165]:
+              - generic [ref=e166]: $23,000
+              - text: + in prizes
+            - generic [ref=e167]: + other prizes
+          - generic [ref=e168]:
+            - generic [ref=e169]:
+              - heading "⋆ DeveloperWeek 2026 Overall Winner" [level=6] [ref=e170]:
+                - generic [ref=e171]:
+                  - generic [ref=e172]: ⋆
+                  - generic [ref=e173]: DeveloperWeek 2026 Overall Winner
+              - generic [ref=e174]:
+                - generic [ref=e175]: 1 winner
+                - paragraph [ref=e176]: 1 winner - $12,500 USD value
+                - paragraph [ref=e177]: "1st Place Prize: - Amazon Echos (Up to 5) - DevNetwork Premium All-Access Passes to all 2026 conferences - Announcement in our email to 60,000 subscribers listing your team and project"
+            - generic [ref=e178]:
+              - heading "⋆ Kilo - For Devs, By Devs" [level=6] [ref=e179]:
+                - generic [ref=e180]:
+                  - generic [ref=e181]: ⋆
+                  - generic [ref=e182]: Kilo - For Devs, By Devs
+              - generic [ref=e183]:
+                - generic [ref=e184]:
+                  - generic [ref=e185]: $4,000
+                  - text: in cash
+                - generic [ref=e186]: 2 winners
+                - paragraph [ref=e187]: "1st Place: $1,500 Cash + $1,500 in Kilo Credits 2nd Place: $500 Cash + $500 in Kilo Credits"
+                - paragraph [ref=e188]:
+                  - text: "Contact:"
+                  - link "developerweek25@kilo.ai" [ref=e189] [cursor=pointer]:
+                    - /url: mailto:developerweek25@kilo.ai
+                - paragraph [ref=e190]: Build an open source developer tool — or create something that improves Kilo itself. That could mean enhancing our VS Code extension, JetBrains plugin, or CLI, or building on top of features like Cloud Agents, App Builder, Code Reviews, or Kilo for Slack. CLI utilities, workflow automations, debugging helpers, something to banish demo gremlins forever — if it makes developers’ lives better, we want to see it. We’re judging on utility, code quality, and “would we actually use this?” factor. Ship something the community will thank you for.
+          - generic [ref=e191]:
+            - generic [ref=e192]:
+              - heading "⋆ Kilo - Finally Ship It" [level=6] [ref=e193]:
+                - generic [ref=e194]:
+                  - generic [ref=e195]: ⋆
+                  - generic [ref=e196]: Kilo - Finally Ship It
+              - generic [ref=e197]:
+                - generic [ref=e198]:
+                  - generic [ref=e199]: $3,000
+                  - text: in cash
+                - generic [ref=e200]: 2 winners
+                - paragraph [ref=e201]:
+                  - text: "1st Place: $1,000 Cash + $1,000 in Kilo Credits 2nd Place: $500 Cash + $500 in Kilo Credits Contact:"
+                  - link "developerweek25@kilo.ai" [ref=e202] [cursor=pointer]:
+                    - /url: mailto:developerweek25@kilo.ai
+                - paragraph [ref=e203]: That side project you’ve been sitting on? This is your excuse to finally build it. Using Kilo Code, create and deploy something you’ll actually use. No constraints on what — an app, a game, a tool, a weird experiment. We just want to see you ship it with Kilo. We’re judging on creativity, execution, and that “I wish I’d thought of that” feeling.
+            - generic [ref=e204]:
+              - 'heading "⋆ Perfect Corp: Building the Next Generation of AI-Driven Consumer Experiences" [level=6] [ref=e205]':
+                - generic [ref=e206]:
+                  - generic [ref=e207]: ⋆
+                  - generic [ref=e208]: "Perfect Corp: Building the Next Generation of AI-Driven Consumer Experiences"
+              - generic [ref=e209]:
+                - generic [ref=e210]:
+                  - generic [ref=e211]: $2,500
+                  - text: in cash
+                - generic [ref=e212]: 2 winners
+                - paragraph [ref=e213]:
+                  - text: "1st Place: $1,500 Cash Prize 2nd Place: $1,000 Cash Prize Contact:"
+                  - link "tony_tsai@perfectcorp.com" [ref=e214] [cursor=pointer]:
+                    - /url: mailto:tony_tsai@perfectcorp.com
+                  - text: and
+                  - link "darren_liu@perfectcorp.com" [ref=e215] [cursor=pointer]:
+                    - /url: mailto:darren_liu@perfectcorp.com
+                - paragraph [ref=e216]: • Design and build an immersive web or mobile experience using Perfect Corp’s AI- and AR-powered technology suite to solve real-world consumer needs. • Participants are encouraged to explore creative, innovative, and unexpected ways to leverage Perfect Corp’s APIs — from virtual try-on and AI skin analysis to personalized product recommendations, gen AI text-to-image creation, and fashion visualization — to create engaging, interactive experiences or shopping journeys. • Participants are encouraged to explore creative and unexpected use cases for Perfect’s suite of APIs • Must integrate at last 1 Perfect Corp API and demonstrate clear consumer or retail value • Project page with short write-up & screenshots • Demo video (1-3 minutes) showing the experience end-to-end
+                - paragraph [ref=e217]:
+                  - text: "Click here to claim your 1000 FREE API units to begin your Hackathon Challenge:"
+                  - link "https://yce.perfectcorp.com/?affiliate=202602DevWeekHackathon" [ref=e218] [cursor=pointer]:
+                    - /url: https://yce.perfectcorp.com/?affiliate=202602DevWeekHackathon
+                - paragraph [ref=e219]:
+                  - text: Click here for our slides on Perfect Corp's Hackathon Challenge
+                  - link "https://perfectcorp365-my.sharepoint.com/:p:/g/personal/valerie_torres_perfectcorp_com/IQAuMJXL2sSDS6yTgQv2LPIBAcGBZuE5QDYAImUhoVxCoyk?e=igVnMy" [ref=e220] [cursor=pointer]:
+                    - /url: https://perfectcorp365-my.sharepoint.com/:p:/g/personal/valerie_torres_perfectcorp_com/IQAuMJXL2sSDS6yTgQv2LPIBAcGBZuE5QDYAImUhoVxCoyk?e=igVnMy
+          - generic [ref=e221]:
+            - generic [ref=e222]:
+              - 'heading "⋆ Foxit Software: The Foxit Document Automation Hackathon" [level=6] [ref=e223]':
+                - generic [ref=e224]:
+                  - generic [ref=e225]: ⋆
+                  - generic [ref=e226]: "Foxit Software: The Foxit Document Automation Hackathon"
+              - generic [ref=e227]:
+                - generic [ref=e228]:
+                  - generic [ref=e229]: $1,000
+                  - text: in cash
+                - generic [ref=e230]: 2 winners
+                - paragraph [ref=e231]:
+                  - text: "1st Place: $750 Gift Card 2nd Place: $250 Gift Card Contact:"
+                  - link "jorge_euceda@foxitsoftware.com" [ref=e232] [cursor=pointer]:
+                    - /url: mailto:jorge_euceda@foxitsoftware.com
+                - paragraph [ref=e233]: Build anything you want — as long as you use both Foxit Document Generation and Foxit PDF Services APIs. This hackathon is all about turning real-world workflows into polished, automated PDF experiences. Create a tool, demo, or prototype that generates documents dynamically and processes/enhances those PDFs to deliver a complete “input → output” experience.
+                - paragraph [ref=e234]: How to get API access
+                - paragraph [ref=e235]:
+                  - text: "Create a free developer account at:"
+                  - link "https://developer-api.foxit.com/" [ref=e236] [cursor=pointer]:
+                    - /url: https://developer-api.foxit.com/
+                - paragraph [ref=e237]: Create your app/project and grab your credentials
+                - paragraph [ref=e238]: Start building using the Document Generation API + PDF Services API
+                - paragraph [ref=e239]: What you’ll submit
+                - paragraph [ref=e240]: "Please provide:"
+                - paragraph [ref=e241]: Project name + pitch
+                - paragraph [ref=e242]: Public repo link (or a shared link if private repos are required)
+                - paragraph [ref=e243]: "Short demo video (recommended: 2–4 minutes)"
+                - paragraph [ref=e244]: Setup instructions (how we run it locally or view a hosted demo)
+                - paragraph [ref=e245]: A brief architecture overview (diagram optional, but helpful)
+                - paragraph [ref=e246]: "Clear callout of where you used each API:"
+                - paragraph [ref=e247]: "Document Generation API: what you generated and why"
+                - paragraph [ref=e248]: "PDF Services API: what you did to the generated PDF and why"
+                - paragraph [ref=e249]: Requirements
+                - paragraph [ref=e250]: You must use both APIs in a meaningful way (not just a “hello world” call).
+                - paragraph [ref=e251]: "Your solution should be safe and respectful:"
+                - paragraph [ref=e252]: Don’t include real sensitive personal data in your demo.
+                - paragraph [ref=e253]: If you accept uploads, explain how you handle data (even if it’s “not stored”).
+                - paragraph [ref=e254]: Judging criteria (what wins)
+                - paragraph [ref=e255]: "End-to-end usefulness: Does it solve a real problem?"
+                - paragraph [ref=e256]: "Quality of workflow design: Clean “generate → process → deliver” flow"
+                - paragraph [ref=e257]: "Technical execution: Reliability, code quality, error handling"
+                - paragraph [ref=e258]: "Creativity: Novel idea or fresh approach to a common workflow"
+                - paragraph [ref=e259]: "Developer experience: Setup clarity, docs, and overall usability"
+            - generic [ref=e260]:
+              - 'heading "⋆ Replit: Replit Mobile App Challenge" [level=6] [ref=e261]':
+                - generic [ref=e262]:
+                  - generic [ref=e263]: ⋆
+                  - generic [ref=e264]: "Replit: Replit Mobile App Challenge"
+              - generic [ref=e265]:
+                - generic [ref=e266]: 2 winners
+                - paragraph [ref=e267]: "1st Place: $1000 in Replit Credits and an iPad Pro 2nd Place: $500 in Replit Credits"
+          - generic [ref=e268]:
+            - generic [ref=e269]:
+              - heading "⋆ You.com - Build Intelligent Applications with You.com APIs" [level=6] [ref=e270]:
+                - generic [ref=e271]:
+                  - generic [ref=e272]: ⋆
+                  - generic [ref=e273]: You.com - Build Intelligent Applications with You.com APIs
+              - generic [ref=e274]:
+                - generic [ref=e275]: 2 winners
+                - paragraph [ref=e276]:
+                  - text: "1st Place: $200 Amazon gift Card + $200 API credits 2nd Place: $200 Amazon Gift Card + $100 API Credits Contact:"
+                  - link "mariane.bekker@you.com" [ref=e277] [cursor=pointer]:
+                    - /url: mailto:mariane.bekker@you.com
+                - paragraph [ref=e278]: We’re looking for creative and impactful projects that use You.com APIs to build AI agents and applications capable of thinking, reasoning, and searching live.
+                - paragraph [ref=e279]: The strongest submissions will show how real-time web data, structured research, and citation-backed results can be combined to deliver more reliable, trustworthy, and useful AI experiences. Whether you’re building an intelligent agent, research copilot, or real-time insight tool, we’re excited to see how you turn live information into meaningful action.
+                - paragraph [ref=e280]: "Projects will be evaluated based on:"
+                - paragraph [ref=e281]: 1. Thoughtful and effective use of You.com APIs 2. Quality, clarity, and completeness of the overall solution 3. Creativity and originality of the idea or approach 4. Product vision, usability, and real-world impact
+                - paragraph [ref=e282]: All projects must integrate at least one of our public APIs.
+                - paragraph [ref=e283]:
+                  - link "https://you.com/resources/hackathon" [ref=e284] [cursor=pointer]:
+                    - /url: https://you.com/resources/hackathon
+            - generic [ref=e285]:
+              - heading "⋆ Akamai Technologies - Build the Most Creative Open-Source Solution on Linode" [level=6] [ref=e286]:
+                - generic [ref=e287]:
+                  - generic [ref=e288]: ⋆
+                  - generic [ref=e289]: Akamai Technologies - Build the Most Creative Open-Source Solution on Linode
+              - generic [ref=e290]:
+                - generic [ref=e291]: 1 winner
+                - paragraph [ref=e292]:
+                  - text: "1st Place: Nvidia Jetson Orin Nano Super Developer Kit (up to 5 based on team size) Need help setting up your Akamai Cloud Computing account? Contact Support"
+                  - link "https://www.linode.com/support/" [ref=e293] [cursor=pointer]:
+                    - /url: https://www.linode.com/support/
+                - paragraph [ref=e294]: Create the most creative and impactful open-source solution built on Linode Kubernetes Engine (LKE) or Linode Compute, showcasing how developers can design scalable, modern applications on Akamai Cloud Computing. Bonus points will be awarded for projects that leverage GPU-accelerated workloads, especially for AI/ML, data processing, or advanced compute use cases.
+                - paragraph [ref=e295]: "Why This Challenge? Modern applications demand performance, flexibility, and portability—from cloud-native microservices to AI-powered workloads at the edge. This hackathon challenges you to explore what’s possible when open source meets developer-friendly cloud infrastructure. Whether you’re experimenting with Kubernetes, WebAssembly, AI pipelines, or edge-native architectures, this challenge is about: Turning open-source innovation into real-world solutions Demonstrating modern application patterns Showing how developers can build and scale confidently on Akamai Cloud"
+                - paragraph [ref=e296]: "Technical Requirements To be eligible: Your project must run on: Linode Kubernetes Engine (LKE) or Linode Compute Your solution must leverage open-source software Projects must be deployable and demonstrable"
+                - paragraph [ref=e297]: Show Us Your Build Teams are required to submit a short video demo (2–5 minutes) showing their project in action. This is your chance to walk us through what you built, how it works, and why it matters. Think of it as a quick “show and tell” for the judges.
+                - paragraph [ref=e298]: "Bonus scoring for: GPU usage AI/ML workloads Advanced Kubernetes or WASM implementations"
+                - paragraph [ref=e299]: Judging Criteria Winners will be selected based on a balanced evaluation of creativity, technical execution, platform usage, and future potential. Submissions should demonstrate innovative thinking and thoughtful use of open-source technologies deployed on Linode Kubernetes Engine (LKE) or Linode Compute. Judges will look for projects that go beyond basic functionality and clearly show how modern cloud-native, AI/ML, WebAssembly, or edge architectures can be applied in meaningful and scalable ways. Bonus consideration will be given to solutions that effectively leverage GPU-accelerated workloads.
+                - paragraph [ref=e300]: All submissions must include a publicly accessible GitHub repository containing the full source code, along with clear instructions for deployment and usage. This ensures that each project is original, functional, and can be evaluated in depth. Entries that exist only as high-level ideas, minimal proofs of concept, or rely heavily on auto-generated code without meaningful implementation will not be considered. Evaluation will focus on the completeness of the solution, quality of engineering decisions, and effective use of Linode or LKE resources.
+                - paragraph [ref=e301]: Finally, judges will assess the real-world applicability and long-term potential of each submission. Strong entries will demonstrate thoughtful architecture, clear documentation, and consideration for scalability, portability, and future expansion. Projects should clearly communicate not just what was built, but why it matters and how it could evolve beyond the hackathon into a more impactful solution.
+                - paragraph [ref=e302]: Account Setup Requirement To participate, all hackers must complete the setup of a new Akamai Cloud Computing (Linode) account using the $1,000 promotional credit.
+                - paragraph [ref=e303]:
+                  - text: "Complete Account Setup Sign up here:"
+                  - link "https://login.linode.com/signup?promo=akm-eve-dev-hack-1000-12126-M866" [ref=e304] [cursor=pointer]:
+                    - /url: https://login.linode.com/signup?promo=akm-eve-dev-hack-1000-12126-M866
+                  - text: "Provide: -Your name -Billing address -A valid credit card -Important Billing Notes You are only charged when you deploy a paid service You may change your payment method after account activation"
+                - paragraph [ref=e305]: "The $1,000 promotional credit: -Is valid for 90 days -Applies to eligible services only"
+                - paragraph [ref=e306]:
+                  - text: "Helpful Documentation: Understanding how billing works"
+                  - link "https://techdocs.akamai.com/cloud-computing/docs/understanding-how-billing-works" [ref=e307] [cursor=pointer]:
+                    - /url: https://techdocs.akamai.com/cloud-computing/docs/understanding-how-billing-works
+                  - text: Where to view available credit in your account
+                  - link "https://techdocs.akamai.com/cloud-computing/docs/billing-faqs#where-can-i-view-the-credit-available-on-my-account" [ref=e308] [cursor=pointer]:
+                    - /url: https://techdocs.akamai.com/cloud-computing/docs/billing-faqs#where-can-i-view-the-credit-available-on-my-account
+                - paragraph [ref=e309]: This hackathon is about building boldly, experimenting freely, and showing what’s possible when open source meets scalable cloud infrastructure.
+          - generic [ref=e310]:
+            - generic [ref=e311]:
+              - 'heading "⋆ CoCreate: Best Computer Vision for Video Understanding" [level=6] [ref=e312]':
+                - generic [ref=e313]:
+                  - generic [ref=e314]: ⋆
+                  - generic [ref=e315]: "CoCreate: Best Computer Vision for Video Understanding"
+              - generic [ref=e316]:
+                - generic [ref=e317]:
+                  - generic [ref=e318]: $1,000
+                  - text: in cash
+                - generic [ref=e319]: 2 winners
+                - paragraph [ref=e320]:
+                  - text: "1st Place: $750 2nd Place: $250 Contact:"
+                  - link "tamish@cocreate.so" [ref=e321] [cursor=pointer]:
+                    - /url: mailto:tamish@cocreate.so
+                - paragraph [ref=e322]: Your challenge is to build a computer vision based project that helps understand video.
+                - paragraph [ref=e323]: Your solution should extract meaning, structure, or insight over time from video data such as recognizing the different characters, actions, events, patterns, relationships, or important moments. The focus is on temporal reasoning and interpretation, rather than single-frame analysis or basic object detection.
+                - paragraph [ref=e324]: Projects may use any computer vision approach but should apply to particularly a narrative driven style of video. We're looking for speed and accuracy with bonus points if this can be run locally.
+            - generic [ref=e325]:
+              - 'heading "⋆ CLINE: Most Innovative Customization" [level=6] [ref=e326]':
+                - generic [ref=e327]:
+                  - generic [ref=e328]: ⋆
+                  - generic [ref=e329]: "CLINE: Most Innovative Customization"
+              - generic [ref=e330]:
+                - generic [ref=e331]: 2 winners
+                - paragraph [ref=e332]:
+                  - text: "1st Place: $500 Cash+ $500 Cline Credits 2nd Place: $100 Cash + $200 Cline Credits Contact:"
+                  - link "bhavini@cline.bot" [ref=e333] [cursor=pointer]:
+                    - /url: mailto:bhavini@cline.bot
+                - paragraph [ref=e334]: "Extend Cline to fit your workflow. Build a custom hook, workflow, or skill that makes Cline more powerful, more personal, or more productive. Whether you're automating repetitive tasks, integrating with tools you already use, or solving a pain point you've encountered, show us how you'd make Cline work better for you. Examples: A hook that auto-formats code on save A workflow that syncs context from your project management tool A skill that helps Cline understand your team's coding conventions"
+          - generic [ref=e335]:
+            - generic [ref=e336]:
+              - 'heading "⋆ CLINE: Cline CLI as Infrastructure" [level=6] [ref=e337]':
+                - generic [ref=e338]:
+                  - generic [ref=e339]: ⋆
+                  - generic [ref=e340]: "CLINE: Cline CLI as Infrastructure"
+              - generic [ref=e341]:
+                - generic [ref=e342]: 2 winners
+                - paragraph [ref=e343]:
+                  - text: "1st Place: $300 Cash + $300 Cline Credits 2nd Place: $100 Cash + $100 Cline Credits Contact:"
+                  - link "bhavini@cline.bot" [ref=e344] [cursor=pointer]:
+                    - /url: mailto:bhavini@cline.bot
+                - paragraph [ref=e345]: "Use Cline not as your coding assistant, but as a building block. Integrate the Cline CLI into a larger system, pipeline, or application. Think of Cline as a programmable component. What can you build when AI-assisted code generation becomes just another tool in your stack? Examples: A CI/CD step that uses Cline to generate migration scripts A Slack bot that delegates technical tasks to Cline A local dev tool that orchestrates Cline for multi-repo changes"
+            - generic [ref=e346]:
+              - 'heading "⋆ Deepgram: The \"Smart Listener\" (Daily Magic)" [level=6] [ref=e347]':
+                - generic [ref=e348]:
+                  - generic [ref=e349]: ⋆
+                  - generic [ref=e350]: "Deepgram: The \"Smart Listener\" (Daily Magic)"
+              - generic [ref=e351]:
+                - generic [ref=e352]: 1 winner
+                - paragraph [ref=e353]:
+                  - text: "1st Place: Keychron K2 HE Rapid Trigger Wireless Custom Keyboard with Hall Effect Gateron Double-Rail Magnetic Switch (up to 5 based on team size) Contact:"
+                  - link "corey.weathers@deepgram.com" [ref=e354] [cursor=pointer]:
+                    - /url: mailto:corey.weathers@deepgram.com
+                - paragraph [ref=e355]: "Goal: Build a tool that listens to real-world audio and gives users a \"\"Magic Insight\"\" they didn't have before."
+                - paragraph [ref=e356]: "Description: Use Deepgram’s Speech-to-Text (STT) or Audio Intelligence APIs to transform spoken words into something useful. This is about understanding—think of tools that summarize messy meetings, detect the \"\"vibe\"\" or sentiment of a conversation, or highlight key action items from a voice memo."
+                - paragraph [ref=e357]: "Eligibility Rule: Your project must focus on analyzing audio. It does not need to talk back or perform tasks."
+          - generic [ref=e358]:
+            - generic [ref=e359]:
+              - 'heading "⋆ Deepgram: The \"Voice Operator\" (Autonomous Agent)" [level=6] [ref=e360]':
+                - generic [ref=e361]:
+                  - generic [ref=e362]: ⋆
+                  - generic [ref=e363]: "Deepgram: The \"Voice Operator\" (Autonomous Agent)"
+              - generic [ref=e364]:
+                - generic [ref=e365]: 1 winner
+                - paragraph [ref=e366]:
+                  - text: "1st Place: Sennheiser HD 490 PRO Professional Reference Open-Back Studio Headphones Bundled with Headphone Case + Headphones Stand Contact:"
+                  - link "corey.weathers@deepgram.com" [ref=e367] [cursor=pointer]:
+                    - /url: mailto:corey.weathers@deepgram.com
+                - paragraph [ref=e368]: "Goal: Build a voice assistant that takes action in the real world when you talk to it. Description: Use the Deepgram Voice Agent API to create an interactive assistant that does things. This challenge is about agency—your agent must use Function Calling to talk to another app. Whether it’s an agent that books a haircut, adds a task to a Trello board, or controls smart home lights, it needs to be a \"doer.\" Eligibility Rule: Your project must use Deepgram’s Voice Agent API and trigger at least one external action (Function Call)."
+            - generic [ref=e369]:
+              - heading "⋆ Figma - From Idea to Interactive" [level=6] [ref=e370]:
+                - generic [ref=e371]:
+                  - generic [ref=e372]: ⋆
+                  - generic [ref=e373]: Figma - From Idea to Interactive
+              - generic [ref=e374]:
+                - generic [ref=e375]: 2 winners
+                - paragraph [ref=e376]:
+                  - text: "1st Place: Winning team receives a Figma swag pack 2nd Place: Receives one swag item from Figma Contact:"
+                  - link "amadonna@figma.com" [ref=e377] [cursor=pointer]:
+                    - /url: mailto:amadonna@figma.com
+                - paragraph [ref=e378]: Start your app idea with Figma Make. Create a business, consumer, or web app concept by using Figma Make as the starting point to kick off your idea and prototype an interactive experience that shows clear user value.
+                - paragraph [ref=e379]: What to Build A clickable prototype (web or mobile) started in Figma Make 3–5 connected screens One clear user flow (e.g. onboarding, dashboard, checkout)
+                - paragraph [ref=e380]: Requirements Figma Make must be used to start the idea and initial prototype Clearly explain the problem and target user Show how the idea could grow beyond the prototype
+                - paragraph [ref=e381]: Judging Criteria Clarity of problem and solution Quality and usability of the prototype How effectively Figma Make was used to kick off the idea Creativity and feasibility
+                - paragraph [ref=e382]: How to Get Started with Figma Make (Free) Getting started is easy—no paid plan required. Sign up for a new free Figma Starter plan at Figma.com Open Figma Make and describe your idea in plain language Instantly generate screens, layouts, and flows to kick off your prototype Iterate, refine, and collaborate with your team in real time Figma Make helps you move from idea to prototype in minutes—so you can spend hackathon time building what matters most.
+          - generic [ref=e383]:
+            - generic [ref=e384]:
+              - 'heading "⋆ Miro: Build a Miro App" [level=6] [ref=e385]':
+                - generic [ref=e386]:
+                  - generic [ref=e387]: ⋆
+                  - generic [ref=e388]: "Miro: Build a Miro App"
+              - generic [ref=e389]:
+                - generic [ref=e390]: 2 winners
+                - paragraph [ref=e391]:
+                  - text: "1st Place: Bose Headset & Lego Kit 2nd Place: Yeti Mug and Lego Kit Contact:"
+                  - link "shipra@miro.com" [ref=e392] [cursor=pointer]:
+                    - /url: mailto:shipra@miro.com
+                - paragraph [ref=e393]:
+                  - text: Use Miro’s API and SDK to create a visual app. Your app can be anything that solves a real world need, and takes advantage of Miro’s multi-player, visual canvas. Your app could be a game (like this fun app
+                  - link "https://miro.com/marketplace/puzzleit" [ref=e394] [cursor=pointer]:
+                    - /url: https://miro.com/marketplace/puzzleit
+                  - text: that turns any image into a puzzle on the Miro board), or something that is useful to product development (like an integration with your favorite to task manager). Your app will be judged based on how creative, unique, fun and useful it is for Miro users - but it obviously has to be stable and bug-free. Miro’s hackathon starter kit has all the information to get you started. We can’t wait to see what you build!
+                  - link "https://github.com/miroapp/hackathon-starter" [ref=e395] [cursor=pointer]:
+                    - /url: https://github.com/miroapp/hackathon-starter
+                - paragraph [ref=e396]: (Limited to teams of three)
+            - generic [ref=e397]:
+              - 'heading "⋆ Progress Software: Build the UI You Wish Existed" [level=6] [ref=e398]':
+                - generic [ref=e399]:
+                  - generic [ref=e400]: ⋆
+                  - generic [ref=e401]: "Progress Software: Build the UI You Wish Existed"
+              - generic [ref=e402]:
+                - generic [ref=e403]: 2 winners
+                - paragraph [ref=e404]:
+                  - text: "1st Place: $500 Visa gift card 2nd Place: $200 Visa gift card Contact:"
+                  - link "Alyssa.nicoll@progress.com" [ref=e405] [cursor=pointer]:
+                    - /url: mailto:Alyssa.nicoll@progress.com
+                - paragraph [ref=e406]: "Use the Progress UI Generator to design a UI for something you wish existed. It can be: • a serious productivity tool • an internal dashboard you’d actually enjoy using • a tiny app that fixes one very annoying problem • a delightfully ridiculous idea that just makes sense in UI form The goal isn’t perfection — it’s clarity, creativity, and intention. If you can explain why it exists and show the UI, you’re doing it right. ________________________________________ What to Submit To enter, submit: 1. A short description (2–5 sentences) explaining what the UI is for 2. Screenshots or a short video of the generated UI 3. (Optional) A repo or demo using the generated output That’s it. No long write-ups. No slide decks. No overthinking. ________________________________________ How We’ll Judge It We’re looking for: • Clarity — does the UI fit the problem it’s solving? • Creativity — interesting ideas, flows, or layouts • Thoughtfulness — smart component and structure choices • Fun — yes, this absolutely counts You do not need a fully built or production-ready app to win. ________________________________________ Tools & Resources You’re free to use any framework or stack, as long as your UI is generated using the Progress UI Generator. Core Tool • Progress UI Generator Generate UI layouts and scaffolding powered with Kendo UI components. UI Libraries Options The UI Generator builds with Kendo UI, which means you can extend or implement your design using: • Kendo UI for Angular • Kendo UI for React • Kendo UI for Blazor Helpful Extras (Totally Optional) • GitHub (for sharing code) • StackBlitz or CodeSandbox (for quick demos) • Short screen recordings or GIFs to show interaction • Any planning tools you like (Figma, sketches, vibes) ________________________________________ The Spirit of the Challenge This isn’t about building the “right” app. It’s about showing how you think, how you design, and what you wish tools did better. Surprise us. Make us laugh. Solve something tiny. Solve something big. We can’t wait to see what you build."
+          - generic [ref=e407]:
+            - generic [ref=e408]:
+              - 'heading "⋆ Retool: From Prompt to Production - Shipping Applications with Retool Assist" [level=6] [ref=e409]':
+                - generic [ref=e410]:
+                  - generic [ref=e411]: ⋆
+                  - generic [ref=e412]: "Retool: From Prompt to Production - Shipping Applications with Retool Assist"
+              - generic [ref=e413]:
+                - generic [ref=e414]: 1 winner
+                - paragraph [ref=e415]:
+                  - text: "Prizes coming Soon! Contact:"
+                  - link "hasun@retool.com" [ref=e416] [cursor=pointer]:
+                    - /url: mailto:hasun@retool.com
+                - paragraph [ref=e417]: Challenge Overview
+                - paragraph [ref=e418]: The challenge with shipping internal tools isn’t business logic - it’s setup, custom code, deployment, and iteration. For this DevWeek 2026 challenge, participants will use Retool’s AppGen solution to generate the foundation of a real internal application, then spend the rest of the hackathon evolving it into something useful, thoughtful, and production-ready.
+                - paragraph [ref=e419]: You’ll create your own Retool tenant and be challenged to go from idea → working internal tool, starting with AI-powered app generation and continuing through refinement, extension, and polish over the course of the hackathon.
+                - paragraph [ref=e420]: This challenge is designed to reward speed at the start, creative scope, and depth over time.
+                - paragraph [ref=e421]: What You’ll Build;
+                - paragraph [ref=e422]: Participants can build any internal tool they choose and are encouraged to explore your real business challenges for sources of inspiration.
+                - paragraph [ref=e423]: "Requirement: Your project must use Retool Assist (AppGen) to generate an initial version of the app. From there, you can refine the application using Retool’s drag-and-drop functionality, custom code, or continue leveraging Retool Assist all the way to the finish line."
+                - paragraph [ref=e424]: "How It Works:"
+                - paragraph [ref=e425]:
+                  - text: 1. Create a Retool tenant and share the domain with
+                  - link "hasun@retool.com" [ref=e426] [cursor=pointer]:
+                    - /url: mailto:hasun@retool.com
+                - paragraph [ref=e427]: 2. Use Retool Assist (AppGen) to generate a starting app
+                - paragraph [ref=e428]: 3. Iterate, extend, and refine your app over the hackathon period
+                - paragraph [ref=e429]: "4. Submit your app along with a short 5 minute recording explaining:"
+                - paragraph [ref=e430]: "--The problem you’re solving"
+                - paragraph [ref=e431]: "--How Retool’s AppGen solution helped you get started"
+                - paragraph [ref=e432]: "--The solution you ultimately delivered Nice To Haves:"
+                - paragraph [ref=e433]: "No backend setup is required to participate - but deeper technical work is encouraged and rewarded if you do. Participants may choose to:"
+                - paragraph [ref=e434]: • Design and refine complex UIs and interactions
+                - paragraph [ref=e435]: • Add workflows, background jobs, or automations
+                - paragraph [ref=e436]: • Connect real or mock data sources
+                - paragraph [ref=e437]: • Write JavaScript or SQL queries
+                - paragraph [ref=e438]: • Integrate other data sources
+                - paragraph [ref=e439]: • Layer in other Retool AI actions or Agents
+                - paragraph [ref=e440]: "You Can Treat AppGen As:"
+                - paragraph [ref=e441]: • A jumpstart for your app development lifecycle
+                - paragraph [ref=e442]: • A collaborator you iterate with throughout the build
+                - paragraph [ref=e443]: Who Should Participate
+                - paragraph [ref=e444]: • Front-end developers can focus on UX, interaction design, and polish
+                - paragraph [ref=e445]: • Back-end and platform engineers can build workflows, integrations, and automation
+                - paragraph [ref=e446]: • Product managers, designers, and operators can turn real problems into working tools
+                - paragraph [ref=e447]: • AI-curious stakeholders can explore how natural language becomes functional software without any prior experience with writing code
+                - paragraph [ref=e448]: This challenge is intentionally inclusive so you don't need technical coding experience. If you can describe a problem, there’s a meaningful way to participate.
+                - paragraph [ref=e449]: Judging Criteria
+                - paragraph [ref=e450]: "Submissions will be evaluated on:"
+                - paragraph [ref=e451]: • Clarity and relevance of the problem solved
+                - paragraph [ref=e452]: • Effective use of Retool Assist
+                - paragraph [ref=e453]: • Depth and thoughtfulness of iteration over time
+                - paragraph [ref=e454]: • Production-grade quality of the final app
+                - paragraph [ref=e455]: Bonus Consideration
+                - paragraph [ref=e456]: "Judges may award extra credit for:"
+                - paragraph [ref=e457]: Workflow automation or background processing
+                - paragraph [ref=e458]: Well-designed, intuitive UX
+                - paragraph [ref=e459]: Thoughtful use of AI or agents
+                - paragraph [ref=e460]: Creative executions of your initial concept
+                - paragraph [ref=e461]: Happy Hacking!
+            - generic [ref=e462]:
+              - heading "⋆ AI + Sanity - Build a Feature Only Structured Content Makes Possible" [level=6] [ref=e463]:
+                - generic [ref=e464]:
+                  - generic [ref=e465]: ⋆
+                  - generic [ref=e466]: AI + Sanity - Build a Feature Only Structured Content Makes Possible
+              - generic [ref=e467]:
+                - generic [ref=e468]: 1 winner
+                - paragraph [ref=e469]:
+                  - text: "1st Place: $500 cash + $500 Sanity credits + Sanity swag pack Contact:"
+                  - link "knut@sanity.io" [ref=e470] [cursor=pointer]:
+                    - /url: mailto:knut@sanity.io
+                - paragraph [ref=e471]: When content has types, fields, and references, you can build features that actually understand relationships. A recipe site where scaling servings updates every ingredient. A shopping list that combines amounts across multiple recipes. An event directory that shows "all talks by this speaker" without maintaining separate lists.
+                - paragraph [ref=e472]: Flat files and markdown can't do this easily. Structured content can.
+                - paragraph [ref=e473]: "The Challenge: Use an AI coding assistant (Cursor, Claude Code, v0, Lovable, or similar) with Sanity's MCP Server to build an application where structured content unlocks at least one feature users will love. The more you can get out of the content, the better."
+                - paragraph [ref=e474]: "Requirements: 1.Build a site or app for a real (or realistic) use case 2. Include at least one feature that depends on queryable, structured content (not just \"displaying content,\" but using the structure to enable something) 3. Use Sanity as your content backend via the MCP Server 4. Deploy to production so we can try it out"
+                - paragraph [ref=e475]: "Examples of what we mean: - A reading list app where books have authors, and you can see \"all books by authors you've read\" - A course catalog where prerequisites are references, enabling \"show me what I can take next\" - A product comparison tool that queries specs across items"
+                - paragraph [ref=e476]:
+                  - text: "Resources: - Sanity MCP Server:"
+                  - link "https://www.sanity.io/docs/mcp-server" [ref=e477] [cursor=pointer]:
+                    - /url: https://www.sanity.io/docs/mcp-server
+                  - text: "- Free Sanity account:"
+                  - link "https://www.sanity.io/get-started" [ref=e478] [cursor=pointer]:
+                    - /url: https://www.sanity.io/get-started
+                - paragraph [ref=e479]: "Judging Criteria: - How creatively does the app use structured content to enable a feature? (most important) - Is this a real use case someone would actually want? - Quality of the schema design and content relationships - Overall execution and polish"
+        - article [ref=e480]:
+          - heading "Judges" [level=3] [ref=e482]
+          - generic [ref=e484]:
+            - generic [ref=e486]:
+              - figure [ref=e488]:
+                - img "Geoffrey Domoracki" [ref=e489]
+              - paragraph [ref=e491]:
+                - strong [ref=e492]: Geoffrey Domoracki
+                - text: Founder @ DevNetwork
+            - generic [ref=e494]:
+              - figure [ref=e496]:
+                - img "Mariane Bekker" [ref=e497]
+              - paragraph [ref=e499]:
+                - strong [ref=e500]: Mariane Bekker
+                - text: Head of Developer Relations @ You.com
+          - generic [ref=e501]:
+            - generic [ref=e503]:
+              - figure [ref=e505]:
+                - img "Alyssa Nicoll" [ref=e506]
+              - paragraph [ref=e508]:
+                - strong [ref=e509]: Alyssa Nicoll
+                - text: Sr. Developer Advocate @ Progress
+            - generic [ref=e511]:
+              - figure [ref=e513]:
+                - img "Aaron Madonna" [ref=e514]
+              - paragraph [ref=e516]:
+                - strong [ref=e517]: Aaron Madonna
+                - text: Field Marketing @ Figma
+          - generic [ref=e518]:
+            - generic [ref=e520]:
+              - figure [ref=e522]:
+                - img "Ana Boyer" [ref=e523]
+              - paragraph [ref=e525]:
+                - strong [ref=e526]: Ana Boyer
+                - text: Designer Advocate @ Figma
+            - generic [ref=e528]:
+              - figure [ref=e530]:
+                - img "Tamish Pulappadi" [ref=e531]
+              - paragraph [ref=e533]:
+                - strong [ref=e534]: Tamish Pulappadi
+                - text: Co-founder @ Cocreate
+          - generic [ref=e535]:
+            - generic [ref=e537]:
+              - figure [ref=e539]:
+                - img "Brian Turcotte" [ref=e540]
+              - paragraph [ref=e542]:
+                - strong [ref=e543]: Brian Turcotte
+                - text: Developer Relations Engineer @ Kilo
+            - generic [ref=e545]:
+              - figure [ref=e547]:
+                - img "Shipra Kayan" [ref=e548]
+              - paragraph [ref=e550]:
+                - strong [ref=e551]: Shipra Kayan
+                - text: Chief Design Evangelist @ Miro
+          - generic [ref=e552]:
+            - generic [ref=e554]:
+              - figure [ref=e556]:
+                - img "Danielle Cook" [ref=e557]
+              - paragraph [ref=e559]:
+                - strong [ref=e560]: Danielle Cook
+                - text: Senior Product Marketing Manager @ Akamai
+            - generic [ref=e562]:
+              - figure [ref=e564]:
+                - img "Lena Hall" [ref=e565]
+              - paragraph [ref=e567]:
+                - strong [ref=e568]: Lena Hall
+                - text: Senior Director of Developer Relations @ Akamai
+          - generic [ref=e569]:
+            - generic [ref=e571]:
+              - figure [ref=e573]:
+                - img "Ruckus Voxi" [ref=e574]
+              - paragraph [ref=e576]:
+                - strong [ref=e577]: Ruckus Voxi
+                - text: Senior Developer Advocate @ Akamai
+            - generic [ref=e579]:
+              - figure [ref=e581]:
+                - img "Corey Weathers" [ref=e582]
+              - paragraph [ref=e584]:
+                - strong [ref=e585]: Corey Weathers
+                - text: Devrel @ Deepgram
+          - generic [ref=e586]:
+            - generic [ref=e588]:
+              - figure [ref=e590]:
+                - img "Knut Melvær" [ref=e591]
+              - paragraph [ref=e593]:
+                - strong [ref=e594]: Knut Melvær
+                - text: Head of Developer Community and Education @ Sanity
+            - generic [ref=e596]:
+              - figure [ref=e598]:
+                - img "Tony Loher" [ref=e599]
+              - paragraph [ref=e601]:
+                - strong [ref=e602]: Tony Loher
+                - text: Solutions Engineer @ CLINE
+          - generic [ref=e603]:
+            - generic [ref=e605]:
+              - figure [ref=e607]:
+                - img "Noah Gentile (Solutions Engineering), sanity" [ref=e608]
+              - paragraph [ref=e610]:
+                - strong [ref=e611]: Noah Gentile (Solutions Engineering), sanity
+                - text: Solutions Engineering @ Sanity
+            - generic [ref=e613]:
+              - figure [ref=e615]:
+                - img "Jon Eide Johnsen" [ref=e616]
+              - paragraph [ref=e618]:
+                - strong [ref=e619]: Jon Eide Johnsen
+                - text: Head of Growth & Data @ Sanity
+          - generic [ref=e620]:
+            - generic [ref=e622]:
+              - figure [ref=e624]:
+                - img "Tony Tsai" [ref=e625]
+              - paragraph [ref=e627]:
+                - strong [ref=e628]: Tony Tsai
+                - text: Marketing Director @ Perfect Corp
+            - generic [ref=e630]:
+              - figure [ref=e632]:
+                - img "Adam Gam" [ref=e633]
+              - paragraph [ref=e635]:
+                - strong [ref=e636]: Adam Gam
+                - text: Chief Marketing Officer @ Perfect Corp
+          - generic [ref=e637]:
+            - generic [ref=e639]:
+              - figure [ref=e641]:
+                - img "Jorge Euceda" [ref=e642]
+              - paragraph [ref=e644]:
+                - strong [ref=e645]: Jorge Euceda
+                - text: Senior Software Engineer | SDE III @ Foxit
+            - generic [ref=e647]:
+              - figure [ref=e649]:
+                - img "Oleksandr Kondratiuk" [ref=e650]
+              - paragraph [ref=e652]:
+                - strong [ref=e653]: Oleksandr Kondratiuk
+                - text: CTO @ akirolabs
+          - generic [ref=e654]:
+            - generic [ref=e656]:
+              - figure [ref=e658]:
+                - img "Valarie Regas" [ref=e659]
+              - paragraph [ref=e661]:
+                - strong [ref=e662]: Valarie Regas
+                - text: Program Implementation Manager @ CodePath
+            - generic [ref=e664]:
+              - figure [ref=e666]:
+                - img "Anthony Dombrowski" [ref=e667]
+              - paragraph [ref=e669]:
+                - strong [ref=e670]: Anthony Dombrowski
+                - text: Product Manager Developer Experience
+          - generic [ref=e671]:
+            - generic [ref=e673]:
+              - figure [ref=e675]:
+                - img "Timothy Spann" [ref=e676]
+              - paragraph [ref=e678]:
+                - strong [ref=e679]: Timothy Spann
+                - text: SR SE @ Snowflake
+            - generic [ref=e681]:
+              - figure [ref=e683]:
+                - img "Roy Derks" [ref=e684]
+              - paragraph [ref=e686]:
+                - strong [ref=e687]: Roy Derks
+                - text: Developer Experience @ IBM
+          - generic [ref=e688]:
+            - generic [ref=e690]:
+              - figure [ref=e692]:
+                - img "Viswanathan Ranganathan" [ref=e693]
+              - paragraph [ref=e695]:
+                - strong [ref=e696]: Viswanathan Ranganathan
+                - text: Senior Distributed Systems Engineer @ Netflix
+            - generic [ref=e698]:
+              - figure [ref=e700]:
+                - img "Jeremy Glassenberg" [ref=e701]
+              - paragraph [ref=e703]:
+                - strong [ref=e704]: Jeremy Glassenberg
+                - text: Product Management Director @ Salesforce
+          - generic [ref=e705]:
+            - generic [ref=e707]:
+              - figure [ref=e709]:
+                - img "Judith Ifeoma Nwokike" [ref=e710]
+              - paragraph [ref=e712]:
+                - strong [ref=e713]: Judith Ifeoma Nwokike
+                - text: Product Designer @ Flutterwave
+            - generic [ref=e715]:
+              - figure [ref=e717]:
+                - img "Gift Ojeabulu" [ref=e718]
+              - paragraph [ref=e720]:
+                - strong [ref=e721]: Gift Ojeabulu
+                - text: Data Scientist & AI Dev. Advocate
+          - generic [ref=e722]:
+            - generic [ref=e724]:
+              - figure [ref=e726]:
+                - img "Simon Müller" [ref=e727]
+              - paragraph [ref=e729]:
+                - strong [ref=e730]: Simon Müller
+                - text: CTO @ eigenmind
+            - generic [ref=e732]:
+              - figure [ref=e734]:
+                - img "Karol Rogowski" [ref=e735]
+              - paragraph [ref=e737]:
+                - strong [ref=e738]: Karol Rogowski
+                - text: Head of Engineering
+          - generic [ref=e739]:
+            - generic [ref=e741]:
+              - figure [ref=e743]:
+                - img "Abhishek Mishra" [ref=e744]
+              - paragraph [ref=e746]:
+                - strong [ref=e747]: Abhishek Mishra
+                - text: Lead DevRel Engineer @ Smallest AI
+            - generic [ref=e749]:
+              - figure [ref=e751]:
+                - img "Joel Varty" [ref=e752]
+              - paragraph [ref=e754]:
+                - strong [ref=e755]: Joel Varty
+                - text: CTO @ Agility CMS
+          - generic [ref=e756]:
+            - generic [ref=e758]:
+              - figure [ref=e760]:
+                - img "Renato Azevedo Sant Anna" [ref=e761]
+              - paragraph [ref=e763]:
+                - strong [ref=e764]: Renato Azevedo Sant Anna
+                - text: Insights Cognitivos Consultoria
+            - generic [ref=e766]:
+              - figure [ref=e768]:
+                - img "Michelle Bonat" [ref=e769]
+              - paragraph [ref=e771]:
+                - strong [ref=e772]: Michelle Bonat
+                - text: CEO @ Soterian AI
+          - generic [ref=e773]:
+            - generic [ref=e775]:
+              - figure [ref=e777]:
+                - img "Tanya Vlahovic" [ref=e778]
+              - paragraph [ref=e780]:
+                - strong [ref=e781]: Tanya Vlahovic
+                - text: Head of 3rd-Party Ecosystem Experiences @ Intuit
+            - generic [ref=e783]:
+              - figure [ref=e785]:
+                - img "Rosalind Radcliffe" [ref=e786]
+              - paragraph [ref=e788]:
+                - strong [ref=e789]: Rosalind Radcliffe
+                - text: IBM Fellow, CTO for Z and LinuxONE Ecosystem
+          - generic [ref=e790]:
+            - generic [ref=e792]:
+              - figure [ref=e794]:
+                - img "Amit Sharma" [ref=e795]
+              - paragraph [ref=e797]:
+                - strong [ref=e798]: Amit Sharma
+                - text: Director @ infinite security
+            - generic [ref=e800]:
+              - figure [ref=e802]:
+                - img "Ohad Manor" [ref=e803]
+              - paragraph [ref=e805]:
+                - strong [ref=e806]: Ohad Manor
+                - text: CTO @ 4Cast
+          - generic [ref=e807]:
+            - generic [ref=e809]:
+              - figure [ref=e811]:
+                - img "Vishal Pallerla" [ref=e812]
+              - paragraph [ref=e814]:
+                - strong [ref=e815]: Vishal Pallerla
+                - text: Solutions Architect @ InterSystems
+            - generic [ref=e817]:
+              - figure [ref=e819]:
+                - img "Victoria van Roosmalen" [ref=e820]
+              - paragraph [ref=e822]:
+                - strong [ref=e823]: Victoria van Roosmalen
+                - text: CISO @ ONE IN CYBER
+          - generic [ref=e824]:
+            - generic [ref=e826]:
+              - figure [ref=e828]:
+                - img "Raul Popa" [ref=e829]
+              - paragraph [ref=e831]:
+                - strong [ref=e832]: Raul Popa
+                - text: CEO @ TypingDNA
+            - generic [ref=e834]:
+              - figure [ref=e836]:
+                - img "Vijji Suryadevara" [ref=e837]
+              - paragraph [ref=e839]:
+                - strong [ref=e840]: Vijji Suryadevara
+                - text: Founder & CEO
+          - generic [ref=e841]:
+            - generic [ref=e843]:
+              - figure [ref=e845]:
+                - img "Grishma Jena" [ref=e846]
+              - paragraph [ref=e848]:
+                - strong [ref=e849]: Grishma Jena
+                - text: Data Scientist and Program Lead @ IBM
+            - generic [ref=e851]:
+              - figure [ref=e853]:
+                - img "Deepak Gupta" [ref=e854]
+              - paragraph [ref=e856]:
+                - strong [ref=e857]: Deepak Gupta
+                - text: Founder/CEO @ GrackerAI
+          - generic [ref=e858]:
+            - generic [ref=e860]:
+              - figure [ref=e862]:
+                - img "Brenton House" [ref=e863]
+              - paragraph [ref=e865]:
+                - strong [ref=e866]: Brenton House
+                - text: Principal AI Advisor @ IBM
+            - generic [ref=e868]:
+              - figure [ref=e870]:
+                - img "Anton Gochev" [ref=e871]
+              - paragraph [ref=e873]:
+                - strong [ref=e874]: Anton Gochev
+                - text: VPE
+          - generic [ref=e877]:
+            - figure [ref=e879]:
+              - img "Kartik Agrawal" [ref=e880]
+            - paragraph [ref=e882]:
+              - strong [ref=e883]: Kartik Agrawal
+        - article [ref=e884]:
+          - heading "Judging Criteria" [level=3] [ref=e886]
+          - list [ref=e888]:
+            - listitem [ref=e889]:
+              - strong [ref=e890]: Progress
+              - text: How much progress did you make?
+            - listitem [ref=e891]:
+              - strong [ref=e892]: Concept
+              - text: Does it solve a real problem?
+            - listitem [ref=e893]:
+              - strong [ref=e894]: Feasibility
+              - text: Could this become a startup or company?
+      - generic [ref=e895]:
+        - paragraph [ref=e898]:
+          - text: Questions?
+          - link "Email the hackathon manager" [ref=e899] [cursor=pointer]:
+            - /url: mailto:info@devnetwork.com
+        - article [ref=e900]:
+          - heading "Hackathon sponsors" [level=3] [ref=e901]
+          - link [ref=e902] [cursor=pointer]:
+            - /url: https://kilo.ai/
+            - img "Kilo" [ref=e903]
+          - link [ref=e904] [cursor=pointer]:
+            - /url: https://www.perfectcorp.com/business
+            - img "Perfect Corp" [ref=e905]
+          - link [ref=e906] [cursor=pointer]:
+            - /url: https://romade.fepic.ro/
+            - img "RoMade" [ref=e907]
+          - link [ref=e908] [cursor=pointer]:
+            - /url: https://www.foxit.com/
+            - img "Foxit Software" [ref=e909]
+          - link [ref=e910] [cursor=pointer]:
+            - /url: https://www.outsystems.com/
+            - img "Outsystems" [ref=e911]
+          - link [ref=e912] [cursor=pointer]:
+            - /url: https://replit.com/
+            - img "Replit" [ref=e913]
+          - link [ref=e914] [cursor=pointer]:
+            - /url: https://you.com/home
+            - img "You.com" [ref=e915]
+          - link [ref=e916] [cursor=pointer]:
+            - /url: https://www.akamai.com/
+            - img "Akamai" [ref=e917]
+          - link [ref=e918] [cursor=pointer]:
+            - /url: https://appfire.com/
+            - img "Appfire" [ref=e919]
+          - link [ref=e920] [cursor=pointer]:
+            - /url: https://www.backblaze.com/
+            - img "Backblaze" [ref=e921]
+          - link [ref=e922] [cursor=pointer]:
+            - /url: https://www.browserbase.com/
+            - img "BrowserBase" [ref=e923]
+          - link [ref=e924] [cursor=pointer]:
+            - /url: https://buildkite.com/
+            - img "Buildkite" [ref=e925]
+          - link [ref=e926] [cursor=pointer]:
+            - /url: https://www.chainguard.dev/
+            - img "Chainguard" [ref=e927]
+          - link [ref=e928] [cursor=pointer]:
+            - /url: https://cline.bot/
+            - img "CLINE" [ref=e929]
+          - link [ref=e930] [cursor=pointer]:
+            - /url: https://www.cocreate.so/
+            - img "CoCreate" [ref=e931]
+          - link [ref=e932] [cursor=pointer]:
+            - /url: https://www.dash0.com/
+            - img "Dash0" [ref=e933]
+          - link [ref=e934] [cursor=pointer]:
+            - /url: https://www.descope.com/
+            - img "Descope" [ref=e935]
+          - link [ref=e936] [cursor=pointer]:
+            - /url: https://deepgram.com/
+            - img "Deepgram" [ref=e937]
+          - link [ref=e938] [cursor=pointer]:
+            - /url: https://elevenlabs.io/enterprise
+            - img "Eleven Labs" [ref=e939]
+          - link [ref=e940] [cursor=pointer]:
+            - /url: https://www.figma.com/
+            - img "Figma" [ref=e941]
+          - link [ref=e942] [cursor=pointer]:
+            - /url: https://galileo.ai/
+            - img "Galileo" [ref=e943]
+          - link [ref=e944] [cursor=pointer]:
+            - /url: https://lavinmq.com/
+            - img "LavinMQ" [ref=e945]
+          - link [ref=e946] [cursor=pointer]:
+            - /url: https://launchdarkly.com/
+            - img "LaunchDarkly" [ref=e947]
+          - link [ref=e948] [cursor=pointer]:
+            - /url: https://miro.com/
+            - img "Miro" [ref=e949]
+          - link [ref=e950] [cursor=pointer]:
+            - /url: https://www.progress.com/
+            - img "Progress Software Corporation" [ref=e951]
+          - link [ref=e952] [cursor=pointer]:
+            - /url: https://www.prolific.com/
+            - img "Prolific" [ref=e953]
+          - link [ref=e954] [cursor=pointer]:
+            - /url: https://www.qodo.ai/
+            - img "Qodo.ai" [ref=e955]
+          - link [ref=e956] [cursor=pointer]:
+            - /url: https://retool.com/
+            - img "Retool" [ref=e957]
+          - link [ref=e958] [cursor=pointer]:
+            - /url: https://www.sanity.io/
+            - img "Sanity" [ref=e959]
+          - link [ref=e960] [cursor=pointer]:
+            - /url: https://developers.redhat.com/
+            - img "Red Hat" [ref=e961]
+          - link [ref=e962] [cursor=pointer]:
+            - /url: https://www.twilio.com/en-us
+            - img "Twilio" [ref=e963]
+          - link [ref=e964] [cursor=pointer]:
+            - /url: https://wso2.com/
+            - img "WSO2" [ref=e965]
+        - paragraph [ref=e967]:
+          - text: This site is protected by reCAPTCHA and the Google
+          - link "Privacy Policy" [ref=e968] [cursor=pointer]:
+            - /url: https://policies.google.com/privacy
+          - text: and
+          - link "Terms of Service" [ref=e969] [cursor=pointer]:
+            - /url: https://policies.google.com/terms
+          - text: apply.
+  - contentinfo [ref=e970]:
+    - generic [ref=e971]:
+      - navigation [ref=e973]:
+        - heading "Devpost" [level=4] [ref=e974]
+        - list [ref=e975]:
+          - listitem [ref=e976]:
+            - link "About" [ref=e977] [cursor=pointer]:
+              - /url: https://info.devpost.com/about
+          - listitem [ref=e978]:
+            - link "Careers" [ref=e979] [cursor=pointer]:
+              - /url: https://info.devpost.com/careers
+          - listitem [ref=e980]:
+            - link "Contact" [ref=e981] [cursor=pointer]:
+              - /url: https://info.devpost.com/contact
+          - listitem [ref=e982]:
+            - link "Help" [ref=e983] [cursor=pointer]:
+              - /url: https://help.devpost.com/
+      - navigation [ref=e985]:
+        - heading "Hackathons" [level=4] [ref=e986]
+        - list [ref=e987]:
+          - listitem [ref=e988]:
+            - link "Browse hackathons" [ref=e989] [cursor=pointer]:
+              - /url: https://devpost.com/hackathons
+          - listitem [ref=e990]:
+            - link "Explore projects" [ref=e991] [cursor=pointer]:
+              - /url: https://devpost.com/software
+          - listitem [ref=e992]:
+            - link "Host a hackathon" [ref=e993] [cursor=pointer]:
+              - /url: https://info.devpost.com
+          - listitem [ref=e994]:
+            - link "Hackathon guides" [ref=e995] [cursor=pointer]:
+              - /url: https://info.devpost.com/guides
+      - navigation [ref=e997]:
+        - heading "Portfolio" [level=4] [ref=e998]
+        - list [ref=e999]:
+          - listitem [ref=e1000]:
+            - link "Your projects" [ref=e1001] [cursor=pointer]:
+              - /url: https://devpost.com/portfolio/redirect?page=projects
+          - listitem [ref=e1002]:
+            - link "Your hackathons" [ref=e1003] [cursor=pointer]:
+              - /url: https://devpost.com/portfolio/redirect?page=hackathons
+          - listitem [ref=e1004]:
+            - link "Settings" [ref=e1005] [cursor=pointer]:
+              - /url: https://devpost.com/settings
+      - navigation [ref=e1007]:
+        - heading "Connect" [level=4] [ref=e1008]
+        - list [ref=e1009]:
+          - listitem [ref=e1010]:
+            - link [ref=e1011] [cursor=pointer]:
+              - /url: https://twitter.com/devpost
+              - generic [ref=e1012]: 
+              - text: Twitter
+          - listitem [ref=e1014]:
+            - link [ref=e1015] [cursor=pointer]:
+              - /url: https://discord.com/invite/HP4BhW3hnp
+              - generic [ref=e1016]: 
+              - text: Discord
+          - listitem [ref=e1018]:
+            - link [ref=e1019] [cursor=pointer]:
+              - /url: https://www.facebook.com/devposthacks
+              - generic [ref=e1020]: 
+              - text: Facebook
+          - listitem [ref=e1022]:
+            - link [ref=e1023] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/devpost/
+              - generic [ref=e1024]: 
+              - text: LinkedIn
+    - navigation [ref=e1027]:
+      - generic [ref=e1029]:
+        - generic [ref=e1030]: © 2026 Devpost, Inc. All rights reserved.
+        - list [ref=e1031]:
+          - listitem [ref=e1032]:
+            - link "Community guidelines" [ref=e1033] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/community-guidelines
+          - listitem [ref=e1034]:
+            - link "Security" [ref=e1035] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/security
+          - listitem [ref=e1036]:
+            - link "CA notice" [ref=e1037] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/california-consumer-privacy-act
+          - listitem [ref=e1038]:
+            - link "Privacy policy" [ref=e1039] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/privacy-policy
+          - listitem [ref=e1040]:
+            - link "Terms of service" [ref=e1041] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/terms-of-service

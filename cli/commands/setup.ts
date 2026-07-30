@@ -1,4 +1,4 @@
-import { getConfig, setLLMConfig, type LLMConfig } from '../config-manager.js';
+import { getConfig, setLLMConfig, setDeployConfig, type LLMConfig, type DeployConfig } from '../config-manager.js';
 import { header, success, warn, info, ask } from '../output.js';
 import { initializeProviders } from '../provider-init.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
@@ -84,6 +84,33 @@ export async function setupCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIR
     setLLMConfig(llmConfig);
 
     success('Configuration saved.\n');
+
+    // GitHub token (optional)
+    info('GitHub token is used for:');
+    console.log('  • Creating and managing GitHub repositories');
+    console.log('  • Deploying generated projects via Vercel/Netlify');
+    console.log('  • Submission assistant (creating pull requests)');
+    console.log('  This is optional — you can skip and configure later.\n');
+
+    const ghAnswer = await ask('Configure GitHub Personal Access Token? (Y/n): ');
+    if (ghAnswer === null) {
+      return { success: false, message: 'Setup cancelled: no interactive input available.' };
+    }
+    if (ghAnswer.toLowerCase() !== 'n') {
+      const ghToken = await ask('Enter GitHub token (classic or fine-grained with repo scope): ');
+      if (ghToken === null) {
+        return { success: false, message: 'Setup cancelled: no interactive input available.' };
+      }
+      if (ghToken) {
+        const currentDeploy = getConfig()?.deploy ?? {};
+        const deployConfig: DeployConfig = {
+          ...currentDeploy,
+          githubToken: ghToken,
+        };
+        setDeployConfig(deployConfig);
+        success('GitHub token saved.\n');
+      }
+    }
 
     const verifyAnswer = await ask('Verify connection with this provider? (Y/n): ');
     if (verifyAnswer === null) {

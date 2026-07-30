@@ -154,6 +154,31 @@ export class CustomEndpointProvider implements LLMProvider {
     const apiKey = this.apiKeyManager.getKey(this.providerId);
     const startTime = Date.now();
 
+    const systemMsg = request.messages.find(m => m.role === 'system');
+    const userMsg = request.messages.find(m => m.role === 'user');
+    const promptTotalChars = request.messages.reduce((s, m) => s + m.content.length, 0);
+    const bodyStr = JSON.stringify({
+      model: request.model_id,
+      messages: request.messages.map((m) => ({ role: m.role, content: m.content })),
+      max_tokens: request.max_tokens,
+      temperature: request.temperature,
+      response_format: request.response_format === 'json_object' ? { type: 'json_object' } : undefined,
+    });
+
+    process.stderr.write(`\n=== REQUEST ===\n`);
+    process.stderr.write(`provider: ${this.providerId}\n`);
+    process.stderr.write(`model: ${request.model_id}\n`);
+    process.stderr.write(`endpoint URL: ${this.baseUrl}/chat/completions\n`);
+    process.stderr.write(`request body size: ${bodyStr.length} bytes\n`);
+    process.stderr.write(`total prompt length: ${promptTotalChars} characters\n`);
+    process.stderr.write(`system prompt length: ${systemMsg ? systemMsg.content.length : 0} characters\n`);
+    process.stderr.write(`user prompt length: ${userMsg ? userMsg.content.length : 0} characters\n`);
+    process.stderr.write(`max_tokens: ${request.max_tokens}\n`);
+    process.stderr.write(`temperature: ${request.temperature}\n`);
+    process.stderr.write(`stream: false\n`);
+    process.stderr.write(`response_format: ${request.response_format ?? 'text'}\n`);
+    process.stderr.write(`headers (excl secrets): Content-Type: application/json\n`);
+
     if (this.rateLimitTracker.isRateLimited(this.providerId)) {
       throw new Error(`${this.providerId} rate limit exceeded`);
     }
@@ -171,10 +196,28 @@ export class CustomEndpointProvider implements LLMProvider {
       body.response_format = { type: 'json_object' };
     }
 
+    let abortElapsed: number | null = null;
+    let abortStage = '';
+
     const fetcher = async (): Promise<Record<string, unknown>> => {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+      const timeout = setTimeout(() => {
+        abortElapsed = Date.now() - startTime;
+        abortStage = stage;
+        process.stderr.write(`\n=== ABORT FIRED ===\n`);
+        process.stderr.write(`exact elapsed time: ${abortElapsed}ms\n`);
+        process.stderr.write(`current stage: ${abortStage}\n`);
+        process.stderr.write(`stack: ${new Error().stack}\n`);
+        controller.abort();
+      }, this.timeoutMs);
+
+      let stage = 'before fetch()';
       try {
+        stage = 'before fetch()';
+        const t1 = Date.now();
+        process.stderr.write(`\n=== TIMING ===\n`);
+        process.stderr.write(`T0 (request created): 0ms\n`);
+
         const res = await fetch(`${this.baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
@@ -184,6 +227,10 @@ export class CustomEndpointProvider implements LLMProvider {
           body: JSON.stringify(body),
           signal: controller.signal,
         });
+
+        const t2 = Date.now();
+        stage = 'waiting for headers';
+        process.stderr.write(`T1 (fetch() called): ${t2 - startTime}ms\n`);
 
         if (res.status === 429) {
           const resetAt = new Date(Date.now() + 60000);
@@ -195,7 +242,18 @@ export class CustomEndpointProvider implements LLMProvider {
           throw Object.assign(new Error(`${this.providerId} API error ${res.status}: ${text}`), { status: res.status, retryAfter: res.headers.get('Retry-After') });
         }
 
+        const t3 = Date.now();
+        stage = 'before res.json()';
+        process.stderr.write(`T2 (first response headers received): ${t3 - startTime}ms\n`);
+        process.stderr.write(`response status: ${res.status}\n`);
+
+        stage = 'reading response body';
         const data = await res.json();
+
+        const t4 = Date.now();
+        stage = 'after res.json()';
+        process.stderr.write(`T3 (response body fully read + parsed): ${t4 - startTime}ms\n`);
+
         return data as Record<string, unknown>;
       } finally {
         clearTimeout(timeout);
@@ -205,6 +263,8 @@ export class CustomEndpointProvider implements LLMProvider {
     const retryConfig = { ...DEFAULT_RETRY_CONFIG, maxRetries: this.maxRetries };
     const data = await withRetry(fetcher, retryConfig);
 
+    const t6 = Date.now();
+    process.stderr.write(`T5 (JSON parsed, provider.execute() returns): ${t6 - startTime}ms\n`);
     const latency = Date.now() - startTime;
 
     this.requestTimestamps.push(Date.now());

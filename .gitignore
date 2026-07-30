@@ -14,3 +14,21 @@ tmp/
 *.tgz
 build-*/
 create-*/
+
+# Generated project directories (from hag run)
+ai-yes-*/
+gatewayhacks-*/
+hackonomics-*/
+india-high-school-*/
+not-a-url/
+project-from-https-*/
+---/
+
+# Stale debug / test output files
+p0_hang_fix_*.txt
+test_hang.txt
+test_help.txt
+test_run.txt
+
+# Generated test fixtures
+tests/hackonomics-*/

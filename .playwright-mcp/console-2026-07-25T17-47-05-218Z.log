@@ -1,0 +1,11 @@
+[    1477ms] [LOG] JQMIGRATE: Migrate is installed, version 1.4.1 @ https://js.honeybadger.io/v6.12/honeybadger.min.js:0
+[    2065ms] [WARNING] We would like to inform Cookie Control users that IAB has announced the end of support for TCFv1.1 at the end of March 2020. Full support for IAB TCFv2.0 and CCPA will be included in Cookie Control v9.0, which all users will be eligible to download for free once it is released. Customers who use the IAB functionality are strongly advised to plan for this upgrade as soon as possible. For more information, please visit https://www.civicuk.com @ https://js.honeybadger.io/v6.12/honeybadger.min.js:0
+[    3826ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://ai-yes-competition-30441.devpost.com/undefined:0
+[    3827ms] [ERROR] TypeError: Cannot read properties of undefined (reading 'length')
+    at Proxy.<anonymous> (https://d2dmyh35ffsxbl.cloudfront.net/packs/js/hackathon_recommendation-91dd65c0ef5fa16ded83.js:2:217767)
+    at Proxy.<anonymous> (https://d2dmyh35ffsxbl.cloudfront.net/packs/js/hackathon_recommendation-91dd65c0ef5fa16ded83.js:2:16208)
+    at ee (https://d2dmyh35ffsxbl.cloudfront.net/packs/js/hackathon_recommendation-91dd65c0ef5fa16ded83.js:2:14127)
+    at https://d2dmyh35ffsxbl.cloudfront.net/packs/js/hackathon_recommendation-91dd65c0ef5fa16ded83.js:2:32583
+    at n (https://d2dmyh35ffsxbl.cloudfront.net/packs/js/hackathon_recommendation-91dd65c0ef5fa16ded83.js:2:2690)
+    at _t (https://d2dmyh35ffsxbl.cloudfront.net/packs/js/hackathon_recommendation-91dd65c0ef5fa16ded83.js:2:11233)
+    at Qt (https://d2dmyh35ffsxbl.cloudfront.net/packs/js/hackathon_recommendation-91dd65c0ef5fa16ded83.js:2:12851) @ https://js.honeybadger.io/v6.12/honeybadger.min.js:0

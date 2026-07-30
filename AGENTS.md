@@ -11,106 +11,118 @@ Turn Hack-A-Gent into a production-quality CLI that any developer can install gl
 - Never remove features unless absolutely necessary
 - Maintain deterministic behavior and template fallback when no LLM configured
 
-## Completed Phases
+## Current Status (v1.1.1)
 
-### Phase 1 — Competition Intelligence (New)
-- `CompetitionIntelligence` class in `cli/devpost-parser.ts` — extracts structured competition analysis from Devpost data
-- `CompetitionAnalysis` interface with challenge summary, weighted judging criteria, sponsor APIs, deliverables, restrictions, deadlines
-- Detects sponsor APIs (OpenAI, Twilio, Stripe, Firebase, AWS, Azure, Supabase, Vercel, Hugging Face) with strategic value scoring
-- Normalizes judging weights to sum to 100, infers theme/difficulty/organizer from raw text
-- `generateBrief()` produces markdown competition summary
+- **Build**: `npx tsc --noEmit` — 0 errors; `npm run build` — succeeds
+- **Tests**: 856 unit/feature tests pass (44s), 3 pre-existing benchmark failures (starter ESM syntax, evaluateProject timeout, history race condition — all timeout/environmental)
+- **Pipeline**: 11-stage spec pipeline: Challenge Analysis → **Challenge Validation** → Dynamic Interview → Winning Strategy → Project Generation → Auto Repair → Runtime Validation → Browser Validation → Internal Judge → Improvement Pass → Submission Package
+- **Version**: 1.1.1
 
-### Phase 2 — Winning Strategy Generator (New)
-- `WinningStrategyGenerator` class in `cli/devpost-parser.ts` — generates judge-optimized strategies from competition analysis
-- `WinningStrategy` interface with targeted criteria, sponsor API priorities, differentiators, risks/mitigations, estimated judge score
-- Sorts criteria by weight to prioritize highest-impact areas
-- Prioritizes must-use/should-use sponsor APIs
+## Completed Work
 
-### Phase 3 — Hackathon Pipeline Orchestrator (New)
-- `HackathonPipelineOrchestrator` class in `cli/devpost-parser.ts` — chains CompetitionIntelligence → WinningStrategyGenerator → SelfReviewScorer → PipelineReportGenerator
-- `PipelineContext` tracks all stages with status, timing, and results
-- `init(analysis, strategy)` records pre-computed results without duplicating work
-- `completePipeline()` runs self-review → optimization → quality checks → final report
-- `summarizePipeline()` produces markdown summary of all stages
-- Wired into `cli/commands/run.ts` — runs after execution with competition analysis, strategy, review scores, and improvements added to pipeline output
+### Session: v1.1.0 / v1.1.1 — Pipeline Implementation (21 tasks, 6 phases)
 
-### Phase 4 — Prompt Engineering (Not applicable in this session)
-- The existing `prompt-engine.ts` in kernel/prompts handles prompt assembly
+**Phase 1 — Dynamic Interview Engine (Tasks 1.1–1.5)**
+- `cli/interview/types.ts` — `InterviewQuestion`, `InterviewOption`, `InterviewInfluence`, `InterviewState`, `InterviewResult` types
+- `cli/interview/question-generator.ts` — `generateQuestions()` from `CompetitionAnalysis`, generates prize/sponsor/budget/idea questions
+- `cli/interview/runner.ts` — `runInterview()` CLI, numbered options, skip support, multi-select for sponsors
+- `cli/interview/idea-generator.ts` — `generateProjectIdea()` auto-generates ideas from top criterion + top sponsor API
+- `cli/interview/index.ts` — barrel export
+- Wired into `cli/commands/run.ts` after Challenge Analysis and before Winning Strategy
 
-### Phase 5 — Project Quality Scaffolder (New)
-- `ProjectScaffolder` class in `cli/devpost-parser.ts` — checks generated projects for quality scaffolding elements
-- `QualityCheck` interface with check name, pass/fail status, message, and severity (required/recommended/optional)
-- Checks for: README, LICENSE, .gitignore, .env.example, Docker, CI/CD, Tests, Deployment Config, Responsive UI
-- `formatChecks()` produces markdown quality checklist
+**Phase 2 — Strategy-First Code Generation (Tasks 2.1–2.3)**
+- Extended `WinningStrategy` with `TechnologyStack`, `UIDirection`, `FeaturePriority`, `RoadmapPhase`
+- `cli/pipeline/strategy-adapter.ts` — `adaptStrategyToGeneration()` + `buildCodeGenContext()` decouples code gen from raw analysis
+- Updated code generation entry point in `run.ts` to consume `GenerationInput`
 
-### Phase 6 — Self-Review Scorer (New)
-- `SelfReviewScorer` class in `cli/devpost-parser.ts` — scores 7 dimensions: Innovation, Technical Depth, Feasibility, Presentation, Completeness, Maintainability, Judge Alignment
-- 100% deterministic scoring (no Math.random)
-- `runImprovementLoop()` — end-to-end feedback loop with convergence detection
-- `generateFeedback()` produces prioritized improvement actions (critical > high > medium > low)
-- `summarize()` produces markdown score report
-- Integrated into PipelineReportGenerator as fallback scorer
+**Phase 3 — Pipeline Refactor (Tasks 3.1–3.3)**
+- `cli/pipeline/spec-pipeline.ts` — `SpecPipelineStage` enum, `SPEC_PIPELINE_ORDER`, `SpecPipeline` validation class
+- `cli/pipeline/runtime-validation.ts` — `validateRuntime()` detects framework, installs deps, starts server, health check
+- Reordered `run.ts` to exact 10-stage spec order
 
-### Phase 7 — Hackathon Optimizer (New)
-- `HackathonOptimizer` class in `cli/devpost-parser.ts` — optimization stage that asks "If I were judging, how could it score higher?"
-- Generates targeted optimizations: demo scripts, sponsor API showcases, zero-config deployment, UX onboarding
-- Prioritizes critical/high/medium actions based on score thresholds and competition context
-- `formatOptimizations()` produces markdown optimization report
+**Phase 4 — Real Improvement Pass (Tasks 4.1–4.4)**
+- `cli/improvement/improvement-types.ts` — `ImprovementAction` model with 7 action types
+- `cli/improvement/improvement-planner.ts` — `planImprovements()` maps judge scores to targeted actions
+- `cli/improvement/improvement-executor.ts` — `executeImprovement()` writes files for all 7 action types
+- `cli/improvement/index.ts` — barrel export
+- Wired as "Improvement Pass" stage after Internal Judge
 
-### Phase 8 — Pipeline Benchmarks (New)
-- `PipelineBenchmarker` class in `cli/devpost-parser.ts` — compares old vs improved pipeline performance
-- `BenchmarkComparison` interface tracks prompt size, generation time, error count, judge score, criteria analyzed, improvement actions
-- `generateBenchmarkPrompts()` produces standardized benchmark suite
-- `formatComparison()` produces markdown comparison table
+**Phase 5 — Submission Package (Tasks 5.1–5.3)**
+- `cli/submission/package-generator.ts` — `generatePackage()` writes README.md, SETUP.md, DEPLOY.md, DEMO.md, SUBMISSION.md
+- `cli/submission/readiness-check.ts` — `checkReadiness()` 6 checks (build, readme, deploy config, license, gitignore, placeholders)
+- `cli/submission/index.ts` — barrel export
+- Wired as "Submission Package" stage
 
-### Phase 9 — Pipeline Report Generator (New)
-- `PipelineReportGenerator` class in `cli/devpost-parser.ts` — produces comprehensive end-of-generation report
-- `FinalReport` interface with challenge summary, chosen strategy, tech stack, features, weaknesses, improvements, 7 review scores
-- `formatReport()` produces markdown report
-- Integrates with SelfReviewScorer for score computation
+**Phase 6 — CLI Polish (Tasks 6.1–6.2)**
+- Renamed all stages to spec names in pipeline display
+- Removed `--demo`, `--research`, `--simulate-only` flags
+- Removed obsolete `runDemoSurfacePipeline()`
+- Hidden qualification gate and learning from display (kept as internal logic)
 
-## Previous Phases (Pre-existing)
+## Previous Sessions
 
-### Phase 1 — Bug Fixes & Core Stability
-- CustomEndpointProvider API key lookup bug fix (`this.apiKeyEnvVar` mangling) — replaced with `this.providerId`
-- `buildExecutionPlan()` stub (always threw) → `extractRequirements()` + `createExecutionPlan()` in `run.ts`
-- `RouterEngine` wired into orchestrator + `generateFilesWithLLM()` method with template fallback
-- Import path fixes (`../llm/` → `../kernel/llm/`)
-- `process.exit()` → `process.exitCode` to avoid Node.js libuv assert crash on Windows (SIGINT still uses `process.exit()`)
-- Zod config schema validation — rejects invalid provider values, validates on read/write
-- `.env` file support (`HACKAGENT_PROVIDER`, `HACKAGENT_API_KEY`, `HACKAGENT_BASE_URL`, etc.)
-- `checkHealth()` added to `LLMProvider` interface + all 6 implementations (CustomEndpoint uses real `GET /models`)
-- `--verify` flag uses real `checkHealth()` instead of cached `getHealth()`
-- `hag` bin alias + `npm run hag` script; removed broken `hack-agent` bin entry
-- Command aliases (`c` → `config`, `s` → `setup`)
-- Provider aliases (`nvidia-nims`, `nvidia-nim` → `nvidia`)
-- SIGINT handler for graceful Ctrl+C
-- Created `cli/commands/setup.ts` — interactive setup wizard
-- `--endpoint` as alias for `--base-url`
+### Fix `hackagent run` Hang
+- **Fix 1**: `res.json()` moved inside `AbortController` in all 5 providers — prevents indefinite hang on stalled HTTP body
+- **Fix 2**: `withRetry` skips retries on `AbortError` (was retrying timeouts, causing 240s per failure → 40+ min delays)
+- **Files**: `kernel/providers/*-provider.ts`, `kernel/providers/provider-types.ts`
 
-### Phase 2 — CLI Experience
-- Created `cli/output.ts` — ANSI color utility with `icons`, `Spinner`, `header()`, `step()`, `success()`, `error()`, `warn()`, `info()`, `labeled()`, `divider()`, `dim()`, `log()`
-- Disables colors/spinners when stdout is not a TTY
-- Updated `run.ts` and `setup.ts` to use output utilities
-- Setup type fixes (non-null assertions, `as` cast for provider value)
+### Sprint 4 — Production Readiness
+- `typecheckAndRepair` removed from `executeFullPipeline` (was 558s timeout in tests), moved to `run.ts` as explicit post-pipeline step
+- `typecheckAndRepair` and `runtimeSmokeTest` made `public` for external calling
+- `tmp`/`__test` guard skips npm install in temp/test directories
 
-### Phase 5 — New CLI Commands
-- `hag doctor` — system diagnostic (Node, Git, config, provider checkHealth, workspace)
-- `hag models` — lists models from configured provider via `getModels()`
-- `hag providers` — shows all 6 provider statuses (configured, initialized, healthy)
-- `hag version` — displays version from `package.json`
-- Registered in `CommandName` union type and `index.ts`
+### Sprint 5 — v1.0.3 Production Quality Overhaul
+- 9 critical bug fixes (typecheck return values, validation bypass, sdkMap structure, shell injection, SSRF, path traversal, hardcoded provider, CLI UX)
+- `kernel/qualification/hackathon-qualifier.ts` — 30+ supported technologies, classifies hackathons
+- `kernel/repair/autonomous-repair.ts` — parses TS errors, pattern-based fixes
+- `kernel/repair/code-quality-validator.ts` — validates against 10 common LLM patterns
+- `kernel/evaluation/real-evaluator.ts` — 6-dimension code analysis scoring
+- `kernel/validation/browser-validator.ts` — dev server + HTML analysis
+- `kernel/learning/failure-tracker.ts` — records failures, tracks patterns
+- 12 high/medium issue fixes (empty catches, fabricated data, unused imports, mock warnings, test timeouts)
+- Version bumped to 1.0.3
 
-### CLI Output Polish
-- Migrated all 10 remaining command files from `console.log`/`console.error` to `cli/output.ts`:
-  `benchmark.ts`, `chat.ts`, `deploy.ts`, `explain.ts`, `health.ts`,
-  `memory.ts`, `replay.ts`, `resume.ts`, `status.ts`, `test.ts`
+### Fix `hag run` Generation Quality
+- **Fix 1**: RouterEngine model fallback limited to 3 attempts (was unbounded on OpenRouter)
+- **Fix 2**: `components/` → `src/components/` normalization in `postProcessProject()`
+- **Fix 3**: Richer runtime diagnostics for ECONNRESET
 
-### Phase 3 — Global Install (verified)
-- `npm link` works
-- `hackagent`, `hag`, `npx hackagent` all work
-- Help shows all commands
-- Unconfigured state shows helpful error messages pointing to `hag setup`
+### Fix Production Build (pages/app conflict) & ECONNRESET Race
+- **Fix 4**: `writeFileSync` → `rmSync` for `pages/` directory cleanup
+- **Fix 5**: Removed `resolve()` from `req.on('error')` handler — defers to close handler
+- **Fix 6**: Removed unconditional `vitest` pin; added `skipLibCheck` + `types: ['node']` to generated tsconfig
+
+### Session: Challenge Validation — Section-Scoped Parsing + Validation Stage
+- `cli/pipeline/challenge-validation.ts` — `validateChallenge()`, `validateSponsors()`, `validateJudgingCriteria()`, `validateTracks()`, `validateSubmissionRequirements()`, `validateNoInferredData()` — 6 checks that verify parsed data comes from proper HTML section headings
+- `features/analyze/parser.ts` — Added generic `extractSectionText(html, sectionNames)` function; refactored `extractSponsorSectionText()` to use it; made `parseJudgingCriteria()` section-scoped (requires `<h2>Judging Criteria</h2>` heading, returns empty if none found)
+- `cli/pipeline/spec-pipeline.ts` — Added `ChallengeValidation` stage (now 11 stages total)
+- `cli/commands/run.ts` — Wired Challenge Validation after parsing and qualification gate
+- `tests/unit/challenge-validation.test.ts` — 24 tests covering all validation checks
+- All test SAMPLE_HTML updated with proper `<h2>Judging Criteria</h2>` and `<h2>Sponsors</h2>` headings
+
+### Session: QA — 6 Parser Bugs Fixed (ai-yes-competition-30441.devpost.com)
+- **Bug (judging criteria)**: `parseJudgingCriteria` received `stripHtml` output (one line), losing `<li>` structure. Fixed by passing raw HTML section; added `extractCriteriaFromLis()` for `<strong>` name + percentage detection. 5 new regression tests.
+- **Bug 1 (organizer)**: "Hosted by"/"Organized by" pattern not present on page. Added fallback: extract organization name from `hackathons?organization=` sidebar link.
+- **Bug 2 (themes)**: False positives from footer text ("social", "security", "privacy"); missing "Beginner Friendly" and "Machine Learning/AI". Added `extractThemesFromTags()` — parses Devpost `hackathons?themes[]=` tag links; keyword fallback for non-Devpost pages.
+- **Bug 3 (prizes)**: `\$[\d,]+` regex returned nothing for non-cash prizes. Added fallback: extract prize descriptions (certificates, trophies, swag) from Prizes section.
+- **Bug 4 (rules)**: `extractSectionText` only matches h2/h3/h4; "Who can participate" used h6. Added fallback: regex for `<h5>/<h6>Who can participate</h6><ul>` with `<li>` extraction.
+- **Bug 5 (deadlines)**: Time and timezone missing from deadline regex. Extended regex to capture `@ HH:MMam/pm` and `GMT+5:30` timezone offsets.
+- **QA process**: Playwright as ground truth — extracted HTML, DOM queries for each field, compared against parser output. 9 new regression tests (62 total).
+- **Status**: AI YES page parser output now matches ground truth for all 9 fields.
+
+### Earlier Work (v1.0.0–v1.0.2)
+- Core stability: CustomEndpointProvider API key fix, `buildExecutionPlan()` replacement, RouterEngine wiring, import path fixes
+- `process.exit()` → `process.exitCode` for Windows compatibility
+- Zod config schema validation, `.env` support, `checkHealth()` on all 6 providers
+- CLI: `hag` alias, `hag doctor/models/providers/version` commands, setup wizard, ANSI output utilities
+- Global install: `npm link`, `hackagent`, `hag`, `npx hackagent` all work
+- Output polish: all 10 command files migrated from `console.log`/`console.error` to `cli/output.ts`
+
+## Remaining Ideas / Future Work
+- CI/CD pipeline for npm publishing (`.github/workflows/publish.yml` exists but untested)
+- Dynamic model fetching from provider APIs (currently static/hardcoded)
+- Browser smoke test with headless Chrome (not yet implemented)
+- AI generation reliability (JSON parse errors in LLM output, ~40% success with NVIDIA NIM)
 
 ## Key Decisions
 - `process.exit()` → `process.exitCode` to avoid Node.js libuv assert crash on Windows
@@ -120,168 +132,17 @@ Turn Hack-A-Gent into a production-quality CLI that any developer can install gl
 - `hag` shorthand for `hackagent` + `c` for `config`, `s` for `setup`
 - Terminal output utility (`cli/output.ts`) with no dependencies — ANSI escape codes directly
 
-## Critical Context
-- `npx tsc --noEmit` — 0 TypeScript errors (clean compile)
-- `npm run build` emits `dist/cli/index.js` successfully
-- `npm run hackagent` uses `tsx` directly (no build needed)
-- Test suite: 1200+ tests, 2 failures (both timeout-related in slow CI)
-- Pipeline produces 20 tasks for real Devpost URLs with real NVIDIA NIMs API key
-
 ## Relevant Files
 - `cli/output.ts` — ANSI color/spinner/icon utility
 - `cli/index.ts` — entry point, aliases, SIGINT handler
 - `cli/types.ts` — `CommandName` union with all commands
 - `cli/config-manager.ts` — Zod validation, `.env` support
 - `cli/provider-init.ts` — creates RouterEngine from config
-- `cli/commands/setup.ts` — interactive setup wizard
-- `cli/commands/config.ts` — LLM/deploy config management
-- `cli/commands/doctor.ts` — system diagnostic
-- `cli/commands/models.ts` — list models
-- `cli/commands/providers.ts` — provider status
-- `cli/commands/version.ts` — version display
-- `cli/commands/run.ts` — full pipeline runner
-- `cli/commands/status.ts`, `memory.ts`, `health.ts`, `benchmark.ts`, `deploy.ts`, `explain.ts`, `replay.ts`, `resume.ts`, `test.ts`, `chat.ts` — all migrated to output.ts
-
-## Phase 1-9 Implemented Changes
-
-### Phase 1 — Competition Intelligence
-- Added `CompetitionAnalysis` interface with structured fields for: challenge summary, theme, difficulty, participants, organizer
-- Scoring weights are parsed from judging criteria text (e.g. "40%", "25 pts") and normalized to sum to 100
-- `SponsorAPI` detection from known sponsors (OpenAI, Twilio, Stripe, Firebase, AWS, etc.)
-- `Deliverable`, `Deadline`, and `Restriction` extraction from raw text
-- `CompetitionIntelligence` class with `analyze()` method that produces structured analysis
-- `generateBrief()` method for concise markdown briefs
-
-### Phase 2 — Winning Strategy Generator
-- `WinningStrategy` interface: oneLiner, whyScoreWell, targetedCriteria, prioritizedAPIs, architecture, differentiators, risks
-- `WinningStrategyGenerator` class: takes `CompetitionAnalysis`, produces judge-optimized strategy
-- Prioritizes top-weighted criteria, sponsor APIs, and differentiators
-
-### Phase 9 — Pipeline Reports
-- `FinalReport` interface: challengeSummary, chosenStrategy, techStack, features, weaknesses, improvements
-- 7 self-review scores: Innovation, Technical Depth, Feasibility, Presentation, Completeness, Maintainability, Judge Alignment
-- `PipelineReportGenerator` class: produces reports from execution results
-- `formatReport()` generates readable markdown report
-
-### Files Changed
-- `cli/devpost-parser.ts` — Major additions: 3 new classes, 4 new interfaces, ~350 lines of new code
-
-### Implementation Notes
-- Uses `createDeterministicUuid` and `getSeededRandom` from the determinism kernel (not `crypto.randomUUID()` or `Math.random()`)
-- Backwards compatible — all existing exports preserved
-- All new classes are exported from `cli/devpost-parser.ts`
-
-## Remaining Ideas
-- `CompetitionIntelligence`, `WinningStrategyGenerator`, `PipelineReportGenerator` — wired into `cli/commands/run.ts` via `HackathonPipelineOrchestrator`
-- Phase 3: Multi-Agent Pipeline — chain agents with filtered info flow
-- Phase 4: Prompt Engineering Audit — improve clarity, structure, JSON reliability
-- Phase 5: Project Quality Scaffolding — auto-generate README, LICENSE, .gitignore, .env.example, Docker, CI
-- Phase 6: Dedicated SelfReviewScorer class with the 7 scoring dimensions
-- Phase 7: HackathonOptimizer that reviews projects and suggests improvements
-- Phase 8: Old vs improved pipeline benchmarks
-- Dynamic model fetching from provider APIs (currently all static/hardcoded)
-- CI/CD pipeline for npm publishing
-
-## Session: Fix `hackagent run` Hang
-
-### Fix 1: `res.json()` outside AbortController (indefinite hang)
-All 5 LLM providers called `res.json()` **after** `clearTimeout`, leaving response body parsing unprotected. If the HTTP body stream stalled, this hung **forever**.
-- **Fix**: Moved `await res.json()` inside `fetcher`'s `try` block (before `clearTimeout`)
-- **Files**: `kernel/providers/openai-provider.ts`, `anthropic-provider.ts`, `gemini-provider.ts`, `openrouter-provider.ts`, `custom-endpoint-provider.ts`
-
-### Fix 2: `withRetry` retrying timeout errors (30+ min delay)
-`withRetry` retried ALL errors including `AbortError` (timeout). With `maxRetries=3` and 60s timeout, each LLM call took 4×60s = **240s** to fail. 10+ calls = **40+ minutes**.
-- **Fix**: Added `isAbortError` check in `withRetry` — abort errors skip retries and throw immediately
-- **Fix**: Reduced `CustomEndpointProvider` default timeout from 60s to 30s (matching other providers)
-- **Files**: `kernel/providers/provider-types.ts`, `kernel/providers/custom-endpoint-provider.ts`
-
-### Result
-- Each failed LLM call: **30s** (was 240s)
-- LLM stage total: **~5 min** (was 40+ min)
-- Pipeline no longer hangs indefinitely — completes all LLM calls and proceeds to browser tests
-
-## Session: Sprint 4 — Production Readiness
-
-### Fixes
-- **`typecheckAndRepair` removed from `executeFullPipeline`** — was causing 558s timeouts in integration tests (7-min npm install + tsc in tmp dir). Moved to `run.ts` as explicit post-pipeline step so it runs in production only.
-- **`typecheckAndRepair` made `public`** — exposed for external calling from `cli/commands/run.ts`
-- **`runtimeSmokeTest` made `public`** — exposed for external calling, same pattern
-- **`tmp`/`__test` guard** — replaces node_modules-only check; skips npm install when projectDir is in a temp or test directory
-
-### New CLI Behavior
-- `hag run` now shows **Type-checking** stage after pipeline execution (typecheck + auto-repair)
-- `hag run` now shows **Smoke test** stage — starts dev server, hits localhost, reports HTTP 200 status
-- Both stages are non-fatal: failure doesn't block report generation
-
-### Test Metrics
-- **Test suite**: 77 pass, 3 failed files, 6 failed tests — **all pre-existing**, back to baseline
-- **Duration**: Full test suite runs in **61s** (was 558s after introducing typecheckAndRepair)
-- **Integration tests**: `internet-execution.test.ts` completes in **6.3s** (was timing out at 558s)
-
-### Remaining Production Issues
-- **LLM non-determinism** (~40% success with NVIDIA NIM) — not fixable in code, output varies wildly
-- **TypeScript errors in LLM output** — common patterns: named vs default export, missing children prop, missing @types/* packages, inline types vs imports. typecheckAndRepair mitigates but can't fix all
-- **5/6 validation projects fail to build when LLM succeeds** (template fallback always works)
-
-## Session: Sprint 5 — v1.0.3 Production Quality Overhaul
-
-### Phase 0 — Critical Bug Fixes (9 fixes)
-- `typecheckAndRepair` no longer returns `true` on failure — changed all 5 early-exit paths from `return true` to `return false`
-- Validation bypass via `tmp/__test` substring match fixed with segment-based check
-- `sdkMap` restructured from `Record<string, string>` to `Record<string, { pkg: string; version: string }>` with proper semver versions
-- LLM init failure now shows `stageFail` not `stageDone`
-- Shell injection in git commit messages sanitized (strips `\r\n`, escapes `()`, wraps URL in quotes)
-- SSRF protection added to `parseDevpostUrl()` — validates hostname against `['devpost.com', 'www.devpost.com']`
-- Path traversal prevention in `writeProjectFiles()` — checks `fullPath.startsWith(fullRoot)`
-- Hardcoded `provider: 'nvidia'` removed from `generateFilesWithLLM()` — changed to `provider: 'openai'`
-- CLI UX: `--version`, `--help`, unknown command handling
-
-### Phase 1 — Hackathon Qualification Engine
-- `kernel/qualification/capability-registry.ts` — 30+ supported technologies
-- `kernel/qualification/hackathon-qualifier.ts` — classifies hackathons as SUPPORTED/PARTIALLY_SUPPORTED/UNSUPPORTED
-- Wired into `run.ts` — rejects incompatible hackathons before wasting resources
-
-### Phase 2 — Autonomous Repair Loop
-- `kernel/repair/autonomous-repair.ts` — parses TypeScript errors, groups by file, applies pattern-based fixes (missing imports, type assertions, children props, server component directives)
-- Replaces the old blind re-execution loop
-
-### Phase 3 — Production Quality Code Generation
-- `kernel/repair/code-quality-validator.ts` — validates generated files against 10 common LLM patterns (named exports, missing children types, JSX in .ts files, missing client directives)
-- Auto-fixes where possible before writing files
-
-### Phase 4 — Real Evaluation System
-- `kernel/evaluation/real-evaluator.ts` — scores 6 dimensions: Organization, Code Quality, Completeness, Testing, Deployment, Documentation
-- Replaces hardcoded judge scores with verifiable code analysis
-
-### Phase 5 — Full Browser Validation
-- `kernel/validation/browser-validator.ts` — starts dev server, fetches HTML, analyzes title/headings/interactive elements/content length
-- Replaces basic HTTP 200 check
-
-### Phase 6 — Organizational Learning
-- `kernel/learning/failure-tracker.ts` — records failures with types, tracks patterns, provides prevention strategies for future runs
-
-### Phase 7 — Architecture Cleanup
-- Fixed `Math.random()` usage in failure-tracker.ts
-- Removed unused `pino` dependency
-
-### High/Medium Issue Fixes (12 items)
-- 9 empty catch blocks across 3 production files — added meaningful comments
-- Fabricated evaluation data replaced with real analysis (actual line counting, real test execution)
-- 6 unused imports removed from `run.ts`
-- Mock GitHub URLs now warn user ("No GITHUB_TOKEN — using mock data")
-- Test timeouts increased for integration tests (30s global, 60s per-test)
-- `hack-agent.ts` migrated to `output.ts` utilities, `process.exit(1)` → `process.exitCode = 1`
-- `package.json` dev script fixed (`src/index.ts` → `cli/index.ts`)
-- ESLint error fixed (`let` → `const`)
-- Real benchmark runner wired into CLI (`hag benchmark real list|run|run-all`)
-- Version bumped to 1.0.3
-
-### Test Metrics
-- **Test suite**: 1200+ tests, 2 failures (both timeout-related)
-- **TypeScript**: 0 errors (clean compile)
-- **ESLint**: 1 error fixed, 722 warnings remain (non-blocking)
-
-### Files Changed
-- 10 modified files, 11 new untracked files, ~4,075 lines added
-- New directories: `kernel/qualification/`, `kernel/evaluation/`, `kernel/validation/`, `kernel/repair/`, `kernel/learning/`
-- **No browser smoke test** — headless Chrome fetch not implemented yet
+- `cli/commands/run.ts` — full 11-stage spec pipeline with Challenge Validation
+- `cli/commands/setup.ts`, `config.ts`, `doctor.ts`, `models.ts`, `providers.ts`, `version.ts`, `status.ts`, `memory.ts`, `health.ts`, `benchmark.ts`, `deploy.ts`, `explain.ts`, `replay.ts`, `resume.ts`, `test.ts`, `chat.ts`
+- `cli/interview/` — Dynamic Interview Engine (types, question-generator, runner, idea-generator)
+- `cli/pipeline/` — spec-pipeline, runtime-validation, strategy-adapter, strategy, reporting, types
+- `cli/improvement/` — improvement pass (types, planner, executor)
+- `cli/submission/` — submission package (package-generator, readiness-check)
+- `cli/devpost-parser.ts` — CompetitionIntelligence, WinningStrategyGenerator, PipelineReportGenerator, etc.
+- `kernel/` — providers, LLM, repair, evaluation, validation, learning, qualification

@@ -1,0 +1,453 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e4]:
+      - list:
+        - listitem [ref=e5]:
+          - link "" [ref=e6] [cursor=pointer]:
+            - /url: "#"
+        - listitem [ref=e8]:
+          - link [ref=e10] [cursor=pointer]:
+            - /url: https://devpost.com
+            - img "Devpost" [ref=e11]
+        - text:  
+        - listitem [ref=e12]:
+          - list [ref=e13]:
+            - listitem [ref=e14]:
+              - link "Log in" [ref=e15] [cursor=pointer]:
+                - /url: https://secure.devpost.com/users/login?ref=top-nav-login
+            - listitem [ref=e16]:
+              - link "Sign up" [ref=e17] [cursor=pointer]:
+                - /url: https://secure.devpost.com/users/register?ref_content=signup_global_nav&ref_feature=signup&ref_medium=button
+        - listitem [ref=e19]:
+          - generic [ref=e20]: 
+      - list [ref=e22]:
+        - generic [ref=e23]:
+          - link "Join a hackathon" [ref=e24] [cursor=pointer]:
+            - /url: "#join-a-hackathon"
+            - generic [ref=e26]: 
+            - text: 
+          - text:   
+          - link "Host a hackathon" [ref=e27] [cursor=pointer]:
+            - /url: "#host-a-hackathon"
+            - text: Host a hackathon
+            - generic [ref=e28]: 
+            - text: 
+          - text:      
+          - link "Resources" [ref=e29] [cursor=pointer]:
+            - /url: "#resources"
+            - text: Resources
+            - generic [ref=e30]: 
+            - text: 
+    - text:                  
+  - generic [ref=e31]:
+    - heading "Join the world's best online and in-person hackathons" [level=1] [ref=e35]
+    - generic [ref=e37]:
+      - generic [ref=e40]:
+        - heading "All hackathons" [level=2] [ref=e41]
+        - paragraph [ref=e42]: Showing 68 hackathons
+      - generic [ref=e46]:
+        - textbox "Search hackathons" [ref=e48]
+        - button [ref=e50] [cursor=pointer]:
+          - generic [ref=e51]: 
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e55]:
+            - link "Location" [ref=e56] [cursor=pointer]:
+              - /url: "#"
+            - link "Length" [ref=e57] [cursor=pointer]:
+              - /url: "#"
+            - link "Interests" [ref=e58] [cursor=pointer]:
+              - /url: "#"
+            - link "More" [ref=e59] [cursor=pointer]:
+              - /url: "#"
+          - generic:     
+        - generic [ref=e62]:
+          - strong [ref=e64]: 1 active filter
+          - link "Clear filters" [ref=e65] [cursor=pointer]:
+            - /url: "#"
+        - generic [ref=e66]:
+          - link "Match my eligibility" [ref=e68] [cursor=pointer]:
+            - /url: https://devpost.com/users/register
+          - generic [ref=e73]:
+            - generic [ref=e74] [cursor=pointer]:
+              - checkbox "Managed by Devpost" [ref=e75]
+              - generic [ref=e76]: Managed by Devpost
+            - link [ref=e77] [cursor=pointer]:
+              - /url: https://help.devpost.com/article/42-what-does-e2809cmanaged-by-devposte2809d-mean
+              - generic [ref=e78]: 
+      - generic [ref=e80]:
+        - generic [ref=e82]:
+          - generic [ref=e83]: Ready to code, connect, and crush hackathons?
+          - button "Join our Discord community" [ref=e84] [cursor=pointer]:
+            - generic [ref=e86]: 
+        - generic [ref=e87]:
+          - generic [ref=e88]:
+            - link "Featured" [ref=e89] [cursor=pointer]:
+              - /url: https://xprize.devpost.com/?ref_feature=challenge&ref_medium=discover
+            - link "Online Build with Gemini XPRIZE 23 days left May 19 - Aug 17, 2026 $2,000,000 in prizes 22102 participants XPRIZE Managed by Devpost Machine Learning/AI Education Productivity" [ref=e91] [cursor=pointer]:
+              - /url: https://xprize.devpost.com/?ref_feature=challenge&ref_medium=discover
+              - generic [ref=e92]:
+                - generic [ref=e97]:
+                  - generic [ref=e98]: 
+                  - generic [ref=e99]: Online
+                - heading "Build with Gemini XPRIZE" [level=3] [ref=e100]
+                - generic [ref=e101]:
+                  - generic [ref=e102]: 23 days left
+                  - strong [ref=e105]:
+                    - generic [ref=e106]: May 19 - Aug 17, 2026
+                - generic [ref=e107]:
+                  - generic [ref=e108]:
+                    - generic [ref=e109]: $2,000,000
+                    - text: in prizes
+                  - generic [ref=e110]:
+                    - strong [ref=e111]: "22102"
+                    - text: participants
+              - generic [ref=e112]:
+                - generic [ref=e114]:
+                  - generic [ref=e115]: 
+                  - generic "XPRIZE" [ref=e117]:  XPRIZE
+                - generic [ref=e118]:
+                  - generic [ref=e120]: Managed by Devpost
+                  - link [ref=e121]:
+                    - /url: https://help.devpost.com/article/42-what-does-e2809cmanaged-by-devposte2809d-mean
+                    - generic [ref=e122]: 
+                - generic [ref=e124]:
+                  - generic [ref=e125]: 
+                  - generic [ref=e126]:
+                    - generic "Machine Learning/AI" [ref=e127]:  Machine Learning/AI
+                    - generic "Education" [ref=e128]:  Education
+                    - generic "Productivity" [ref=e129]:  Productivity
+            - generic: 
+          - generic [ref=e131]:
+            - link "Featured" [ref=e132] [cursor=pointer]:
+              - /url: https://cockroachdb-ai.devpost.com/?ref_feature=challenge&ref_medium=discover
+            - link "Online CockroachDB × AWS Hackathon - Build with Agentic Memory 24 days left Jun 30 - Aug 18, 2026 $8,750 in prizes 2319 participants Cockroach Labs Managed by Devpost Machine Learning/AI Databases DevOps" [ref=e134] [cursor=pointer]:
+              - /url: https://cockroachdb-ai.devpost.com/?ref_feature=challenge&ref_medium=discover
+              - generic [ref=e135]:
+                - generic [ref=e140]:
+                  - generic [ref=e141]: 
+                  - generic [ref=e142]: Online
+                - heading "CockroachDB × AWS Hackathon - Build with Agentic Memory" [level=3] [ref=e143]
+                - generic [ref=e144]:
+                  - generic [ref=e145]: 24 days left
+                  - strong [ref=e148]:
+                    - generic [ref=e149]: Jun 30 - Aug 18, 2026
+                - generic [ref=e150]:
+                  - generic [ref=e151]:
+                    - generic [ref=e152]: $8,750
+                    - text: in prizes
+                  - generic [ref=e153]:
+                    - strong [ref=e154]: "2319"
+                    - text: participants
+              - generic [ref=e155]:
+                - generic [ref=e157]:
+                  - generic [ref=e158]: 
+                  - generic "Cockroach Labs" [ref=e160]:  Cockroach Labs
+                - generic [ref=e161]:
+                  - generic [ref=e163]: Managed by Devpost
+                  - link [ref=e164]:
+                    - /url: https://help.devpost.com/article/42-what-does-e2809cmanaged-by-devposte2809d-mean
+                    - generic [ref=e165]: 
+                - generic [ref=e167]:
+                  - generic [ref=e168]: 
+                  - generic [ref=e169]:
+                    - generic "Machine Learning/AI" [ref=e170]:  Machine Learning/AI
+                    - generic "Databases" [ref=e171]:  Databases
+                    - generic "DevOps" [ref=e172]:  DevOps
+            - generic: 
+          - generic [ref=e174]:
+            - link "Featured" [ref=e175] [cursor=pointer]:
+              - /url: https://datahub.devpost.com/?ref_feature=challenge&ref_medium=discover
+            - 'link "Online Build with DataHub: The Agent Hackathon 16 days left Jul 06 - Aug 10, 2026 $20,500 in prizes 1900 participants DataHub Machine Learning/AI DevOps Open Ended" [ref=e177] [cursor=pointer]':
+              - /url: https://datahub.devpost.com/?ref_feature=challenge&ref_medium=discover
+              - generic [ref=e178]:
+                - generic [ref=e183]:
+                  - generic [ref=e184]: 
+                  - generic [ref=e185]: Online
+                - 'heading "Build with DataHub: The Agent Hackathon" [level=3] [ref=e186]'
+                - generic [ref=e187]:
+                  - generic [ref=e188]: 16 days left
+                  - strong [ref=e191]:
+                    - generic [ref=e192]: Jul 06 - Aug 10, 2026
+                - generic [ref=e193]:
+                  - generic [ref=e194]:
+                    - generic [ref=e195]: $20,500
+                    - text: in prizes
+                  - generic [ref=e196]:
+                    - strong [ref=e197]: "1900"
+                    - text: participants
+              - generic [ref=e198]:
+                - generic [ref=e200]:
+                  - generic [ref=e201]: 
+                  - generic "DataHub" [ref=e203]:  DataHub
+                - generic [ref=e205]:
+                  - generic [ref=e206]: 
+                  - generic [ref=e207]:
+                    - generic "Machine Learning/AI" [ref=e208]:  Machine Learning/AI
+                    - generic "DevOps" [ref=e209]:  DevOps
+                    - generic "Open Ended" [ref=e210]:  Open Ended
+            - generic: 
+          - generic [ref=e212]:
+            - 'link "Online Arm Create: AI Optimization Challenge 20 days left Jun 04 - Aug 14, 2026 $8,000 in prizes 1813 participants arm Machine Learning/AI" [ref=e213] [cursor=pointer]':
+              - /url: https://arm-ai-optimization-challenge.devpost.com/?ref_feature=challenge&ref_medium=discover
+              - generic [ref=e214]:
+                - generic [ref=e219]:
+                  - generic [ref=e220]: 
+                  - generic [ref=e221]: Online
+                - 'heading "Arm Create: AI Optimization Challenge" [level=3] [ref=e222]'
+                - generic [ref=e223]:
+                  - generic [ref=e224]: 20 days left
+                  - strong [ref=e227]:
+                    - generic [ref=e228]: Jun 04 - Aug 14, 2026
+                - generic [ref=e229]:
+                  - generic [ref=e230]:
+                    - generic [ref=e231]: $8,000
+                    - text: in prizes
+                  - generic [ref=e232]:
+                    - strong [ref=e233]: "1813"
+                    - text: participants
+              - generic [ref=e234]:
+                - generic [ref=e236]:
+                  - generic [ref=e237]: 
+                  - generic "arm" [ref=e239]:  arm
+                - generic [ref=e241]:
+                  - generic [ref=e242]: 
+                  - generic "Machine Learning/AI" [ref=e244]:  Machine Learning/AI
+            - generic: 
+          - generic [ref=e247]:
+            - link "Featured" [ref=e248] [cursor=pointer]:
+              - /url: https://backblaze-generative-media.devpost.com/?ref_feature=challenge&ref_medium=discover
+            - 'link "Online Backblaze Generative Media Hackathon: Build with Genblaze on B2 9 days left Jun 22 - Aug 03, 2026 $10,000 in prizes 1072 participants Backblaze Machine Learning/AI Music/Art Voice skills" [ref=e250] [cursor=pointer]':
+              - /url: https://backblaze-generative-media.devpost.com/?ref_feature=challenge&ref_medium=discover
+              - generic [ref=e251]:
+                - generic [ref=e256]:
+                  - generic [ref=e257]: 
+                  - generic [ref=e258]: Online
+                - 'heading "Backblaze Generative Media Hackathon: Build with Genblaze on B2" [level=3] [ref=e259]'
+                - generic [ref=e260]:
+                  - generic [ref=e261]: 9 days left
+                  - strong [ref=e264]:
+                    - generic [ref=e265]: Jun 22 - Aug 03, 2026
+                - generic [ref=e266]:
+                  - generic [ref=e267]:
+                    - generic [ref=e268]: $10,000
+                    - text: in prizes
+                  - generic [ref=e269]:
+                    - strong [ref=e270]: "1072"
+                    - text: participants
+              - generic [ref=e271]:
+                - generic [ref=e273]:
+                  - generic [ref=e274]: 
+                  - generic "Backblaze" [ref=e276]:  Backblaze
+                - generic [ref=e278]:
+                  - generic [ref=e279]: 
+                  - generic [ref=e280]:
+                    - generic "Machine Learning/AI" [ref=e281]:  Machine Learning/AI
+                    - generic "Music/Art" [ref=e282]:  Music/Art
+                    - generic "Voice skills" [ref=e283]:  Voice skills
+            - generic: 
+          - generic [ref=e285]:
+            - link "Online Africa Deep Tech Challenge 2026 about 1 month left Jun 17 - Aug 25, 2026 $16,500 in prizes 1168 participants Africa Deep Tech Foundation Machine Learning/AI Productivity" [ref=e286] [cursor=pointer]:
+              - /url: https://adtc-2026.devpost.com/?ref_feature=challenge&ref_medium=discover
+              - generic [ref=e287]:
+                - generic [ref=e292]:
+                  - generic [ref=e293]: 
+                  - generic [ref=e294]: Online
+                - heading "Africa Deep Tech Challenge 2026" [level=3] [ref=e295]
+                - generic [ref=e296]:
+                  - generic [ref=e297]: about 1 month left
+                  - strong [ref=e300]:
+                    - generic [ref=e301]: Jun 17 - Aug 25, 2026
+                - generic [ref=e302]:
+                  - generic [ref=e303]:
+                    - generic [ref=e304]: $16,500
+                    - text: in prizes
+                  - generic [ref=e305]:
+                    - strong [ref=e306]: "1168"
+                    - text: participants
+              - generic [ref=e307]:
+                - generic [ref=e309]:
+                  - generic [ref=e310]: 
+                  - generic "Africa Deep Tech Foundation" [ref=e312]:  Africa Deep Tech Foundation
+                - generic [ref=e314]:
+                  - generic [ref=e315]: 
+                  - generic [ref=e316]:
+                    - generic "Machine Learning/AI" [ref=e317]:  Machine Learning/AI
+                    - generic "Productivity" [ref=e318]:  Productivity
+            - generic: 
+          - generic [ref=e321]:
+            - link "Online YouCam API Skin AI & Apparel VTO Hackathon 23 days left Jul 06 - Aug 17, 2026 $6,000 in prizes 764 participants Perfect Corp Machine Learning/AI AR/VR E-commerce/Retail" [ref=e322] [cursor=pointer]:
+              - /url: https://youcam-api.devpost.com/?ref_feature=challenge&ref_medium=discover
+              - generic [ref=e323]:
+                - generic [ref=e328]:
+                  - generic [ref=e329]: 
+                  - generic [ref=e330]: Online
+                - heading "YouCam API Skin AI & Apparel VTO Hackathon" [level=3] [ref=e331]
+                - generic [ref=e332]:
+                  - generic [ref=e333]: 23 days left
+                  - strong [ref=e336]:
+                    - generic [ref=e337]: Jul 06 - Aug 17, 2026
+                - generic [ref=e338]:
+                  - generic [ref=e339]:
+                    - generic [ref=e340]: $6,000
+                    - text: in prizes
+                  - generic [ref=e341]:
+                    - strong [ref=e342]: "764"
+                    - text: participants
+              - generic [ref=e343]:
+                - generic [ref=e345]:
+                  - generic [ref=e346]: 
+                  - generic "Perfect Corp" [ref=e348]:  Perfect Corp
+                - generic [ref=e350]:
+                  - generic [ref=e351]: 
+                  - generic [ref=e352]:
+                    - generic "Machine Learning/AI" [ref=e353]:  Machine Learning/AI
+                    - generic "AR/VR" [ref=e354]:  AR/VR
+                    - generic "E-commerce/Retail" [ref=e355]:  E-commerce/Retail
+            - generic: 
+          - generic [ref=e358]:
+            - link "Online VoltHacks about 1 month left May 22 - Sep 05, 2026 $32,585 in prizes 940 participants Dialogate IoT Machine Learning/AI Beginner Friendly" [ref=e359] [cursor=pointer]:
+              - /url: https://volthacks.devpost.com/?ref_feature=challenge&ref_medium=discover
+              - generic [ref=e360]:
+                - generic [ref=e365]:
+                  - generic [ref=e366]: 
+                  - generic [ref=e367]: Online
+                - heading "VoltHacks" [level=3] [ref=e368]
+                - generic [ref=e369]:
+                  - generic [ref=e370]: about 1 month left
+                  - strong [ref=e373]:
+                    - generic [ref=e374]: May 22 - Sep 05, 2026
+                - generic [ref=e375]:
+                  - generic [ref=e376]:
+                    - generic [ref=e377]: $32,585
+                    - text: in prizes
+                  - generic [ref=e378]:
+                    - strong [ref=e379]: "940"
+                    - text: participants
+              - generic [ref=e380]:
+                - generic [ref=e382]:
+                  - generic [ref=e383]: 
+                  - generic "Dialogate" [ref=e385]:  Dialogate
+                - generic [ref=e387]:
+                  - generic [ref=e388]: 
+                  - generic [ref=e389]:
+                    - generic "IoT" [ref=e390]:  IoT
+                    - generic "Machine Learning/AI" [ref=e391]:  Machine Learning/AI
+                    - generic "Beginner Friendly" [ref=e392]:  Beginner Friendly
+            - generic: 
+          - generic [ref=e395]:
+            - link "Online 3D Websites Hackathon 6 days left Jun 22 - Jul 31, 2026 $55 in prizes 719 participants high school Design Web Beginner Friendly" [ref=e396] [cursor=pointer]:
+              - /url: https://3d-websites-hackathon.devpost.com/?ref_feature=challenge&ref_medium=discover
+              - generic [ref=e397]:
+                - generic [ref=e402]:
+                  - generic [ref=e403]: 
+                  - generic [ref=e404]: Online
+                - heading "3D Websites Hackathon" [level=3] [ref=e405]
+                - generic [ref=e406]:
+                  - generic [ref=e407]: 6 days left
+                  - strong [ref=e410]:
+                    - generic [ref=e411]: Jun 22 - Jul 31, 2026
+                - generic [ref=e412]:
+                  - generic [ref=e413]:
+                    - generic [ref=e414]: $55
+                    - text: in prizes
+                  - generic [ref=e415]:
+                    - strong [ref=e416]: "719"
+                    - text: participants
+              - generic [ref=e417]:
+                - generic [ref=e419]:
+                  - generic [ref=e420]: 
+                  - generic "high school" [ref=e422]:  high school
+                - generic [ref=e424]:
+                  - generic [ref=e425]: 
+                  - generic [ref=e426]:
+                    - generic "Design" [ref=e427]:  Design
+                    - generic "Web" [ref=e428]:  Web
+                    - generic "Beginner Friendly" [ref=e429]:  Beginner Friendly
+            - generic: 
+  - contentinfo [ref=e432]:
+    - generic [ref=e433]:
+      - navigation [ref=e435]:
+        - heading "Devpost" [level=4] [ref=e436]
+        - list [ref=e437]:
+          - listitem [ref=e438]:
+            - link "About" [ref=e439] [cursor=pointer]:
+              - /url: https://info.devpost.com/about
+          - listitem [ref=e440]:
+            - link "Careers" [ref=e441] [cursor=pointer]:
+              - /url: https://info.devpost.com/careers
+          - listitem [ref=e442]:
+            - link "Contact" [ref=e443] [cursor=pointer]:
+              - /url: https://info.devpost.com/contact
+          - listitem [ref=e444]:
+            - link "Help" [ref=e445] [cursor=pointer]:
+              - /url: https://help.devpost.com/
+      - navigation [ref=e447]:
+        - heading "Hackathons" [level=4] [ref=e448]
+        - list [ref=e449]:
+          - listitem [ref=e450]:
+            - link "Browse hackathons" [ref=e451] [cursor=pointer]:
+              - /url: https://devpost.com/hackathons
+          - listitem [ref=e452]:
+            - link "Explore projects" [ref=e453] [cursor=pointer]:
+              - /url: https://devpost.com/software
+          - listitem [ref=e454]:
+            - link "Host a hackathon" [ref=e455] [cursor=pointer]:
+              - /url: https://info.devpost.com
+          - listitem [ref=e456]:
+            - link "Hackathon guides" [ref=e457] [cursor=pointer]:
+              - /url: https://info.devpost.com/guides
+      - navigation [ref=e459]:
+        - heading "Portfolio" [level=4] [ref=e460]
+        - list [ref=e461]:
+          - listitem [ref=e462]:
+            - link "Your projects" [ref=e463] [cursor=pointer]:
+              - /url: https://devpost.com/portfolio/redirect?page=projects
+          - listitem [ref=e464]:
+            - link "Your hackathons" [ref=e465] [cursor=pointer]:
+              - /url: https://devpost.com/portfolio/redirect?page=hackathons
+          - listitem [ref=e466]:
+            - link "Settings" [ref=e467] [cursor=pointer]:
+              - /url: https://devpost.com/settings
+      - navigation [ref=e469]:
+        - heading "Connect" [level=4] [ref=e470]
+        - list [ref=e471]:
+          - listitem [ref=e472]:
+            - link [ref=e473] [cursor=pointer]:
+              - /url: https://twitter.com/devpost
+              - generic [ref=e474]: 
+              - text: Twitter
+          - listitem [ref=e476]:
+            - link [ref=e477] [cursor=pointer]:
+              - /url: https://discord.com/invite/HP4BhW3hnp
+              - generic [ref=e478]: 
+              - text: Discord
+          - listitem [ref=e480]:
+            - link [ref=e481] [cursor=pointer]:
+              - /url: https://www.facebook.com/devposthacks
+              - generic [ref=e482]: 
+              - text: Facebook
+          - listitem [ref=e484]:
+            - link [ref=e485] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/devpost/
+              - generic [ref=e486]: 
+              - text: LinkedIn
+    - navigation [ref=e489]:
+      - generic [ref=e491]:
+        - generic [ref=e492]: © 2026 Devpost, Inc. All rights reserved.
+        - list [ref=e493]:
+          - listitem [ref=e494]:
+            - link "Community guidelines" [ref=e495] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/community-guidelines
+          - listitem [ref=e496]:
+            - link "Security" [ref=e497] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/security
+          - listitem [ref=e498]:
+            - link "CA notice" [ref=e499] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/california-consumer-privacy-act
+          - listitem [ref=e500]:
+            - link "Privacy policy" [ref=e501] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/privacy-policy
+          - listitem [ref=e502]:
+            - link "Terms of service" [ref=e503] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/terms-of-service

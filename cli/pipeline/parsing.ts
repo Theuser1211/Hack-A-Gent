@@ -1,6 +1,13 @@
 import type { DevpostParseResult } from './types.js';
 import { confirmed, inferred, unknownField, type ExtractedField } from '../confidence.js';
 
+export function normalizeUrl(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
 /**
  * Parse a Devpost hackathon page and extract structured information.
  *
@@ -12,7 +19,11 @@ import { confirmed, inferred, unknownField, type ExtractedField } from '../confi
  * Never fabricates missing information.
  */
 export async function parseDevpostUrl(url: string): Promise<DevpostParseResult> {
-  const parsed = new URL(url);
+  const normalized = normalizeUrl(url);
+  if (!normalized) {
+    throw new Error('No URL provided. Expected a Devpost URL like:\n  https://example.devpost.com');
+  }
+  const parsed = new URL(normalized);
   const hostname = parsed.hostname;
   if (hostname !== 'devpost.com' && !hostname.endsWith('.devpost.com')) {
     throw new Error(`URL must be a Devpost URL (devpost.com). Got: ${hostname}`);
@@ -21,7 +32,7 @@ export async function parseDevpostUrl(url: string): Promise<DevpostParseResult> 
     throw new Error(`URL must use http or https protocol. Got: ${parsed.protocol}`);
   }
 
-  const response = await fetch(url, {
+  const response = await fetch(normalized, {
     headers: { 'User-Agent': 'Hack-A-Gent/1.0 (devpost parser)' },
     signal: AbortSignal.timeout(15000),
   });
@@ -127,7 +138,7 @@ function extractTextBetween(html: string, pattern: RegExp): string | null {
 
 function extractTechnologies(html: string): string[] {
   const techTags = html.match(
-    /<span[^>]*class=["'][^"']*?(?:tech|tag|label|badge)[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi,
+    /<span[^>]*class=["'][^"']*?\b(?:tech|tag|label|badge)\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi,
   );
   if (!techTags) return [];
   return techTags.map((t) => t.replace(/<[^>]*>/g, '').trim());
@@ -135,12 +146,21 @@ function extractTechnologies(html: string): string[] {
 
 function extractListItems(html: string, keyword: RegExp): string[] {
   const matchIndex = html.search(keyword);
-  // search() returns -1 when not found — guard against slicing from -1
   if (matchIndex < 0) return [];
 
-  const start = Math.max(0, matchIndex - 500);
-  const end = matchIndex + 1000;
-  const section = html.slice(start, end);
+  const beforeText = html.slice(0, matchIndex);
+  const headingTags = beforeText.match(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi);
+  const sectionStart = headingTags && headingTags.length > 0
+    ? beforeText.lastIndexOf(headingTags[headingTags.length - 1]!) + headingTags[headingTags.length - 1]!.length
+    : Math.max(0, matchIndex - 500);
+
+  const afterText = html.slice(matchIndex);
+  const nextHeadingMatch = afterText.search(/<h[1-6][^>]*>/i);
+  const sectionEnd = nextHeadingMatch >= 0
+    ? matchIndex + nextHeadingMatch
+    : Math.min(html.length, matchIndex + 1000);
+
+  const section = html.slice(sectionStart, sectionEnd);
   if (!section) return [];
 
   const items = section.match(/<li[^>]*>([\s\S]*?)<\/li>/gi);
@@ -228,7 +248,7 @@ function extractOrganizer(html: string, fallbackText: string): string | null {
   return null;
 }
 
-function extractSponsorMentions(html: string): string[] {
+export function extractSponsorMentions(html: string): string[] {
   // Look for the Devpost sidebar prize/sponsor section
   const sponsorPatterns = [
     /<div[^>]*class=["'][^"']*?(?:prize|sponsor|reward)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi,
@@ -259,7 +279,7 @@ function extractSponsorMentions(html: string): string[] {
   // A number followed by "prize" is a strong signal of sponsor prizes
   if (mentions.size === 0) {
     // Check for common Devpost sidebar patterns
-    const prizeSection = html.match(/<div[^>]*(?:sidebar|aside)[^>]*>([\s\S]*?)(?:<\/div>\s*<\/div>)/i);
+    const prizeSection = html.match(/<div[^>]*(?:sidebar|aside)[^>]*>([\s\S]*?)(?:<\/div>\s*<\/div>|<\/div>)/i);
     if (prizeSection) {
       const prizeText = prizeSection[1]!;
       for (const sponsor of knownSponsors) {

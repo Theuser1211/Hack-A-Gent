@@ -119,7 +119,7 @@ describe('CompetitionIntelligenceAgent', () => {
           judgingCriteria: ['Innovation 40%', 'Impact 30%'],
           constraints: [],
           recommendedStack: ['openai', 'Next.js'],
-          rawText: 'theme: climate sponsor openai prize',
+          rawText: '<h2>Sponsors</h2>OpenAI is providing AI credits.',
           submissionRequirements: [],
         },
       },

@@ -1,0 +1,698 @@
+- generic [active] [ref=f3e1]:
+  - banner [ref=f3e2]:
+    - navigation [ref=f3e4]:
+      - list:
+        - listitem [ref=f3e5]:
+          - link "" [ref=f3e6] [cursor=pointer]:
+            - /url: "#"
+        - listitem [ref=f3e8]:
+          - link [ref=f3e10] [cursor=pointer]:
+            - /url: https://devpost.com
+            - img "Devpost" [ref=f3e11]
+        - text:  
+        - listitem [ref=f3e12]:
+          - list [ref=f3e13]:
+            - listitem [ref=f3e14]:
+              - link "Log in" [ref=f3e15] [cursor=pointer]:
+                - /url: https://secure.devpost.com/users/login?ref=top-nav-login
+            - listitem [ref=f3e16]:
+              - link "Sign up" [ref=f3e17] [cursor=pointer]:
+                - /url: https://secure.devpost.com/users/register?ref_content=signup_global_nav&ref_feature=signup&ref_medium=button
+        - listitem [ref=f3e19]:
+          - generic [ref=f3e20]: 
+      - list [ref=f3e22]:
+        - generic [ref=f3e23]:
+          - link "Join a hackathon" [ref=f3e24] [cursor=pointer]:
+            - /url: "#join-a-hackathon"
+            - generic [ref=f3e26]: 
+            - text: 
+          - text:   
+          - link "Host a hackathon" [ref=f3e27] [cursor=pointer]:
+            - /url: "#host-a-hackathon"
+            - text: Host a hackathon
+            - generic [ref=f3e28]: 
+            - text: 
+          - text:      
+          - link "Resources" [ref=f3e29] [cursor=pointer]:
+            - /url: "#resources"
+            - text: Resources
+            - generic [ref=f3e30]: 
+            - text: 
+    - text:                  
+  - text: 
+  - banner [ref=f3e31]:
+    - heading [level=1] [ref=f3e34]:
+      - link [ref=f3e35] [cursor=pointer]:
+        - /url: https://volthacks.devpost.com/
+        - img "VoltHacks" [ref=f3e36]
+    - navigation [ref=f3e40]:
+      - link "Descend" [ref=f3e42] [cursor=pointer]:
+        - /url: "#"
+      - list [ref=f3e43]:
+        - listitem [ref=f3e44]:
+          - link "Overview" [ref=f3e45] [cursor=pointer]:
+            - /url: https://volthacks.devpost.com/
+  - generic [ref=f3e47]:
+    - generic [ref=f3e48]:
+      - heading "VoltHacks" [level=1] [ref=f3e49]
+      - heading "Design. Build. Power the Future." [level=3] [ref=f3e50]
+      - generic [ref=f3e51]:
+        - link "Join hackathon" [ref=f3e55] [cursor=pointer]:
+          - /url: https://volthacks.devpost.com/register?flow%5Bdata%5D%5Bchallenge_id%5D=29884&flow%5Bname%5D=register_for_challenge
+        - generic [ref=f3e56]:
+          - heading "Who can participate" [level=6] [ref=f3e57]
+          - list [ref=f3e58]:
+            - listitem [ref=f3e59]: "- Ages 13+ only"
+            - listitem [ref=f3e60]: "- Students only"
+            - listitem [ref=f3e61]: "- Companies/professional organizations excluded from participation"
+            - listitem [ref=f3e62]:
+              - text: "- All countries/territories, excluding"
+              - generic "Brazil, Crimea, Cuba, Iran, North Korea, Quebec, Russia" [ref=f3e63]:
+                - text: standard exceptions
+                - generic [ref=f3e64]: 
+          - link "View full rules" [ref=f3e66] [cursor=pointer]:
+            - /url: /rules
+    - generic [ref=f3e68]:
+      - generic [ref=f3e69]:
+        - generic [ref=f3e70]:
+          - paragraph [ref=f3e72]:
+            - time [ref=f3e73]: 42 more days
+            - text: to deadline
+          - paragraph [ref=f3e74]:
+            - link "View schedule" [ref=f3e75] [cursor=pointer]:
+              - /url: https://volthacks.devpost.com/details/dates
+        - generic [ref=f3e76]:
+          - generic [ref=f3e77]:
+            - paragraph [ref=f3e78]: Deadline
+            - text: Sep 6, 2026 @ 2:30am
+            - link "GMT+5:30" [ref=f3e79] [cursor=pointer]:
+              - /url: https://devpost.com/settings/preferences_and_eligibility#eligibility-section
+              - text: GMT+5:30
+              - generic [ref=f3e80]: 
+          - generic [ref=f3e81] [cursor=pointer]:
+            - generic [ref=f3e82]: 
+            - text:   
+      - table [ref=f3e84]:
+        - rowgroup [ref=f3e85]:
+          - row [ref=f3e86]:
+            - cell "Online" [ref=f3e87]:
+              - generic [ref=f3e88]:
+                - generic [ref=f3e89]: 
+                - generic [ref=f3e90]: Online
+            - cell "Public" [ref=f3e91]:
+              - generic [ref=f3e92]:
+                - generic [ref=f3e93]: 
+                - generic [ref=f3e94]: Public
+          - row [ref=f3e95]:
+            - cell [ref=f3e96]:
+              - link "$32,585 in cash" [ref=f3e97] [cursor=pointer]:
+                - /url: "#prizes"
+                - strong [ref=f3e98]:
+                  - generic [ref=f3e99]: $32,585
+                - text: in cash
+            - cell [ref=f3e100]:
+              - strong [ref=f3e101]: "940"
+              - text: participants
+      - generic [ref=f3e102]:
+        - generic [ref=f3e103]:
+          - generic [ref=f3e104]: 
+          - link "Dialogate" [ref=f3e106] [cursor=pointer]:
+            - /url: https://devpost.com/hackathons?organization=Dialogate
+        - generic [ref=f3e108]:
+          - generic [ref=f3e109]: 
+          - generic [ref=f3e110]:
+            - link "IoT" [ref=f3e111] [cursor=pointer]:
+              - /url: https://devpost.com/hackathons?themes%5B%5D=IoT
+            - link "Machine Learning/AI" [ref=f3e113] [cursor=pointer]:
+              - /url: https://devpost.com/hackathons?themes%5B%5D=Machine+Learning%2FAI
+            - link "Beginner Friendly" [ref=f3e115] [cursor=pointer]:
+              - /url: https://devpost.com/hackathons?themes%5B%5D=Beginner+Friendly
+  - main [ref=f3e121]:
+    - generic [ref=f3e122]:
+      - generic [ref=f3e123]:
+        - article [ref=f3e124]:
+          - heading "About the Challenge" [level=4] [ref=f3e125]
+          - paragraph [ref=f3e126]: VoltHacks 2026 is a hackathon focused on building real world solutions using hardware, IoT, and AI. Participants are encouraged to go beyond traditional software projects and create systems that interact with the physical world through sensors, embedded systems, automation, and intelligent devices.
+          - paragraph [ref=f3e127]: Whether you're interested in robotics, smart devices, sustainability, healthcare technology, or open innovation, VoltHacks is designed to push creativity and engineering skills toward solving meaningful problems.
+          - paragraph [ref=f3e128]: "Tracks could include:"
+          - list [ref=f3e129]:
+            - listitem [ref=f3e130]: Robotics & Embedded Systems
+            - listitem [ref=f3e131]: AI + Hardware Integration
+            - listitem [ref=f3e132]: Smart Health Technology
+            - listitem [ref=f3e133]: Sustainability & Smart Cities
+            - listitem [ref=f3e134]: Open Innovation
+            - listitem [ref=f3e135]: Anything Engineering based with Impact
+          - paragraph [ref=f3e136]: Participants will present their projects to a panel of judges, with awards recognizing innovation, technical complexity, and real world impact.
+          - heading "Get Started" [level=4] [ref=f3e137]
+          - list [ref=f3e138]:
+            - listitem [ref=f3e139]: Register individually or with a team
+            - listitem [ref=f3e140]: Brainstorm a project idea related to the challenge themes
+            - listitem [ref=f3e141]: Build your project during the hackathon period
+            - listitem [ref=f3e142]: Submit your final project on Devpost before the deadline
+          - paragraph [ref=f3e143]: All skill levels are welcome. Whether you're experienced with hardware or just getting started, VoltHacks is meant to be a place to learn, collaborate, and build something meaningful.
+        - article [ref=f3e144]:
+          - heading "Requirements" [level=3] [ref=f3e146]
+          - generic [ref=f3e148]:
+            - heading "What to Build" [level=4] [ref=f3e149]
+            - paragraph [ref=f3e150]: "Build a project related to one or more of the VoltHacks themes, such as:"
+            - list [ref=f3e151]:
+              - listitem [ref=f3e152]: IoT systems
+              - listitem [ref=f3e153]: Robotics and automation
+              - listitem [ref=f3e154]: AI-powered tools
+              - listitem [ref=f3e155]: Embedded systems
+              - listitem [ref=f3e156]: Smart devices
+              - listitem [ref=f3e157]: Sustainability or health technology solutions
+            - paragraph [ref=f3e158]: Projects can be hardware-based, software-based, or a combination of both.
+            - heading "What to Submit" [level=4] [ref=f3e159]
+            - paragraph [ref=f3e160]: "Each submission should include:"
+            - list [ref=f3e161]:
+              - listitem [ref=f3e162]: Project name and short description
+              - listitem [ref=f3e163]: Explanation of the problem your project solves
+              - listitem [ref=f3e164]: Photos, screenshots, or prototype images
+              - listitem [ref=f3e165]: Source code or GitHub repository (if applicable)
+              - listitem [ref=f3e166]: List of technologies/components used
+            - paragraph [ref=f3e167]: Teams should clearly explain how their project works and what makes it innovative.
+        - article [ref=f3e168]:
+          - heading "Prizes" [level=3] [ref=f3e170]
+          - generic [ref=f3e173]:
+            - generic [ref=f3e174]:
+              - generic [ref=f3e175]: $32,585
+              - text: + in prizes
+            - generic [ref=f3e176]: + other prizes
+          - generic [ref=f3e177]:
+            - generic [ref=f3e178]:
+              - heading "⋆ Grand Prize" [level=6] [ref=f3e179]:
+                - generic [ref=f3e180]:
+                  - generic [ref=f3e181]: ⋆
+                  - generic [ref=f3e182]: Grand Prize
+              - generic [ref=f3e183]:
+                - generic [ref=f3e184]:
+                  - generic [ref=f3e185]: $1,020
+                  - text: in cash
+                - generic [ref=f3e186]: 1 winner
+                - paragraph [ref=f3e187]: $300 USD in Featherless.ai credits CodeCrafters VIP Membership (2 Years) — $720 value per team member
+            - generic [ref=f3e188]:
+              - heading "⋆ XYZ Domain Awards & Dialogate Lifetime Subscriptions" [level=6] [ref=f3e189]:
+                - generic [ref=f3e190]:
+                  - generic [ref=f3e191]: ⋆
+                  - generic [ref=f3e192]: XYZ Domain Awards & Dialogate Lifetime Subscriptions
+              - generic [ref=f3e193]:
+                - generic [ref=f3e194]:
+                  - generic [ref=f3e195]: $75
+                  - text: in cash
+                - generic [ref=f3e196]: 15 winners
+                - paragraph [ref=f3e197]: The top 15 submissions will be given a free .xyz domain for a year, no costs for a year. (≈15$ value each) The top 15 submissions will also be given a free lifetime subscription to Dialogate ($60 value each)
+          - generic [ref=f3e198]:
+            - generic [ref=f3e199]:
+              - heading "⋆ Additional Prizes Coming Soon" [level=6] [ref=f3e200]:
+                - generic [ref=f3e201]:
+                  - generic [ref=f3e202]: ⋆
+                  - generic [ref=f3e203]: Additional Prizes Coming Soon
+              - generic [ref=f3e204]:
+                - generic [ref=f3e205]: 1 winner
+                - paragraph [ref=f3e206]: More prizes are currently being gathered by the VoltHacks team through sponsor partnerships and community support. Additional awards may be announced throughout the event as new sponsors join VoltHacks 2026.
+            - generic [ref=f3e207]:
+              - heading "⋆ Second Place" [level=6] [ref=f3e208]:
+                - generic [ref=f3e209]:
+                  - generic [ref=f3e210]: ⋆
+                  - generic [ref=f3e211]: Second Place
+              - generic [ref=f3e212]:
+                - generic [ref=f3e213]:
+                  - generic [ref=f3e214]: $360
+                  - text: in cash
+                - generic [ref=f3e215]: 1 winner
+                - paragraph [ref=f3e216]: CodeCrafters VIP Membership (1 Year) — $360 value per team member
+          - generic [ref=f3e217]:
+            - generic [ref=f3e218]:
+              - heading "⋆ Third Place" [level=6] [ref=f3e219]:
+                - generic [ref=f3e220]:
+                  - generic [ref=f3e221]: ⋆
+                  - generic [ref=f3e222]: Third Place
+              - generic [ref=f3e223]:
+                - generic [ref=f3e224]:
+                  - generic [ref=f3e225]: $180
+                  - text: in cash
+                - generic [ref=f3e226]: 1 winner
+                - paragraph [ref=f3e227]: CodeCrafters VIP Membership (6 Months) — $180 value per team member
+            - generic [ref=f3e228]:
+              - heading "⋆ Tin Computer Growth Credits" [level=6] [ref=f3e229]:
+                - generic [ref=f3e230]:
+                  - generic [ref=f3e231]: ⋆
+                  - generic [ref=f3e232]: Tin Computer Growth Credits
+              - generic [ref=f3e233]:
+                - generic [ref=f3e234]:
+                  - generic [ref=f3e235]: $299
+                  - text: in cash
+                - generic [ref=f3e236]: 100 winners
+                - paragraph [ref=f3e237]: up to 100 eligible teams can each receive $299 in Tin Computer Growth Plan credits after submitting their projects.
+                - paragraph [ref=f3e238]: Available to up to 100 eligible teams $299 in Growth Plan credits per eligible team
+                - paragraph [ref=f3e239]: ⚠️ THIS IS NOT A CASH PRIZE. This award consists of sponsor-provided product credits, subscriptions, software licenses, domains, or other non-cash benefits and cannot be exchanged or redeemed for cash.
+          - generic [ref=f3e241]:
+            - heading "⋆ Dialogate Lifetime Subscription" [level=6] [ref=f3e242]:
+              - generic [ref=f3e243]:
+                - generic [ref=f3e244]: ⋆
+                - generic [ref=f3e245]: Dialogate Lifetime Subscription
+            - generic [ref=f3e246]:
+              - generic [ref=f3e247]: 9,999 winners
+              - paragraph [ref=f3e248]: Every VoltHacks participant will receive a complimentary lifetime Dialogate Pro subscription after the event. This benefit includes lifetime access to Dialogate Pro at no cost.
+        - article [ref=f3e249]:
+          - heading "Judges" [level=3] [ref=f3e251]
+          - generic [ref=f3e253]:
+            - generic [ref=f3e255]:
+              - figure [ref=f3e257]:
+                - img "Ehsan Sadiq" [ref=f3e258]
+              - paragraph [ref=f3e260]:
+                - strong [ref=f3e261]: Ehsan Sadiq
+                - text: Dialogate & Volthacks Founder
+            - generic [ref=f3e263]:
+              - figure [ref=f3e265]:
+                - img "More Judges TBD" [ref=f3e266]
+              - paragraph [ref=f3e268]:
+                - strong [ref=f3e269]: More Judges TBD
+                - generic [ref=f3e270]:
+                  - text: If you want to be a judge send a message to
+                  - link "ehsansadiq141@gmail.com" [ref=f3e271] [cursor=pointer]:
+                    - /url: mailto:ehsansadiq141@gmail.com
+          - generic [ref=f3e272]:
+            - generic [ref=f3e274]:
+              - figure [ref=f3e276]:
+                - img "RatnaKumar Bonagiri" [ref=f3e277]
+              - paragraph [ref=f3e279]:
+                - strong [ref=f3e280]: RatnaKumar Bonagiri
+                - text: Senior IEEE Member
+            - generic [ref=f3e282]:
+              - figure [ref=f3e284]:
+                - img "Ankur Bhatnagar" [ref=f3e285]
+              - paragraph [ref=f3e287]:
+                - strong [ref=f3e288]: Ankur Bhatnagar
+                - text: Senior IEEE Member
+          - generic [ref=f3e289]:
+            - generic [ref=f3e291]:
+              - figure [ref=f3e293]:
+                - img "Swarnamalya Mohan" [ref=f3e294]
+              - paragraph [ref=f3e296]:
+                - strong [ref=f3e297]: Swarnamalya Mohan
+                - text: Senior AI/ML Advisor
+            - generic [ref=f3e299]:
+              - figure [ref=f3e301]:
+                - img "Deepashree Rajendraprasad" [ref=f3e302]
+              - paragraph [ref=f3e304]:
+                - strong [ref=f3e305]: Deepashree Rajendraprasad
+                - text: Business Intelligence Developer, Carilion Clinic
+          - generic [ref=f3e306]:
+            - generic [ref=f3e308]:
+              - figure [ref=f3e310]:
+                - img "Prashant Bhowmik" [ref=f3e311]
+              - paragraph [ref=f3e313]:
+                - strong [ref=f3e314]: Prashant Bhowmik
+                - text: Lead Data Engineer | McKinsey & Company
+            - generic [ref=f3e316]:
+              - figure [ref=f3e318]:
+                - img "Reshmika Dhandapani" [ref=f3e319]
+              - paragraph [ref=f3e321]:
+                - strong [ref=f3e322]: Reshmika Dhandapani
+                - text: Product Manager, Motorola Solutions
+          - generic [ref=f3e323]:
+            - generic [ref=f3e325]:
+              - figure [ref=f3e327]:
+                - img "Kunal Jain" [ref=f3e328]
+              - paragraph [ref=f3e330]:
+                - strong [ref=f3e331]: Kunal Jain
+                - text: Research Assistant | NYU Tandon School of Engineering
+            - generic [ref=f3e333]:
+              - figure [ref=f3e335]:
+                - img "Abhijit Kale" [ref=f3e336]
+              - paragraph [ref=f3e338]:
+                - strong [ref=f3e339]: Abhijit Kale
+                - text: Staff Cloud Infrastructure Engineer, Lucid Motors
+          - generic [ref=f3e340]:
+            - generic [ref=f3e342]:
+              - figure [ref=f3e344]:
+                - img "Bedil Karimov" [ref=f3e345]
+              - paragraph [ref=f3e347]:
+                - strong [ref=f3e348]: Bedil Karimov
+                - text: DevOps/Data Engineer
+            - generic [ref=f3e350]:
+              - figure [ref=f3e352]:
+                - img "Disha Patel" [ref=f3e353]
+              - paragraph [ref=f3e355]:
+                - strong [ref=f3e356]: Disha Patel
+                - text: SWE @ Apple
+          - generic [ref=f3e357]:
+            - generic [ref=f3e359]:
+              - figure [ref=f3e361]:
+                - img "Ratish Kumar" [ref=f3e362]
+              - paragraph [ref=f3e364]:
+                - strong [ref=f3e365]: Ratish Kumar
+                - text: Solutions Engineer(AI/ML)
+            - generic [ref=f3e367]:
+              - figure [ref=f3e369]:
+                - img "Shrie Raam Sathyanarayanan" [ref=f3e370]
+              - paragraph [ref=f3e372]:
+                - strong [ref=f3e373]: Shrie Raam Sathyanarayanan
+                - text: Health Data Analyst at Oklahoma State University
+          - generic [ref=f3e374]:
+            - generic [ref=f3e376]:
+              - figure [ref=f3e378]:
+                - img "Brajesh Shrivastava" [ref=f3e379]
+              - paragraph [ref=f3e381]:
+                - strong [ref=f3e382]: Brajesh Shrivastava
+                - text: Sr. Staff Engineer, Nutanix
+            - generic [ref=f3e384]:
+              - figure [ref=f3e386]:
+                - img "Swapnil Nagar" [ref=f3e387]
+              - paragraph [ref=f3e389]:
+                - strong [ref=f3e390]: Swapnil Nagar
+                - text: Lead Engineer, Azure Functions at Microsoft
+          - generic [ref=f3e391]:
+            - generic [ref=f3e393]:
+              - figure [ref=f3e395]:
+                - img "N. Raghav" [ref=f3e396]
+              - paragraph [ref=f3e398]:
+                - strong [ref=f3e399]: N. Raghav
+                - text: Founder & CEO, Devvit
+            - generic [ref=f3e401]:
+              - figure [ref=f3e403]:
+                - img "Siyuan Feng" [ref=f3e404]
+              - paragraph [ref=f3e406]:
+                - strong [ref=f3e407]: Siyuan Feng
+                - text: Senior Data & AI Engineer at CSC Global
+          - generic [ref=f3e408]:
+            - generic [ref=f3e410]:
+              - figure [ref=f3e412]:
+                - img "Vamshi Krishna" [ref=f3e413]
+              - paragraph [ref=f3e415]:
+                - strong [ref=f3e416]: Vamshi Krishna
+                - text: Senior .NET Developer, Commonwealth of Kentucky
+            - generic [ref=f3e418]:
+              - figure [ref=f3e420]:
+                - img "Shruthi Sepuri" [ref=f3e421]
+              - paragraph [ref=f3e423]:
+                - strong [ref=f3e424]: Shruthi Sepuri
+                - text: QA Lead | AI Governance Researcher
+          - generic [ref=f3e425]:
+            - generic [ref=f3e427]:
+              - figure [ref=f3e429]:
+                - img "Sarah Sonje" [ref=f3e430]
+              - paragraph [ref=f3e432]:
+                - strong [ref=f3e433]: Sarah Sonje
+                - text: Senior Engineer, Oracle (AI for Databases)
+            - generic [ref=f3e435]:
+              - figure [ref=f3e437]:
+                - img "Alagu Alagappan" [ref=f3e438]
+              - paragraph [ref=f3e440]:
+                - strong [ref=f3e441]: Alagu Alagappan
+                - text: Senior Software Engineer, AWS
+          - generic [ref=f3e442]:
+            - generic [ref=f3e444]:
+              - figure [ref=f3e446]:
+                - img "Taher Ujjainwala" [ref=f3e447]
+              - paragraph [ref=f3e449]:
+                - strong [ref=f3e450]: Taher Ujjainwala
+                - text: Senior Electrical & Embedded Systems Engineer
+            - generic [ref=f3e452]:
+              - figure [ref=f3e454]:
+                - img "Honey Nikam" [ref=f3e455]
+              - paragraph [ref=f3e457]:
+                - strong [ref=f3e458]: Honey Nikam
+                - text: Machine Learning Engineer, TikTok
+          - generic [ref=f3e459]:
+            - generic [ref=f3e461]:
+              - figure [ref=f3e463]:
+                - img "Mandar Chaudhari" [ref=f3e464]
+              - paragraph [ref=f3e466]:
+                - strong [ref=f3e467]: Mandar Chaudhari
+                - text: Full-Stack Software Developer & ML Engineer
+            - generic [ref=f3e469]:
+              - figure [ref=f3e471]:
+                - img "Nilesh Dhage" [ref=f3e472]
+              - paragraph [ref=f3e474]:
+                - strong [ref=f3e475]: Nilesh Dhage
+                - text: Director of Product Management | AI Product Leader & Engineering Executive
+          - generic [ref=f3e476]:
+            - generic [ref=f3e478]:
+              - figure [ref=f3e480]:
+                - img "Rejin Joy" [ref=f3e481]
+              - paragraph [ref=f3e483]:
+                - strong [ref=f3e484]: Rejin Joy
+                - text: Staff Machine Learning Engineer, Meta
+            - generic [ref=f3e486]:
+              - figure [ref=f3e488]:
+                - img "Gaurav Shah" [ref=f3e489]
+              - paragraph [ref=f3e491]:
+                - strong [ref=f3e492]: Gaurav Shah
+                - text: Director – Staff Engineer, Full-Stack & Cloud
+          - generic [ref=f3e493]:
+            - generic [ref=f3e495]:
+              - figure [ref=f3e497]:
+                - img "Soomin Kim" [ref=f3e498]
+              - paragraph [ref=f3e500]:
+                - strong [ref=f3e501]: Soomin Kim
+                - text: Senior Data Scientist, Sony Music Entertainment
+            - generic [ref=f3e503]:
+              - figure [ref=f3e505]:
+                - img "Ankur Gupta" [ref=f3e506]
+              - paragraph [ref=f3e508]:
+                - strong [ref=f3e509]: Ankur Gupta
+                - text: Senior Staff Technical Program Manager, AI Infrastructure, LinkedIn
+          - generic [ref=f3e510]:
+            - generic [ref=f3e512]:
+              - figure [ref=f3e514]:
+                - img "Suraj Devatha" [ref=f3e515]
+              - paragraph [ref=f3e517]:
+                - strong [ref=f3e518]: Suraj Devatha
+                - text: Senior Software Engineer, Meta
+            - generic [ref=f3e520]:
+              - figure [ref=f3e522]:
+                - img "Soumya Ranjan" [ref=f3e523]
+              - paragraph [ref=f3e525]:
+                - strong [ref=f3e526]: Soumya Ranjan
+                - text: Software Engineer, Qualcomm
+          - generic [ref=f3e527]:
+            - generic [ref=f3e529]:
+              - figure [ref=f3e531]:
+                - img "Haithem Bekkari" [ref=f3e532]
+              - paragraph [ref=f3e534]:
+                - strong [ref=f3e535]: Haithem Bekkari
+                - text: AI/ML Engineer & Software Developer
+            - generic [ref=f3e537]:
+              - figure [ref=f3e539]:
+                - img "Gayathri Bollineni" [ref=f3e540]
+              - paragraph [ref=f3e542]:
+                - strong [ref=f3e543]: Gayathri Bollineni
+                - text: Software Development Engineer in Test (SDET)
+          - generic [ref=f3e544]:
+            - generic [ref=f3e546]:
+              - figure [ref=f3e548]:
+                - img "Pavan Kumar Yakkala" [ref=f3e549]
+              - paragraph [ref=f3e551]:
+                - strong [ref=f3e552]: Pavan Kumar Yakkala
+                - text: Senior Software Engineer, Amazon Web Services
+            - generic [ref=f3e554]:
+              - figure [ref=f3e556]:
+                - img "Malai Malaiiyyappan" [ref=f3e557]
+              - paragraph [ref=f3e559]:
+                - strong [ref=f3e560]: Malai Malaiiyyappan
+                - text: Founder, kGrid.ai
+          - generic [ref=f3e561]:
+            - generic [ref=f3e563]:
+              - figure [ref=f3e565]:
+                - img "Suneet Malhotra" [ref=f3e566]
+              - paragraph [ref=f3e568]:
+                - strong [ref=f3e569]: Suneet Malhotra
+                - text: Software Quality Engineer & AI Testing Researcher
+            - generic [ref=f3e571]:
+              - figure [ref=f3e573]:
+                - img "Divya Singh" [ref=f3e574]
+              - paragraph [ref=f3e576]:
+                - strong [ref=f3e577]: Divya Singh
+                - text: Senior Software Engineer, LinkedIn
+          - generic [ref=f3e578]:
+            - generic [ref=f3e580]:
+              - figure [ref=f3e582]:
+                - img "Erica Olsthoorn" [ref=f3e583]
+              - paragraph [ref=f3e585]:
+                - strong [ref=f3e586]: Erica Olsthoorn
+                - text: Enterprise Sales Leader, HappyRobot
+            - generic [ref=f3e588]:
+              - figure [ref=f3e590]:
+                - img "Venkata Sai Bolineni" [ref=f3e591]
+              - paragraph [ref=f3e593]:
+                - strong [ref=f3e594]: Venkata Sai Bolineni
+                - text: Data Engineer
+          - generic [ref=f3e595]:
+            - generic [ref=f3e597]:
+              - figure [ref=f3e599]:
+                - img "Nanda Kishore Kande" [ref=f3e600]
+              - paragraph [ref=f3e602]:
+                - strong [ref=f3e603]: Nanda Kishore Kande
+                - text: Senior Software Engineer, Visa
+            - generic [ref=f3e605]:
+              - figure [ref=f3e607]:
+                - img "Frank Chu" [ref=f3e608]
+              - paragraph [ref=f3e610]:
+                - strong [ref=f3e611]: Frank Chu
+                - text: Machine Learning Manager, Meta
+          - generic [ref=f3e612]:
+            - generic [ref=f3e614]:
+              - figure [ref=f3e616]:
+                - img "Devyendar Maganti" [ref=f3e617]
+              - paragraph [ref=f3e619]:
+                - strong [ref=f3e620]: Devyendar Maganti
+                - text: Lead Platform Engineer, Prudential Financial
+            - generic [ref=f3e622]:
+              - figure [ref=f3e624]:
+                - img "Swapnil Gaikwad" [ref=f3e625]
+              - paragraph [ref=f3e627]:
+                - strong [ref=f3e628]: Swapnil Gaikwad
+                - text: Senior Software Development Engineer, Amazon
+          - generic [ref=f3e629]:
+            - generic [ref=f3e631]:
+              - figure [ref=f3e633]:
+                - img "Koundanya Rajan Kesani" [ref=f3e634]
+              - paragraph [ref=f3e636]:
+                - strong [ref=f3e637]: Koundanya Rajan Kesani
+                - text: Senior AI/ML Engineer, JPMorgan Chase
+            - generic [ref=f3e639]:
+              - figure [ref=f3e641]:
+                - img "Ranjit Ponugoti" [ref=f3e642]
+              - paragraph [ref=f3e644]:
+                - strong [ref=f3e645]: Ranjit Ponugoti
+                - text: Software Engineer
+        - article [ref=f3e646]:
+          - heading "Judging Criteria" [level=3] [ref=f3e648]
+          - list [ref=f3e650]:
+            - listitem [ref=f3e651]:
+              - strong [ref=f3e652]: Innovation and Creativity
+              - text: How original and creative the project idea is, including unique approaches to solving real-world problems.
+            - listitem [ref=f3e653]:
+              - strong [ref=f3e654]: Technical Complexity
+              - text: The depth of engineering, programming, hardware integration, or system design demonstrated in the project.
+            - listitem [ref=f3e655]:
+              - strong [ref=f3e656]: Real World Impact
+              - text: How useful, practical, or meaningful the project could be in real world situations.
+            - listitem [ref=f3e657]:
+              - strong [ref=f3e658]: Design and Functionality
+              - text: The overall quality, usability, and effectiveness of the project’s design and implementation.
+            - listitem [ref=f3e659]:
+              - strong [ref=f3e660]: Presentation Quality
+              - text: How clearly the team explains their project, including demonstrations, documentation, and communication of ideas.
+      - generic [ref=f3e661]:
+        - paragraph [ref=f3e664]:
+          - text: Questions?
+          - link "Email the hackathon manager" [ref=f3e665] [cursor=pointer]:
+            - /url: mailto:ehsansadiq141@gmail.com
+        - article [ref=f3e666]:
+          - heading "Hackathon sponsors" [level=3] [ref=f3e667]
+          - link [ref=f3e668] [cursor=pointer]:
+            - /url: https://codecrafters.io
+            - img "CodeCrafters" [ref=f3e669]
+          - link [ref=f3e670] [cursor=pointer]:
+            - /url: https://featherless.ai
+            - img "Featherless.ai" [ref=f3e671]
+          - link [ref=f3e672] [cursor=pointer]:
+            - /url: https://gen.xyz
+            - img "Gen.xyz" [ref=f3e673]
+          - link [ref=f3e674] [cursor=pointer]:
+            - /url: https://www.dialogate.com
+            - img "Dialogate" [ref=f3e675]
+          - link [ref=f3e676] [cursor=pointer]:
+            - /url: https://tin.computer/
+            - img "Tin Computer" [ref=f3e677]
+          - link [ref=f3e678] [cursor=pointer]:
+            - /url: https://eventopia.in/
+            - img "Eventopia" [ref=f3e679]
+        - paragraph [ref=f3e681]:
+          - text: This site is protected by reCAPTCHA and the Google
+          - link "Privacy Policy" [ref=f3e682] [cursor=pointer]:
+            - /url: https://policies.google.com/privacy
+          - text: and
+          - link "Terms of Service" [ref=f3e683] [cursor=pointer]:
+            - /url: https://policies.google.com/terms
+          - text: apply.
+  - contentinfo [ref=f3e684]:
+    - generic [ref=f3e685]:
+      - navigation [ref=f3e687]:
+        - heading "Devpost" [level=4] [ref=f3e688]
+        - list [ref=f3e689]:
+          - listitem [ref=f3e690]:
+            - link "About" [ref=f3e691] [cursor=pointer]:
+              - /url: https://info.devpost.com/about
+          - listitem [ref=f3e692]:
+            - link "Careers" [ref=f3e693] [cursor=pointer]:
+              - /url: https://info.devpost.com/careers
+          - listitem [ref=f3e694]:
+            - link "Contact" [ref=f3e695] [cursor=pointer]:
+              - /url: https://info.devpost.com/contact
+          - listitem [ref=f3e696]:
+            - link "Help" [ref=f3e697] [cursor=pointer]:
+              - /url: https://help.devpost.com/
+      - navigation [ref=f3e699]:
+        - heading "Hackathons" [level=4] [ref=f3e700]
+        - list [ref=f3e701]:
+          - listitem [ref=f3e702]:
+            - link "Browse hackathons" [ref=f3e703] [cursor=pointer]:
+              - /url: https://devpost.com/hackathons
+          - listitem [ref=f3e704]:
+            - link "Explore projects" [ref=f3e705] [cursor=pointer]:
+              - /url: https://devpost.com/software
+          - listitem [ref=f3e706]:
+            - link "Host a hackathon" [ref=f3e707] [cursor=pointer]:
+              - /url: https://info.devpost.com
+          - listitem [ref=f3e708]:
+            - link "Hackathon guides" [ref=f3e709] [cursor=pointer]:
+              - /url: https://info.devpost.com/guides
+      - navigation [ref=f3e711]:
+        - heading "Portfolio" [level=4] [ref=f3e712]
+        - list [ref=f3e713]:
+          - listitem [ref=f3e714]:
+            - link "Your projects" [ref=f3e715] [cursor=pointer]:
+              - /url: https://devpost.com/portfolio/redirect?page=projects
+          - listitem [ref=f3e716]:
+            - link "Your hackathons" [ref=f3e717] [cursor=pointer]:
+              - /url: https://devpost.com/portfolio/redirect?page=hackathons
+          - listitem [ref=f3e718]:
+            - link "Settings" [ref=f3e719] [cursor=pointer]:
+              - /url: https://devpost.com/settings
+      - navigation [ref=f3e721]:
+        - heading "Connect" [level=4] [ref=f3e722]
+        - list [ref=f3e723]:
+          - listitem [ref=f3e724]:
+            - link [ref=f3e725] [cursor=pointer]:
+              - /url: https://twitter.com/devpost
+              - generic [ref=f3e726]: 
+              - text: Twitter
+          - listitem [ref=f3e728]:
+            - link [ref=f3e729] [cursor=pointer]:
+              - /url: https://discord.com/invite/HP4BhW3hnp
+              - generic [ref=f3e730]: 
+              - text: Discord
+          - listitem [ref=f3e732]:
+            - link [ref=f3e733] [cursor=pointer]:
+              - /url: https://www.facebook.com/devposthacks
+              - generic [ref=f3e734]: 
+              - text: Facebook
+          - listitem [ref=f3e736]:
+            - link [ref=f3e737] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/devpost/
+              - generic [ref=f3e738]: 
+              - text: LinkedIn
+    - navigation [ref=f3e741]:
+      - generic [ref=f3e743]:
+        - generic [ref=f3e744]: © 2026 Devpost, Inc. All rights reserved.
+        - list [ref=f3e745]:
+          - listitem [ref=f3e746]:
+            - link "Community guidelines" [ref=f3e747] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/community-guidelines
+          - listitem [ref=f3e748]:
+            - link "Security" [ref=f3e749] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/security
+          - listitem [ref=f3e750]:
+            - link "CA notice" [ref=f3e751] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/california-consumer-privacy-act
+          - listitem [ref=f3e752]:
+            - link "Privacy policy" [ref=f3e753] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/privacy-policy
+          - listitem [ref=f3e754]:
+            - link "Terms of service" [ref=f3e755] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/terms-of-service

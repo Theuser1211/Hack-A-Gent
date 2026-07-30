@@ -11,6 +11,8 @@ import type {
 } from '../planning/planner-types.js';
 import type { PlanningProvider } from '../planning/planning-provider.js';
 import type { PromptEngine } from '../prompts/prompt-engine.js';
+import { extractJSON, executeWithJSONRetry, buildRetryPrompt } from './json-extractor.js';
+import { HackathonDataSchema, ProjectIdeaArraySchema, RiskArraySchema, UnknownArraySchema, RecommendedQuestionArraySchema } from './llm-output-schemas.js';
 
 export class LLMPlanningProvider implements PlanningProvider {
   private router: RouterEngine;
@@ -53,7 +55,8 @@ export class LLMPlanningProvider implements PlanningProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    return JSON.parse(response.content) as HackathonData;
+    const parsed = extractJSON(response.content, { schema: HackathonDataSchema, provider: response.provider, model: response.model_id, stage: 'ingestHackathon' });
+    return parsed as HackathonData;
   }
 
   async generateProjectIdeas(data: HackathonData): Promise<ProjectIdea[]> {
@@ -79,10 +82,10 @@ export class LLMPlanningProvider implements PlanningProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    const parsed = JSON.parse(response.content);
-    return Array.isArray(parsed)
-      ? (parsed as ProjectIdea[])
-      : ((parsed.ideas ?? parsed.projects ?? []) as ProjectIdea[]);
+    const parsed = extractJSON(response.content, { provider: response.provider, model: response.model_id, stage: 'generateProjectIdeas' });
+    const ideas = Array.isArray(parsed) ? parsed : ((parsed as Record<string, unknown>).ideas ?? (parsed as Record<string, unknown>).projects ?? []);
+    const validated = ProjectIdeaArraySchema.safeParse(ideas);
+    return (validated.success ? validated.data : ideas) as ProjectIdea[];
   }
 
   async assessRisks(data: HackathonData, ideas: ProjectIdea[]): Promise<Risk[]> {
@@ -108,8 +111,10 @@ export class LLMPlanningProvider implements PlanningProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    const parsed = JSON.parse(response.content);
-    return Array.isArray(parsed) ? (parsed as Risk[]) : ((parsed.risks ?? []) as Risk[]);
+    const parsed = extractJSON(response.content, { provider: response.provider, model: response.model_id, stage: 'assessRisks' });
+    const risks = Array.isArray(parsed) ? parsed : ((parsed as Record<string, unknown>).risks ?? []);
+    const validated = RiskArraySchema.safeParse(risks);
+    return (validated.success ? validated.data : risks) as Risk[];
   }
 
   async identifyUnknowns(data: HackathonData, ideas: ProjectIdea[]): Promise<Unknown[]> {
@@ -135,8 +140,10 @@ export class LLMPlanningProvider implements PlanningProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    const parsed = JSON.parse(response.content);
-    return Array.isArray(parsed) ? (parsed as Unknown[]) : ((parsed.unknowns ?? []) as Unknown[]);
+    const parsed = extractJSON(response.content, { provider: response.provider, model: response.model_id, stage: 'identifyUnknowns' });
+    const unknowns = Array.isArray(parsed) ? parsed : ((parsed as Record<string, unknown>).unknowns ?? []);
+    const validated = UnknownArraySchema.safeParse(unknowns);
+    return (validated.success ? validated.data : unknowns) as Unknown[];
   }
 
   async generateQuestions(unknowns: Unknown[]): Promise<RecommendedQuestion[]> {
@@ -162,9 +169,9 @@ export class LLMPlanningProvider implements PlanningProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    const parsed = JSON.parse(response.content);
-    return Array.isArray(parsed)
-      ? (parsed as RecommendedQuestion[])
-      : ((parsed.questions ?? []) as RecommendedQuestion[]);
+    const parsed = extractJSON(response.content, { provider: response.provider, model: response.model_id, stage: 'generateQuestions' });
+    const questions = Array.isArray(parsed) ? parsed : ((parsed as Record<string, unknown>).questions ?? []);
+    const validated = RecommendedQuestionArraySchema.safeParse(questions);
+    return (validated.success ? validated.data : questions) as RecommendedQuestion[];
   }
 }

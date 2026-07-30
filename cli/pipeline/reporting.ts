@@ -52,6 +52,10 @@ export class PipelineReportGenerator {
         risks: [],
         recommendedStack: ['React', 'Node.js'],
         estimatedJudgeScore: 0, // Not computed — requires real evaluation
+        technologyStack: { frontend: 'React', backend: 'Node.js', database: 'SQLite', deployment: 'Vercel', testing: 'Vitest', styling: 'Tailwind CSS' },
+        uiDirection: { designLanguage: 'Modern, clean', layout: 'Centered card-based', keyScreens: ['Landing', 'Dashboard', 'Submission'], responsiveBreakpoints: 'Mobile, Tablet, Desktop', componentLibrary: 'Tailwind CSS' },
+        featurePriority: [{ feature: 'Core implementation', weight: 50, effort: 'high', category: 'core' }, { feature: 'Deployment', weight: 20, effort: 'low', category: 'core' }],
+        roadmap: [{ phase: 'Development', tasks: ['Build', 'Test', 'Deploy'], estimatedMinutes: 120 }],
       },
       techStack: params.strategy?.recommendedStack ?? ['React', 'Node.js', 'PostgreSQL'],
       generatedFeatures: features,

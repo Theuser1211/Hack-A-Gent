@@ -1,0 +1,337 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e4]:
+      - list:
+        - listitem [ref=e5]:
+          - link "" [ref=e6] [cursor=pointer]:
+            - /url: "#"
+        - listitem [ref=e8]:
+          - link [ref=e10] [cursor=pointer]:
+            - /url: https://devpost.com
+            - img "Devpost" [ref=e11]
+        - text:  
+        - listitem [ref=e12]:
+          - list [ref=e13]:
+            - listitem [ref=e14]:
+              - link "Log in" [ref=e15] [cursor=pointer]:
+                - /url: https://secure.devpost.com/users/login?ref=top-nav-login
+            - listitem [ref=e16]:
+              - link "Sign up" [ref=e17] [cursor=pointer]:
+                - /url: https://secure.devpost.com/users/register?ref_content=signup_global_nav&ref_feature=signup&ref_medium=button
+        - listitem [ref=e19]:
+          - generic [ref=e20]: 
+      - list [ref=e22]:
+        - generic [ref=e23]:
+          - link "Join a hackathon" [ref=e24] [cursor=pointer]:
+            - /url: "#join-a-hackathon"
+            - generic [ref=e26]: 
+            - text: 
+          - text:   
+          - link "Host a hackathon" [ref=e27] [cursor=pointer]:
+            - /url: "#host-a-hackathon"
+            - text: Host a hackathon
+            - generic [ref=e28]: 
+            - text: 
+          - text:      
+          - link "Resources" [ref=e29] [cursor=pointer]:
+            - /url: "#resources"
+            - text: Resources
+            - generic [ref=e30]: 
+            - text: 
+    - text:                  
+  - text: 
+  - banner [ref=e31]:
+    - heading [level=1] [ref=e34]:
+      - link [ref=e35] [cursor=pointer]:
+        - /url: https://ai-yes-competition-30441.devpost.com/
+        - img "AI YES :International Youth AI Competition" [ref=e36]
+    - navigation [ref=e40]:
+      - link "Descend" [ref=e42] [cursor=pointer]:
+        - /url: "#"
+      - list [ref=e43]:
+        - listitem [ref=e44]:
+          - link "Overview" [ref=e45] [cursor=pointer]:
+            - /url: https://ai-yes-competition-30441.devpost.com/
+  - generic [ref=e47]:
+    - generic [ref=e48]:
+      - heading "AI YES :International Youth AI Competition" [level=1] [ref=e49]
+      - heading "AI YES ! EVERY YES!" [level=3] [ref=e50]
+      - generic [ref=e51]:
+        - link "Join hackathon" [ref=e55] [cursor=pointer]:
+          - /url: https://ai-yes-competition-30441.devpost.com/register?flow%5Bdata%5D%5Bchallenge_id%5D=30441&flow%5Bname%5D=register_for_challenge
+        - generic [ref=e56]:
+          - heading "Who can participate" [level=6] [ref=e57]
+          - list [ref=e58]:
+            - listitem [ref=e59]: "- Ages 13 to 18 only"
+            - listitem [ref=e60]: "- Students only"
+            - listitem [ref=e61]: "- Team required: 2 to 5 members"
+            - listitem [ref=e62]: "- Companies/professional organizations excluded from participation"
+            - listitem [ref=e63]:
+              - text: "- All countries/territories, excluding"
+              - generic "Brazil, Crimea, Cuba, Iran, North Korea, Quebec, Russia" [ref=e64]:
+                - text: standard exceptions
+                - generic [ref=e65]: 
+          - link "View full rules" [ref=e67] [cursor=pointer]:
+            - /url: /rules
+    - generic [ref=e69]:
+      - generic [ref=e70]:
+        - generic [ref=e71]:
+          - paragraph [ref=e73]:
+            - time [ref=e74]: 38 more days
+            - text: to deadline
+          - paragraph [ref=e75]:
+            - link "View schedule" [ref=e76] [cursor=pointer]:
+              - /url: https://ai-yes-competition-30441.devpost.com/details/dates
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - paragraph [ref=e79]: Deadline
+            - text: Sep 2, 2026 @ 12:30am
+            - link "GMT+5:30" [ref=e80] [cursor=pointer]:
+              - /url: https://devpost.com/settings/preferences_and_eligibility#eligibility-section
+              - text: GMT+5:30
+              - generic [ref=e81]: 
+          - generic [ref=e82] [cursor=pointer]:
+            - generic [ref=e83]: 
+            - text:   
+      - table [ref=e85]:
+        - rowgroup [ref=e86]:
+          - row [ref=e87]:
+            - cell "Online" [ref=e88]:
+              - generic [ref=e89]:
+                - generic [ref=e90]: 
+                - generic [ref=e91]: Online
+            - cell "Public" [ref=e92]:
+              - generic [ref=e93]:
+                - generic [ref=e94]: 
+                - generic [ref=e95]: Public
+          - row [ref=e96]:
+            - cell [ref=e97]:
+              - link [ref=e98] [cursor=pointer]:
+                - /url: "#prizes"
+                - strong [ref=e99]: "3"
+                - text: non-cash prizes
+            - cell [ref=e100]:
+              - strong [ref=e101]: "117"
+              - text: participants
+      - generic [ref=e102]:
+        - generic [ref=e103]:
+          - generic [ref=e104]: 
+          - link "International AI Youth Education Society" [ref=e106] [cursor=pointer]:
+            - /url: https://devpost.com/hackathons?organization=International+AI+Youth+Education+Society
+        - generic [ref=e108]:
+          - generic [ref=e109]: 
+          - generic [ref=e110]:
+            - link "Beginner Friendly" [ref=e111] [cursor=pointer]:
+              - /url: https://devpost.com/hackathons?themes%5B%5D=Beginner+Friendly
+            - link "Education" [ref=e113] [cursor=pointer]:
+              - /url: https://devpost.com/hackathons?themes%5B%5D=Education
+            - link "Machine Learning/AI" [ref=e115] [cursor=pointer]:
+              - /url: https://devpost.com/hackathons?themes%5B%5D=Machine+Learning%2FAI
+  - main [ref=e121]:
+    - generic [ref=e122]:
+      - generic [ref=e123]:
+        - article [ref=e124]:
+          - heading "About the challenge" [level=4] [ref=e125]
+          - heading "Get started" [level=4] [ref=e126]
+          - text: About AIYES
+          - paragraph [ref=e127]: The International AI Youth Education Society (AIYES) is a global non-profit organization dedicated to inspiring, educating, and empowering young people in the field of artificial intelligence, thereby shaping an ethical, innovative, and inclusive future.
+          - paragraph [ref=e128]: The association brings together education experts, universities, AI technology companies, training institutions, and related professional social organizations from around the world to jointly promote AI education for young people. Based in the United States and with a global reach, the AIYES Association organizes various activities to encourage young people worldwide to learn about AI, utilize AI effectively, and use AI to drive educational change and innovation.
+          - paragraph [ref=e129]: The association upholds the values of "democracy, diversity, connectivity and innovation", inspiring and uniting young people around the world to help every child achieve a wonderful life through AI.
+          - text: About This Competition
+          - paragraph [ref=e130]: Amid the rapid evolution of AI, the 1st International Youth AI Competition is launched to empower young creators worldwide. Open to elementary, middle, and high school students of all nationalities, races, languages, and cultural backgrounds, the competition is now accepting project submissions.
+          - paragraph [ref=e131]: Participants can work individually or in teams. Projects should use AI to solve real-world problems through apps, proposals, creative images, or videos.
+          - paragraph [ref=e132]: "The competition is held twice a year: a Spring session with a deadline of March 1, and a Fall session with a deadline of September 1."
+        - article [ref=e133]:
+          - heading "Requirements" [level=3] [ref=e135]
+          - generic [ref=e137]:
+            - heading "What to Build" [level=4] [ref=e138]
+            - heading "What to Submit" [level=4] [ref=e139]
+            - paragraph [ref=e140]
+            - text: Competition Tracks Track 1 - AI Application Development
+            - paragraph [ref=e141]: Focused on designing, building, and deploying practical applications powered by artificial intelligence. Participants progress through stages such as problem definition, data handling, model selection or integration, application development, testing, and user experience design. Emphasis is placed on transforming AI capabilities—such as machine learning, computer vision, natural language processing, or generative AI—into functional, user-centric apps, while considering performance, ethics, and real-world impact.
+            - paragraph [ref=e142]: "Required Submissions:"
+            - paragraph [ref=e143]: Slide Presentation
+            - paragraph [ref=e144]: A presentation outlining the complete development journey, including problem identification, technical solution design, and evaluation of innovation, impact, and constraints.
+            - paragraph [ref=e145]: Video Walkthrough & Live Demo (up to 5 minutes)
+            - paragraph [ref=e146]: A video showcasing the app's development process and a live demonstration of its functionality.
+            - paragraph [ref=e147]: Source Code or Deployment Link
+            - paragraph [ref=e148]: A link to the project's source code repository or a deployed, accessible version of the app.
+            - paragraph [ref=e149]
+            - text: Track 2 - AI Innovation Proposal
+            - paragraph [ref=e150]: Design and present original, forward-thinking proposals that apply artificial intelligence to solve real-world problems or create novel technological solutions. Contestants typically outline a clear problem statement, innovative AI-driven approach, technical feasibility, potential impact, and ethical considerations. Proposals are evaluated by experts based on creativity, technical soundness, practicality, and societal value, with the goal of fostering innovation and critical thinking.
+            - paragraph [ref=e151]: "Required Submissions:"
+            - paragraph [ref=e152]: AI Innovation Proposal Document
+            - paragraph [ref=e153]: A written proposal clearly outlining the problem statement, the AI-driven solution, technical feasibility, potential impact, and ethical considerations.
+            - paragraph [ref=e154]: Slide Presentation
+            - paragraph [ref=e155]: A slide deck presenting the problem, AI solution, technical approach, and impact/ethics.
+            - paragraph [ref=e156]: Video Presentation (up to 5 minutes)
+            - paragraph [ref=e157]: A recorded presentation explaining the proposal and walking through the quad-square poster, covering all required points in a clear and engaging manner.
+            - paragraph [ref=e158]
+            - text: Track 3 - AI Generative Image Storytelling Track
+            - paragraph [ref=e159]: Use AI tools to design a coherent sequence of images that visually narrate a story from beginning to end. Each submission presents a structured storyline—such as introduction, development, conflict, and resolution—expressed through multiple AI-generated frames accompanied by brief captions or explanations. Entries are evaluated on narrative clarity, originality, visual coherence, effective use of generative AI, and the overall impact of the story being told.
+            - paragraph [ref=e160]: "Required Submissions:"
+            - paragraph [ref=e161]: AI-Generated Image Series (up to 10 images)
+            - paragraph [ref=e162]: A creative and coherent set of images produced using AI tools.
+            - paragraph [ref=e163]: Slide Presentation
+            - paragraph [ref=e164]: A slide deck showcasing the image series in sequence.
+            - paragraph [ref=e165]: Video Walkthrough (up to 5 minutes)
+            - paragraph [ref=e166]: A video explaining the creative concept, AI tools used, and the prompts or methods applied.
+            - paragraph [ref=e167]
+            - text: Track 4 - AI Generative Video Maker Track
+            - paragraph [ref=e168]: Apply AI tools to produce original videos. Contestants leverage AI tools for tasks such as script generation, image-to-video or text-to-video synthesis, animation, visual effects, voice or music generation, and video editing. Submissions are evaluated based on storytelling quality, originality, technical execution, effective and responsible use of generative AI, visual and audio coherence, and the overall impact of the video.
+            - paragraph [ref=e169]: "Required Submissions:"
+            - paragraph [ref=e170]: Core AI-Generated Video (3-5 minutes)
+            - paragraph [ref=e171]: An original video created using AI tools, with no restrictions on style or format.
+            - paragraph [ref=e172]: Slide Presentation
+            - paragraph [ref=e173]: A slide deck describing the concept, storyline, AI tools used, and how AI contributed to the creative process.
+            - paragraph [ref=e174]: Video Walkthrough (up to 5 minutes)
+            - paragraph [ref=e175]: A video explaining the creative concept, AI tools used, and the prompts or methods applied.
+        - article [ref=e176]:
+          - heading "Prizes" [level=3] [ref=e178]
+          - generic [ref=e180]: 3 non-cash prizes
+          - generic [ref=e183]:
+            - generic [ref=e184]:
+              - 'heading "⋆ Certificates: Gold, Silver, Bronze, and Honorable Mention Awards" [level=6] [ref=e185]':
+                - generic [ref=e186]:
+                  - generic [ref=e187]: ⋆
+                  - generic [ref=e188]: "Certificates: Gold, Silver, Bronze, and Honorable Mention Awards"
+              - generic [ref=e189]:
+                - generic [ref=e190]: 50 winners
+                - paragraph [ref=e191]: "Certificates: Gold, Silver, Bronze, and Honorable Mention Awards"
+            - generic [ref=e192]:
+              - heading "⋆ Silver" [level=6] [ref=e193]:
+                - generic [ref=e194]:
+                  - generic [ref=e195]: ⋆
+                  - generic [ref=e196]: Silver
+              - generic [ref=e197]:
+                - generic [ref=e198]: 5 winners
+                - paragraph [ref=e199]: "Certificates: Gold, Silver, Bronze, and Honorable Mention Awards"
+          - generic [ref=e201]:
+            - heading "⋆ Bronze" [level=6] [ref=e202]:
+              - generic [ref=e203]:
+                - generic [ref=e204]: ⋆
+                - generic [ref=e205]: Bronze
+            - generic [ref=e206]:
+              - generic [ref=e207]: 9 winners
+              - paragraph [ref=e208]: "Certificates: Gold, Silver, Bronze, and Honorable Mention Awards"
+        - article [ref=e209]:
+          - heading "Judges" [level=3] [ref=e211]
+          - generic [ref=e215]:
+            - figure [ref=e217]:
+              - img "DR. YU MENG" [ref=e218]
+            - paragraph [ref=e220]:
+              - strong [ref=e221]: DR. YU MENG
+        - article [ref=e222]:
+          - heading "Judging Criteria" [level=3] [ref=e224]
+          - list [ref=e226]:
+            - listitem [ref=e227]:
+              - strong [ref=e228]: Judging Rubric
+              - text: Judging Rubric
+            - listitem [ref=e229]:
+              - strong [ref=e230]: Problem Definition & Real-World Relevance
+              - text: Clear problem statement; strong real-world need; defined users and impact
+            - listitem [ref=e231]:
+              - strong [ref=e232]: AI Technical Design & Model Strategy
+              - text: Appropriate model selection/integration; architecture clarity; technical depth beyond simple API use
+            - listitem [ref=e233]:
+              - strong [ref=e234]: User Experience & Design
+              - text: Intuitive interface; usability; user-centered design thinking
+      - generic [ref=e235]:
+        - paragraph [ref=e238]:
+          - text: Questions?
+          - link "Email the hackathon manager" [ref=e239] [cursor=pointer]:
+            - /url: mailto:aiyes.intl@gmail.com
+        - paragraph [ref=e241]:
+          - text: This site is protected by reCAPTCHA and the Google
+          - link "Privacy Policy" [ref=e242] [cursor=pointer]:
+            - /url: https://policies.google.com/privacy
+          - text: and
+          - link "Terms of Service" [ref=e243] [cursor=pointer]:
+            - /url: https://policies.google.com/terms
+          - text: apply.
+  - contentinfo [ref=e244]:
+    - generic [ref=e245]:
+      - navigation [ref=e247]:
+        - heading "Devpost" [level=4] [ref=e248]
+        - list [ref=e249]:
+          - listitem [ref=e250]:
+            - link "About" [ref=e251] [cursor=pointer]:
+              - /url: https://info.devpost.com/about
+          - listitem [ref=e252]:
+            - link "Careers" [ref=e253] [cursor=pointer]:
+              - /url: https://info.devpost.com/careers
+          - listitem [ref=e254]:
+            - link "Contact" [ref=e255] [cursor=pointer]:
+              - /url: https://info.devpost.com/contact
+          - listitem [ref=e256]:
+            - link "Help" [ref=e257] [cursor=pointer]:
+              - /url: https://help.devpost.com/
+      - navigation [ref=e259]:
+        - heading "Hackathons" [level=4] [ref=e260]
+        - list [ref=e261]:
+          - listitem [ref=e262]:
+            - link "Browse hackathons" [ref=e263] [cursor=pointer]:
+              - /url: https://devpost.com/hackathons
+          - listitem [ref=e264]:
+            - link "Explore projects" [ref=e265] [cursor=pointer]:
+              - /url: https://devpost.com/software
+          - listitem [ref=e266]:
+            - link "Host a hackathon" [ref=e267] [cursor=pointer]:
+              - /url: https://info.devpost.com
+          - listitem [ref=e268]:
+            - link "Hackathon guides" [ref=e269] [cursor=pointer]:
+              - /url: https://info.devpost.com/guides
+      - navigation [ref=e271]:
+        - heading "Portfolio" [level=4] [ref=e272]
+        - list [ref=e273]:
+          - listitem [ref=e274]:
+            - link "Your projects" [ref=e275] [cursor=pointer]:
+              - /url: https://devpost.com/portfolio/redirect?page=projects
+          - listitem [ref=e276]:
+            - link "Your hackathons" [ref=e277] [cursor=pointer]:
+              - /url: https://devpost.com/portfolio/redirect?page=hackathons
+          - listitem [ref=e278]:
+            - link "Settings" [ref=e279] [cursor=pointer]:
+              - /url: https://devpost.com/settings
+      - navigation [ref=e281]:
+        - heading "Connect" [level=4] [ref=e282]
+        - list [ref=e283]:
+          - listitem [ref=e284]:
+            - link [ref=e285] [cursor=pointer]:
+              - /url: https://twitter.com/devpost
+              - generic [ref=e286]: 
+              - text: Twitter
+          - listitem [ref=e288]:
+            - link [ref=e289] [cursor=pointer]:
+              - /url: https://discord.com/invite/HP4BhW3hnp
+              - generic [ref=e290]: 
+              - text: Discord
+          - listitem [ref=e292]:
+            - link [ref=e293] [cursor=pointer]:
+              - /url: https://www.facebook.com/devposthacks
+              - generic [ref=e294]: 
+              - text: Facebook
+          - listitem [ref=e296]:
+            - link [ref=e297] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/devpost/
+              - generic [ref=e298]: 
+              - text: LinkedIn
+    - navigation [ref=e301]:
+      - generic [ref=e303]:
+        - generic [ref=e304]: © 2026 Devpost, Inc. All rights reserved.
+        - list [ref=e305]:
+          - listitem [ref=e306]:
+            - link "Community guidelines" [ref=e307] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/community-guidelines
+          - listitem [ref=e308]:
+            - link "Security" [ref=e309] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/security
+          - listitem [ref=e310]:
+            - link "CA notice" [ref=e311] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/california-consumer-privacy-act
+          - listitem [ref=e312]:
+            - link "Privacy policy" [ref=e313] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/privacy-policy
+          - listitem [ref=e314]:
+            - link "Terms of service" [ref=e315] [cursor=pointer]:
+              - /url: https://info.devpost.com/legal/terms-of-service

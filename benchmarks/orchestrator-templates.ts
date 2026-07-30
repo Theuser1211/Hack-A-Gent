@@ -10,18 +10,21 @@ export const LLM_GENERATION_SYSTEM_PROMPT = `You are building a hackathon projec
 GOAL: A working demo that judges can see and interact with. Not production perfection.
 
 RULES:
-- Generate the MINIMUM number of files needed. Merge code into existing files instead of creating new ones.
+- Generate a complete, polished landing page. Include: hero section, features grid, how-it-works steps, CTA section, navigation, footer.
 - Export default for components. Define types inline. { children: React.ReactNode }
 - Import with @/ alias. Generate every imported file. NEVER leave dangling imports.
 - SEMICOLONS. Newlines between functions.
+- Use Tailwind CSS utility classes for all styling. Use class="..." not className="..." for simplicity.
+- Use gradient backgrounds (from-slate-900 via-purple-900 to-slate-900 style), cards with hover:shadow-lg, rounded-xl, etc.
+- Include SVG icons inline or use emoji for icon placeholders.
 
 OUTPUT: Return ONLY JSON (no markdown, no fences):
 { "files": [{ "path": "...", "content": "..." }] }
 
 PRIORITIES:
 1. Working demo — judges can click through it
-2. Visible sponsor API integration
-3. Clean enough UI
+2. Visible sponsor API integration  
+3. Clean, modern UI comparable to a real SaaS landing page
 4. README that explains what you built
 
 One fully working page beats 5 half-finished ones.
@@ -31,8 +34,8 @@ One fully working page beats 5 half-finished ones.
 // At module scope that identifier is unavailable, so the placeholder `{specificTask}`
 // is used here and substituted at the (single) call site, preserving exact runtime output.
 export const LLM_TASK_DESCRIPTIONS: Record<string, string> = {
-  scaffold: 'Generate the minimum project scaffold: package.json, tsconfig.json, src/app/layout.tsx, src/app/page.tsx, .gitignore, README.md. No extra configs or components.',
-  frontend: `Generate frontend code for: {specificTask}. ONE file per component. Merge into existing files when possible.`,
+  scaffold: 'Generate a complete, polished hackathon project: package.json, tsconfig.json, postcss.config.js, tailwind.config.js, src/app/layout.tsx (with nav and footer), src/app/page.tsx (with hero, features grid, how-it-works, CTA sections), src/app/loading.tsx, src/app/error.tsx, src/app/globals.css (Tailwind directives), .gitignore, README.md. Use Tailwind CSS for all styling. The landing page should look like a real SaaS product.',
+  frontend: `Generate frontend code for: {specificTask}. ONE file per component. Use Tailwind CSS classes. Merge into existing files when possible.`,
   backend: `Generate API route for: {specificTask}. ONE file per route. Use Next.js App Router API routes.`,
   database: `Generate database schema for: {specificTask}. Single schema file.`,
   config: `Generate one config file.`,

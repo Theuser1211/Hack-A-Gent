@@ -5,6 +5,8 @@ import type { LLMRequest } from '../llm/llm-types.js';
 import type { RouterEngine } from '../llm/router-engine.js';
 import type { ArchitectureBlueprint } from '../planning/architect-types.js';
 import type { PromptEngine } from '../prompts/prompt-engine.js';
+import { extractJSON } from './json-extractor.js';
+import { GeneratedModuleSchema } from './llm-output-schemas.js';
 
 export class LLMBuilderProvider implements BuilderProvider {
   private router: RouterEngine;
@@ -73,13 +75,18 @@ export class LLMBuilderProvider implements BuilderProvider {
     };
 
     const { response } = await this.router.execute(this.taskType, request);
-    const parsed = JSON.parse(response.content);
+    const parsed = extractJSON(response.content, { provider: response.provider, model: response.model_id, stage: 'generateModule' });
 
-    if (parsed.name && parsed.files) {
+    if (parsed && typeof parsed === 'object' && 'name' in (parsed as Record<string, unknown>) && 'files' in (parsed as Record<string, unknown>)) {
+      const validated = GeneratedModuleSchema.safeParse(parsed);
+      if (validated.success) return validated.data;
       return parsed as GeneratedModule;
     }
-    if (parsed.modules && Array.isArray(parsed.modules)) {
-      return parsed.modules[0] as GeneratedModule;
+    if (parsed && typeof parsed === 'object' && 'modules' in (parsed as Record<string, unknown>)) {
+      const parsedModules = (parsed as Record<string, unknown>).modules;
+      if (Array.isArray(parsedModules) && parsedModules.length > 0) {
+        return parsedModules[0] as unknown as GeneratedModule;
+      }
     }
     return {
       name: moduleType,

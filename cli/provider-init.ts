@@ -2,6 +2,7 @@ import { getLLMConfig, getDeployConfig, type LLMConfig } from '../cli/config-man
 import type { LLMProvider } from '../kernel/llm/llm-provider.js';
 import { RouterEngine } from '../kernel/llm/router-engine.js';
 import { ProviderFactory } from '../kernel/providers/provider-factory.js';
+import { ModelPerformanceTracker } from '../kernel/routing/model-performance-tracker.js';
 
 export interface ProviderInitializationResult {
   router: RouterEngine;
@@ -68,9 +69,11 @@ export function initializeProviders(config?: LLMConfig): ProviderInitializationR
     throw new Error(`No LLM providers available. Errors: ${providerErrors.join('; ')}`);
   }
 
+  const perfTracker = new ModelPerformanceTracker();
   const router = new RouterEngine(providers, {
     configuredProvider: llmConfig.provider,
     configuredModel: llmConfig.model,
+    perfTracker,
   });
 
   return { router, providers, config: llmConfig };

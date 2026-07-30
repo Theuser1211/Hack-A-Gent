@@ -100,7 +100,7 @@ function readFileWithContext(filePath: string, line: number, contextLines: numbe
     });
     return `File: ${filePath}\nLines ${start + 1}-${end} of ${lines.length}:\n${numbered.join('\n')}`;
   } catch {
-    return `File: ${filePath} (could not read)`;
+    return `File: ${filePath} (could not read)`; // file deleted or permission denied
   }
 }
 
@@ -154,7 +154,7 @@ function applyFix(filePath: string, content: string): boolean {
     fs.writeFileSync(filePath, content, 'utf-8');
     return true;
   } catch {
-    return false;
+    return false; // write failed
   }
 }
 
@@ -375,6 +375,21 @@ export async function autonomousRepair(context: RepairContext): Promise<RepairRe
               applyFix(fullPath, content);
               fixed = true;
             }
+          }
+        } catch { /* skip */ }
+      }
+
+      // Pattern 5: `class` instead of `className` in JSX
+      if (error.message.includes('class') && (error.message.includes('DetailedHTMLProps') || error.message.includes('HTMLAttributes'))) {
+        try {
+          let content = fs.readFileSync(fullPath, 'utf-8');
+          const original = content;
+          content = content.replace(/\bclass="/g, 'className="');
+          content = content.replace(/\bclass='/g, "className='");
+          content = content.replace(/\bclass=\{/g, 'className={');
+          if (content !== original) {
+            applyFix(fullPath, content);
+            fixed = true;
           }
         } catch { /* skip */ }
       }

@@ -188,6 +188,31 @@ export function getDeployConfig(): DeployConfig {
   return config?.deploy ?? {};
 }
 
+export function getGitHubToken(): string | undefined {
+  const config = getConfig();
+  return config?.deploy?.githubToken || process.env.GITHUB_TOKEN || undefined;
+}
+
+const GITHUB_GUARD_MESSAGE = `
+  GitHub token not configured.
+
+  Run:
+
+      hag setup
+
+  or set:
+
+      GITHUB_TOKEN=...
+`;
+
+export function requireGitHubToken(): string {
+  const token = getGitHubToken();
+  if (!token) {
+    throw new Error(GITHUB_GUARD_MESSAGE);
+  }
+  return token;
+}
+
 export function setDeployConfig(deployConfig: DeployConfig): void {
   const existing = getConfig() ?? { llm: { provider: 'openai' }, updatedAt: new Date().toISOString() };
   existing.deploy = { ...existing.deploy, ...deployConfig };

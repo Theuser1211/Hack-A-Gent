@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, execSync, type ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as http from 'node:http';
 import * as path from 'node:path';
@@ -13,14 +13,27 @@ export interface DevServerExecutor {
 
 export class DefaultDevServerExecutor implements DevServerExecutor {
   private readonly processes: Map<number, ChildProcess> = new Map();
+  private _pythonCmd: string | null = null;
+
+  private getPythonCmd(): string {
+    if (this._pythonCmd) return this._pythonCmd;
+    try {
+      execSync('python3 --version', { stdio: 'ignore' });
+      this._pythonCmd = 'python3';
+    } catch {
+      this._pythonCmd = 'python';
+    }
+    return this._pythonCmd;
+  }
 
   async start(projectPath: string, port = 3000, timeoutMs = 60000): Promise<RunningApplication> {
     const projectType = this.detectProjectType(projectPath);
+    const py = this.getPythonCmd();
     const cmd =
       projectType === 'node'
         ? this.getNodeStartCommand(projectPath)
         : projectType === 'python'
-          ? 'python app.py 2>nul || python main.py 2>nul || python -m http.server {port}'
+          ? `${py} app.py || ${py} main.py || ${py} -m http.server {port}`
           : 'echo "No dev server configured"';
 
     const resolvedCmd = cmd.replace('{port}', String(port));

@@ -72,7 +72,7 @@ export class SubmissionAssistant {
       let entries: string[];
       try {
         entries = readdirSync(dir);
-      } catch {
+      } catch { // skip unreadable directories
         return;
       }
       for (const entry of entries) {
@@ -170,7 +170,7 @@ export class SubmissionAssistant {
       let entries: string[];
       try {
         entries = readdirSync(dir);
-      } catch {
+      } catch { // skip unreadable directories
         return;
       }
       for (const entry of entries) {
