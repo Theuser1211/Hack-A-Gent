@@ -2686,7 +2686,7 @@ This is a HACKATHON project. Make it stand out — judges will compare it agains
               { role: 'user', content: adjustedPrompt },
             ],
           };
-          const { response } = await this.routerEngine.execute('coding', retryRequest);
+          const { response } = await this.routerEngine!.execute('coding', retryRequest);
           if (!response) throw new Error('execute returned null response');
           return response.content;
         },

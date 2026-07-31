@@ -211,14 +211,18 @@ describe('Judge Simulation', () => {
   });
 
   describe('Feature Impact', () => {
+    const technicalJudge = JUDGES[0]!;
+    const designJudge = JUDGES[1]!;
+    const businessJudge = JUDGES[2]!;
+
     it('real API integration boosts technical difficulty significantly', () => {
       const withAPI = scoreProject(
         { hasRealAPI: true, hasErrorHandling: false, hasLoadingStates: false, hasResponsiveDesign: false, hasWorkingDemo: false, hasREADME: false, hasJudgingAlignment: false, hasSponsorIntegration: false, hasUniqueApproach: false, hasPolishedUI: false },
-        JUDGES[0],
+        technicalJudge,
       );
       const withoutAPI = scoreProject(
         { hasRealAPI: false, hasErrorHandling: false, hasLoadingStates: false, hasResponsiveDesign: false, hasWorkingDemo: false, hasREADME: false, hasJudgingAlignment: false, hasSponsorIntegration: false, hasUniqueApproach: false, hasPolishedUI: false },
-        JUDGES[0],
+        technicalJudge,
       );
 
       expect(withAPI.technicalDifficulty).toBeGreaterThan(withoutAPI.technicalDifficulty);
@@ -227,11 +231,11 @@ describe('Judge Simulation', () => {
     it('working demo boosts execution significantly', () => {
       const withDemo = scoreProject(
         { hasRealAPI: false, hasErrorHandling: false, hasLoadingStates: false, hasResponsiveDesign: false, hasWorkingDemo: true, hasREADME: false, hasJudgingAlignment: false, hasSponsorIntegration: false, hasUniqueApproach: false, hasPolishedUI: false },
-        JUDGES[0],
+        technicalJudge,
       );
       const withoutDemo = scoreProject(
         { hasRealAPI: false, hasErrorHandling: false, hasLoadingStates: false, hasResponsiveDesign: false, hasWorkingDemo: false, hasREADME: false, hasJudgingAlignment: false, hasSponsorIntegration: false, hasUniqueApproach: false, hasPolishedUI: false },
-        JUDGES[0],
+        technicalJudge,
       );
 
       expect(withDemo.execution).toBeGreaterThan(withoutDemo.execution);
@@ -240,11 +244,11 @@ describe('Judge Simulation', () => {
     it('polished UI boosts design significantly', () => {
       const withUI = scoreProject(
         { hasRealAPI: false, hasErrorHandling: false, hasLoadingStates: false, hasResponsiveDesign: false, hasWorkingDemo: false, hasREADME: false, hasJudgingAlignment: false, hasSponsorIntegration: false, hasUniqueApproach: false, hasPolishedUI: true },
-        JUDGES[0],
+        designJudge,
       );
       const withoutUI = scoreProject(
         { hasRealAPI: false, hasErrorHandling: false, hasLoadingStates: false, hasResponsiveDesign: false, hasWorkingDemo: false, hasREADME: false, hasJudgingAlignment: false, hasSponsorIntegration: false, hasUniqueApproach: false, hasPolishedUI: false },
-        JUDGES[0],
+        designJudge,
       );
 
       expect(withUI.design).toBeGreaterThan(withoutUI.design);

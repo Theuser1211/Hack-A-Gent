@@ -16,7 +16,8 @@ export type LayoutPattern =
   | 'full-screen-demo'
   | 'sidebar-main'
   | 'centered-card'
-  | 'multi-column';
+  | 'multi-column'
+  | 'chart-dashboard';
 
 export type ColorPalette =
   | 'ai-purple'
@@ -166,6 +167,7 @@ export function checkDiversity(
 
   for (let i = 0; i < existingFingerprints.length; i++) {
     const existing = existingFingerprints[i];
+    if (!existing) continue;
     const similarities: string[] = [];
 
     if (existing.layout === newFingerprint.layout) {
