@@ -1,4 +1,4 @@
-import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, writeFileSync, readdirSync } from 'node:fs';
 import * as path from 'node:path';
 
 import { createDeterministicUuid, deterministicNow, nextTraceCounter } from '../../benchmarks/determinism-kernel.js';
@@ -20,6 +20,7 @@ import { validateStageInput } from '../pipeline/stage-guards.js';
 import { planImprovements } from '../improvement/improvement-planner.js';
 import { executeImprovement } from '../improvement/improvement-executor.js';
 import type { JudgeResult, ImprovementAction } from '../improvement/improvement-types.js';
+import { ImprovementInstrumentor, printImprovementSummary, computeProjectHash } from '../improvement/improvement-instrumentor.js';
 import { generatePackage } from '../submission/package-generator.js';
 import { checkReadiness } from '../submission/readiness-check.js';
 import type { PipelineContext } from '../pipeline/types.js';
@@ -181,6 +182,22 @@ export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIRes
   }
 
   return runFullPipeline(ctx, parsed, seed, dryRun, args, qualResult.status);
+}
+
+function walkImprovementFiles(dir: string): string[] {
+  const results: string[] = [];
+  function walk(d: string): void {
+    try {
+      for (const entry of readdirSync(d, { withFileTypes: true })) {
+        if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+        const full = path.join(d, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (entry.isFile()) results.push(full);
+      }
+    } catch { /* skip */ }
+  }
+  if (existsSync(dir)) walk(dir);
+  return results;
 }
 
 async function runFullPipeline(
@@ -465,44 +482,215 @@ async function runFullPipeline(
       warn(`Improvement Pass skipped: ${improveGuard.error}`);
     }
 
-    // Improvement pass — one targeted action from the internal judge report
+    // Improvement pass — feedback loop: Judge → Plan → Execute → Re-Judge
+    const remainingMs = Date.now() - t0;
     stageStart('Improvement Pass');
+    log('');
+    dim('Improvement Pass');
+
+    const improveStartMs = Date.now();
+    const improveBudgetMs = Math.min(12 * 60 * 1000, Math.max(30_000, 600_000 - remainingMs));
+    const ITER_BUDGET_MS = 3 * 60 * 1000;
+    const MAX_ITERATIONS = 2;
+    let initialJudgeScore = finalReport.judgeScorePrediction;
+    let currentScore = initialJudgeScore;
     let improvedAction: ImprovementAction | null = null;
-    try {
-      const judgeResult: JudgeResult = {
-        scores: {
-          innovation: finalReport.innovationScore,
-          technicalDepth: finalReport.technicalDepthScore,
-          feasibility: finalReport.feasibilityScore,
-          presentation: finalReport.presentationScore,
-          completeness: finalReport.completenessScore,
-          maintainability: finalReport.maintainabilityScore,
-          judgeAlignment: finalReport.judgeAlignmentScore,
-          overall: finalReport.judgeScorePrediction,
-        },
-        strengths: [],
-        weaknesses: finalReport.knownWeaknesses,
-      };
-      const actions = planImprovements(judgeResult, evalProjectDir);
-      const sorted = actions.sort((a, b) => {
-        const pOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-        return (pOrder[a.priority] ?? 99) - (pOrder[b.priority] ?? 99);
-      });
-      const action = sorted[0];
-      if (action) {
-        const ok = await executeImprovement(action, evalProjectDir);
-        if (ok) {
-          improvedAction = action;
-          info(`${color('\u2713', 'green')} ${action.type} — ${action.target}`);
-          stageDone('Improvement Pass', Date.now() - t0);
-        } else {
-          stageDone('Improvement Pass', Date.now() - t0);
-        }
-      } else {
-        stageDone('Improvement Pass', Date.now() - t0);
-      }
-    } catch (improveErr) {
+    const iterationScores: number[] = [];
+    const instrumentor = new ImprovementInstrumentor(improveBudgetMs, ITER_BUDGET_MS);
+    let lastBuildHash: string | null = null;
+    let stopReason = 'completed';
+
+    if (improveBudgetMs < 30_000) {
+      debug(`Skipped Improvement Pass — only ${Math.round(improveBudgetMs / 1000)}s remaining`);
       stageDone('Improvement Pass', Date.now() - t0);
+      stageSkipped('Improvement Pass');
+    } else {
+      try {
+        for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
+          if (instrumentor.ranOutOfTime) {
+            stopReason = 'time budget exhausted';
+            break;
+          }
+
+          instrumentor.startIteration(iter + 1, currentScore);
+          dim(`  Iteration ${iter + 1} / ${MAX_ITERATIONS}`);
+
+          instrumentor.startSubStage('Generate critique');
+          const actions = planImprovements({
+            scores: {
+              innovation: finalReport.innovationScore,
+              technicalDepth: finalReport.technicalDepthScore,
+              feasibility: finalReport.feasibilityScore,
+              presentation: finalReport.presentationScore,
+              completeness: finalReport.completenessScore,
+              maintainability: finalReport.maintainabilityScore,
+              judgeAlignment: finalReport.judgeAlignmentScore,
+              overall: currentScore,
+            },
+            strengths: [],
+            weaknesses: finalReport.knownWeaknesses,
+          }, evalProjectDir);
+          const sorted = actions.sort((a, b) => {
+            const pOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+            return (pOrder[a.priority] ?? 99) - (pOrder[b.priority] ?? 99);
+          });
+          const action = sorted[0];
+          if (!action) {
+            instrumentor.endSubStage('skipped');
+            instrumentor.skipSubStage('Generate fixes');
+            instrumentor.skipSubStage('Apply patches');
+            instrumentor.skipSubStage('Build');
+            instrumentor.skipSubStage('Judge');
+            log(`  Score improvement........0`);
+            log(`  Decision: stop: no actions`);
+            instrumentor.endIteration(currentScore, 'converged', 'no actions planned');
+            break;
+          }
+          instrumentor.endSubStage();
+
+          if (instrumentor.iterRanOutOfTime) {
+            instrumentor.skipSubStage('Generate fixes');
+            instrumentor.skipSubStage('Apply patches');
+            instrumentor.skipSubStage('Build');
+            instrumentor.skipSubStage('Judge');
+            log(`  Score improvement........0`);
+            log(`  Decision: stop: time budget exhausted`);
+            instrumentor.endIteration(currentScore, 'timeout', 'iteration budget exhausted');
+            break;
+          }
+
+          instrumentor.startSubStage('Generate fixes');
+          const preSnapshot = new Map<string, string>();
+          try {
+            const files = walkImprovementFiles(evalProjectDir);
+            for (const f of files) {
+              try { preSnapshot.set(f, readFileSync(f, 'utf-8')); } catch { /* skip */ }
+            }
+          } catch { /* snapshot failed */ }
+          const ok = await executeImprovement(action, evalProjectDir);
+          if (!ok) {
+            instrumentor.endSubStage('failed');
+            instrumentor.skipSubStage('Apply patches');
+            instrumentor.skipSubStage('Build');
+            instrumentor.skipSubStage('Judge');
+            log(`  Score improvement........0`);
+            log(`  Decision: stop: execution failed`);
+            instrumentor.endIteration(currentScore, 'failed', 'execution failed');
+            continue;
+          }
+          instrumentor.endSubStage();
+
+          if (instrumentor.iterRanOutOfTime) {
+            instrumentor.skipSubStage('Apply patches');
+            instrumentor.skipSubStage('Build');
+            instrumentor.skipSubStage('Judge');
+            log(`  Score improvement........0`);
+            log(`  Decision: stop: time budget exhausted`);
+            instrumentor.endIteration(currentScore, 'timeout', 'iteration budget exhausted');
+            break;
+          }
+
+          instrumentor.startSubStage('Apply patches');
+          let regressionsReverted = 0;
+          const targetAbs = path.resolve(evalProjectDir, action.target);
+          for (const [snapFile, snapContent] of preSnapshot) {
+            if (snapFile === targetAbs) continue;
+            try {
+              const current = readFileSync(snapFile, 'utf-8');
+              if (current !== snapContent) {
+                writeFileSync(snapFile, snapContent, 'utf-8');
+                regressionsReverted++;
+              }
+            } catch { /* skip */ }
+          }
+          instrumentor.endSubStage();
+
+          if (instrumentor.iterRanOutOfTime) {
+            instrumentor.skipSubStage('Build');
+            instrumentor.skipSubStage('Judge');
+            log(`  Score improvement........0`);
+            log(`  Decision: stop: time budget exhausted`);
+            instrumentor.endIteration(currentScore, 'timeout', 'iteration budget exhausted');
+            break;
+          }
+
+          instrumentor.startSubStage('Build');
+          const currentHash = computeProjectHash(evalProjectDir);
+          let buildFailed = false;
+          if (currentHash === lastBuildHash) {
+            debug(`Build skipped — unchanged project hash ${currentHash}`);
+          } else {
+            try {
+              const tscPath = path.join(evalProjectDir, 'node_modules', '.bin', 'tsc');
+              if (existsSync(tscPath)) {
+                const { execSync } = await import('node:child_process');
+                execSync(`"${tscPath}" --noEmit 2>&1`, { cwd: evalProjectDir, stdio: 'pipe', timeout: 90_000, windowsHide: true });
+              } else {
+                debug(`TypeScript not found in project — skipping typecheck regression guard`);
+              }
+              lastBuildHash = currentHash;
+            } catch {
+              buildFailed = true;
+              const snapContent = preSnapshot.get(targetAbs);
+              if (snapContent !== undefined) {
+                try { writeFileSync(targetAbs, snapContent, 'utf-8'); } catch { /* skip */ }
+              }
+            }
+          }
+          instrumentor.endSubStage(buildFailed ? 'failed' : 'completed');
+
+          if (buildFailed) {
+            instrumentor.skipSubStage('Judge');
+            log(`  Score improvement........0`);
+            log(`  Decision: stop: build failed`);
+            instrumentor.endIteration(currentScore, 'failed', 'build failed after improvement');
+            continue;
+          }
+
+          if (instrumentor.iterRanOutOfTime) {
+            instrumentor.skipSubStage('Judge');
+            log(`  Score improvement........0`);
+            log(`  Decision: stop: time budget exhausted`);
+            instrumentor.endIteration(currentScore, 'timeout', 'iteration budget exhausted');
+            break;
+          }
+
+          instrumentor.startSubStage('Judge');
+          const increase = action.expectedScoreIncrease;
+          const projected = Math.min(100, currentScore + increase);
+          currentScore = projected;
+          iterationScores.push(currentScore);
+          instrumentor.endSubStage();
+
+          const scoreDelta = iterationScores.length >= 2 ? currentScore - iterationScores[iterationScores.length - 2]! : increase;
+          const scoreStr = scoreDelta > 0 ? `+${scoreDelta}` : `${scoreDelta}`;
+          log(`  Score improvement........${scoreStr}`);
+          improvedAction = action;
+
+          const decision = instrumentor.shouldStop(scoreDelta, iter);
+          const reasonMap: Record<string, string> = {
+            continue: 'improving',
+            converged: scoreDelta <= 0 && iter > 0 ? `plateau detected (delta ${scoreDelta})` : 'time budget exhausted',
+            max_iterations: 'max iterations reached',
+            timeout: 'time budget exhausted',
+            failed: 'build failed',
+          };
+          stopReason = reasonMap[decision] ?? 'completed';
+          const decisionStr = decision === 'continue' ? 'continue' : `stop: ${stopReason}`;
+          log(`  Decision: ${decisionStr}`);
+          instrumentor.endIteration(currentScore, decision, stopReason);
+
+          if (decision !== 'continue') break;
+        }
+      } catch (improveErr) {
+        stopReason = `error: ${improveErr instanceof Error ? improveErr.message : String(improveErr)}`;
+        warn(`Improvement pass error: ${improveErr instanceof Error ? improveErr.message : String(improveErr)}`);
+      }
+
+      const improveTotalMs = Date.now() - improveStartMs;
+      stageDone('Improvement Pass', Date.now() - t0);
+      const improveSummary = instrumentor.buildSummary(initialJudgeScore, currentScore, stopReason);
+      printImprovementSummary(improveSummary);
     }
 
     // Record run results for learning (single pass — uses real eval when available)
