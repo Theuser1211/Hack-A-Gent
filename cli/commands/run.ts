@@ -16,6 +16,7 @@ import type { InterviewResult } from '../interview/types.js';
 import { adaptStrategyToGeneration, buildCodeGenContext } from '../pipeline/strategy-adapter.js';
 import { validateRuntime } from '../pipeline/runtime-validation.js';
 import { validateChallenge, type ChallengeValidationResult } from '../pipeline/challenge-validation.js';
+import { validateStageInput } from '../pipeline/stage-guards.js';
 import { planImprovements } from '../improvement/improvement-planner.js';
 import { executeImprovement } from '../improvement/improvement-executor.js';
 import type { JudgeResult, ImprovementAction } from '../improvement/improvement-types.js';
@@ -179,7 +180,7 @@ export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIRes
     stageDone('Challenge Validation', Date.now() - t0);
   }
 
-  return runFullPipeline(ctx, parsed, seed, dryRun, args);
+  return runFullPipeline(ctx, parsed, seed, dryRun, args, qualResult.status);
 }
 
 async function runFullPipeline(
@@ -188,6 +189,7 @@ async function runFullPipeline(
   seed: number,
   dryRun: boolean,
   args: CLIArgs,
+  qualificationStatus: string,
 ): Promise<CLIResult> {
   const t0 = Date.now();
 
@@ -300,6 +302,17 @@ async function runFullPipeline(
   internetOrch.setGenerationInput(adaptStrategyToGeneration(winningStrategy, interviewResult?.optimizationBudget));
 
   const reqs = await internetOrch.extractRequirements(parsed);
+
+  // Pipeline guard: validate inputs before generation
+  const genGuard = validateStageInput('ProjectGeneration', {
+    projectName,
+    title: parsed.title,
+    qualification: qualificationStatus,
+  });
+  if (!genGuard.valid) {
+    stageFail('Project Generation', genGuard.error);
+    return { success: false, message: genGuard.error ?? 'Validation failed' };
+  }
 
   stageStart('Project Generation');
   const executionPlan = await internetOrch.createExecutionPlan(parsed, reqs);
@@ -442,6 +455,15 @@ async function runFullPipeline(
         realEval = evaluateProject(evalProjectDir);
       }
     } catch { /* evaluation is non-critical */ }
+
+    // Pipeline guard: validate improvement pass inputs
+    const improveGuard = validateStageInput('ImprovementPass', {
+      projectName,
+      currentScore: finalReport.judgeScorePrediction,
+    });
+    if (!improveGuard.valid) {
+      warn(`Improvement Pass skipped: ${improveGuard.error}`);
+    }
 
     // Improvement pass — one targeted action from the internal judge report
     stageStart('Improvement Pass');
