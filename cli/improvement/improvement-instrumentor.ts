@@ -101,7 +101,7 @@ export class ImprovementInstrumentor {
     return this.iterRemainingMs <= 0;
   }
 
-  shouldStop(scoreDelta: number, iteration: number): string {
+  shouldStop(scoreDelta: number, iteration: number): 'converged' | 'max_iterations' | 'continue' {
     if (this.ranOutOfTime) return 'converged';
     if (this.iterRanOutOfTime) return 'converged';
     if (iteration >= 2) return 'max_iterations';
@@ -151,7 +151,7 @@ export function computeProjectHash(projectDir: string): string {
 
 function collectProjectFiles(projectDir: string): string[] {
   const files: string[] = [];
-  function walk(dir: string) {
+  function walk(dir: string): void {
     try {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
@@ -165,12 +165,12 @@ function collectProjectFiles(projectDir: string): string[] {
   return files;
 }
 
-export function generateProjectName(competitionName: string | undefined, theme: string | undefined): { slug: string; displayName: string; folderName: string } {
+export function generateProjectName(competitionName: string, theme?: string): { slug: string; displayName: string; folderName: string } {
   const prefixes = ['Vision', 'Pulse', 'Med', 'Skill', 'Eco', 'Code', 'Nova', 'Aero', 'Zen', 'Flux', 'Apex', 'Cascade', 'Vertex', 'Orbit', 'Moment'];
   const suffixes = ['Forge', 'AI', 'Lens', 'Sprint', 'Flow', 'Canvas', 'Sync', 'Shift', 'Link', 'Grid', 'Core', 'Edge', 'Spark', 'Wave', 'Hub'];
   let seed = 0;
   const nameStr = competitionName ?? 'hackathon';
-  for (let i = 0; i < nameStr.length; i++) seed = ((seed << 5) - seed) + nameStr.charCodeAt(i);
+  for (let i = 0; i < nameStr.length; i++) seed = ((seed << 5) - seed) + nameStr.charCodeAt(i)!;
   const prefix = prefixes[Math.abs(seed) % prefixes.length]!;
   const suffix = suffixes[Math.abs(seed >> 8) % suffixes.length]!;
   const displayName = `${prefix}${suffix}`;

@@ -65,7 +65,7 @@ export function validateProviderEnv(provider: string, options: { envFilePath?: s
   if (keyStatus.source === 'missing') {
     issues.push({
       variable: req.apiKeyVar,
-      fix: ENV_VAR_HINTS[req.apiKeyVar] ?? `Set ${req.apiKeyVar} before running the pipeline.`,
+      fix: ENV_VAR_HINTS[req.apiKeyVar as keyof typeof ENV_VAR_HINTS] ?? `Set ${req.apiKeyVar} before running the pipeline.`,
       source: 'missing',
     });
   }
@@ -78,12 +78,12 @@ export function validateProviderEnv(provider: string, options: { envFilePath?: s
         ?? null;
     }
   }
-
   if (!baseUrl && req.baseUrlDefault) {
     baseUrl = req.baseUrlDefault;
   }
 
   const file = parseEnvFile(options.envFilePath);
+
   return {
     provider,
     valid: issues.length === 0,
