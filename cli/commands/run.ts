@@ -84,6 +84,21 @@ export async function runCommand(ctx: CLIContext, args: CLIArgs): Promise<CLIRes
     return { success: false, message: 'Usage: hackagent run <input> (devpost URL, file path, or text spec)' };
   }
 
+  // Pre-validation: reject invalid input before any LLM calls
+  const { validateInput } = await import('../validation/input-validator.js');
+  const inputValidation = validateInput(input);
+  if (!inputValidation.valid) {
+    stageFail('Input Validation');
+    const errorMsg = inputValidation.error ?? `Invalid input: ${input}`;
+    showErrorSummary({
+      phase: 'Input Validation',
+      reason: errorMsg,
+      fix: 'Provide a valid Devpost URL, MLH URL, or hackathon page URL',
+    });
+    return { success: false, message: errorMsg };
+  }
+  labeled('input', `${inputValidation.urlType} (${inputValidation.state})`);
+
   const seed = typeof args.flags.seed === 'number' ? args.flags.seed : ctx.seed;
   const dryRun = args.flags['dry-run'] === true || ctx.dryRun;
 
