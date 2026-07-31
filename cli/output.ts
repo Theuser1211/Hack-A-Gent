@@ -492,3 +492,15 @@ export function showPlan(plan: {
   }
   logRaw('');
 }
+
+// ── Observability helpers ──────────────────────────────────────────────────
+
+export function formatStageProgress(stage: string, current: number, total: number, detail: string): string {
+  return `[${stage}] ${current}/${total} — ${detail}`;
+}
+
+export function formatScoreProgress(before: number, after: number): string {
+  const delta = after - before;
+  const sign = delta > 0 ? '+' : '';
+  return `Score: ${before} → ${after} (${sign}${delta})`;
+}
