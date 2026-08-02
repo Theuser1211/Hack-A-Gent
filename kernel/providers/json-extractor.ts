@@ -171,7 +171,7 @@ export function buildRetryPrompt(originalContent: string, lastError: string): st
   return `${originalContent}\n\nYour previous response could not be parsed.\nError: ${lastError}\nReturn ONLY valid JSON matching the requested schema.`;
 }
 
-const STRUCTURED_OUTPUT_PROVIDERS: Set<ProviderId> = new Set(['openai', 'gemini', 'openrouter', 'anthropic', 'custom']);
+const STRUCTURED_OUTPUT_PROVIDERS: Set<ProviderId> = new Set(['openai', 'gemini', 'openrouter', 'anthropic', 'custom', 'nvidia']);
 
 export function supportsStructuredOutput(provider: ProviderId | string): boolean {
   return STRUCTURED_OUTPUT_PROVIDERS.has(provider as ProviderId);

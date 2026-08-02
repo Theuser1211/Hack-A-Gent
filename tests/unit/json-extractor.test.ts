@@ -209,8 +209,8 @@ describe('supportsStructuredOutput', () => {
     expect(supportsStructuredOutput('custom')).toBe(true);
   });
 
-  it('returns false for nvidia', () => {
-    expect(supportsStructuredOutput('nvidia')).toBe(false);
+  it('returns true for nvidia', () => {
+    expect(supportsStructuredOutput('nvidia')).toBe(true);
   });
 
   it('returns false for mistral', () => {
