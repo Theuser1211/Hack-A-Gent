@@ -9,8 +9,11 @@ export function criterionFocus(name: string): FocusDimension {
   if (/(technical|complexity|depth|engineering|algorithm|sophistication|implement)/.test(lc)) return 'technical';
   if (/(impact|social|benefit|community|reach|outcome|value|real.?world)/.test(lc)) return 'impact';
   if (/(design|ux|usability|presentation|polish|experience|aesthetic)/.test(lc)) return 'design';
-  if (/(feasibility|practical|viable|complete)/.test(lc)) return 'feasibility';
-  if (/(functionality|quality|robust|reliability)/.test(lc)) return 'completeness';
+  // Completeness must be checked before feasibility — the "complete" stem
+  // lives in both words and a criterion named "Completeness" is about
+  // finishing the loop, not about buildability.
+  if (/(complet|functionality|quality|robust|reliability)/.test(lc)) return 'completeness';
+  if (/(feasibility|practical|viable)/.test(lc)) return 'feasibility';
   return 'wow';
 }
 

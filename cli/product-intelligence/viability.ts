@@ -24,6 +24,10 @@ const DOMAIN_PROFILES: Record<string, DomainProfile> = {
   community: { marketSize: 5, businessModel: 'Marketplace / sponsorship', monetizationPath: 'Local business sponsorships or a tiny transaction fee', monetization: 5 },
   accessibility: { marketSize: 6, businessModel: 'B2B accessibility SaaS', monetizationPath: 'Licensed to orgs that must comply with accessibility law', monetization: 6 },
   civic: { marketSize: 5, businessModel: 'B2G / nonprofit', monetizationPath: 'Municipal contracts or foundation funding', monetization: 4 },
+  cybersecurity: { marketSize: 9, businessModel: 'B2B security SaaS', monetizationPath: 'Annual license per seat; free tier for individuals', monetization: 8 },
+  space: { marketSize: 6, businessModel: 'B2B2G / data licensing', monetizationPath: 'License telemetry and data products to researchers and municipalities', monetization: 5 },
+  robotics: { marketSize: 7, businessModel: 'Hardware + software', monetizationPath: 'Sell the hardware at cost, license the software per fleet', monetization: 7 },
+  gaming: { marketSize: 9, businessModel: 'Free-to-play consumer', monetizationPath: 'Free core with cosmetics; creator and esports tools subscription', monetization: 8 },
 };
 
 const URGENCY_SIGNALS = /late.?night|drowning|stuck|last.?minute|waste|drain|loses|lost|before it spoils|no one|never|urgent|missed|forget|forgotten|scrambl|panic|cram|overload|burnout|silent|slip|catch|prevent/;

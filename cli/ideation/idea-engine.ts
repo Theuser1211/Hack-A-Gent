@@ -49,8 +49,9 @@ export function brainstormIdeas(
   const matches = scoreDomains(theme, problemStatement);
   const domainScore = new Map(matches.map((m) => [m.domain.id, m.score]));
   const topDomainId = matches[0]?.domain.id ?? null;
+  const topScore = matches[0]?.score ?? 0;
   const pool = buildAnglePool(domains);
-  const drafts = generateDrafts(pool, theme, problemStatement, domainScore, topDomainId, focusName, apiName, seed);
+  const drafts = generateDrafts(pool, theme, problemStatement, domainScore, topScore, topDomainId, focusName, apiName, seed);
 
   const weights = dimensionWeights(criteria);
   const ranked = drafts
@@ -107,6 +108,7 @@ function generateDrafts(
   theme: string,
   problemStatement: string,
   domainScore: Map<string, number>,
+  topScore: number,
   topDomainId: string | null,
   focusName: string,
   apiName: string | null,
@@ -132,7 +134,7 @@ function generateDrafts(
       line: angle.line,
       adj,
       lcTheme,
-      themeFit: computeThemeFit(angle, theme, problemStatement, domainScore.get(domain) ?? 0, domain === topDomainId),
+      themeFit: computeThemeFit(angle, theme, problemStatement, domainScore.get(domain) ?? 0, topScore, domain === topDomainId),
     };
   });
 }
@@ -197,9 +199,11 @@ function computeSponsorFit(domainId: string, apiName: string | null): number {
   const lower = apiName.toLowerCase();
   const domain = IDEA_DOMAINS.find((d) => d.id === domainId);
   if (domain?.techHints.some((hint) => lower.includes(hint))) return 10;
-  // AI-flavored sponsors are broadly useful.
+  // AI-flavored sponsors are broadly useful to almost every idea.
   if (/openai|gemini|anthropic|hugging|cohere|llm/.test(lower)) return 8;
-  return 7;
+  // A specific sponsor (Twilio, Plaid, Mapbox...) that the idea simply does
+  // not touch is a real opportunity cost — especially for must_use APIs.
+  return 4;
 }
 
 function dimensionWeights(criteria: CompetitionAnalysis['judgingCriteria']): DimensionWeights {
@@ -210,8 +214,13 @@ function dimensionWeights(criteria: CompetitionAnalysis['judgingCriteria']): Dim
   // the high weight costs nothing and the other dimensions decide.)
   const THEME_FIT_WEIGHT = 0.4;
   const CORE_BUDGET = 1 - THEME_FIT_WEIGHT;
+  // Sponsor alignment keeps a fixed share of the core budget so the chosen
+  // sponsor API can actually move rankings. (It was previously normalized to
+  // zero — acc.sponsorFit is never incremented — so sponsors had no influence.)
+  const SPONSOR_SHARE = 0.12;
+  const CRITERIA_BUDGET = CORE_BUDGET * (1 - SPONSOR_SHARE);
 
-  const acc = { novelty: 0, feasibility: 0, technicalDepth: 0, demoAppeal: 0, sponsorFit: 0 };
+  const acc = { novelty: 0, feasibility: 0, technicalDepth: 0, demoAppeal: 0 };
   for (const c of criteria ?? []) {
     const name = c.name.toLowerCase();
     const weight = c.weight;
@@ -228,16 +237,17 @@ function dimensionWeights(criteria: CompetitionAnalysis['judgingCriteria']): Dim
       acc.demoAppeal += weight / 3;
     }
   }
-  const sum = acc.novelty + acc.feasibility + acc.technicalDepth + acc.demoAppeal + acc.sponsorFit;
+  const sum = acc.novelty + acc.feasibility + acc.technicalDepth + acc.demoAppeal;
+  const sponsorFit = CORE_BUDGET * SPONSOR_SHARE;
   if (sum <= 0) {
-    return { novelty: 0.19, feasibility: 0.07, technicalDepth: 0.1, demoAppeal: 0.12, sponsorFit: 0.12, themeFit: THEME_FIT_WEIGHT };
+    return { novelty: 0.209, feasibility: 0.077, technicalDepth: 0.11, demoAppeal: 0.132, sponsorFit, themeFit: THEME_FIT_WEIGHT };
   }
   return {
-    novelty: (acc.novelty / sum) * CORE_BUDGET,
-    feasibility: (acc.feasibility / sum) * CORE_BUDGET,
-    technicalDepth: (acc.technicalDepth / sum) * CORE_BUDGET,
-    demoAppeal: (acc.demoAppeal / sum) * CORE_BUDGET,
-    sponsorFit: (acc.sponsorFit / sum) * CORE_BUDGET,
+    novelty: (acc.novelty / sum) * CRITERIA_BUDGET,
+    feasibility: (acc.feasibility / sum) * CRITERIA_BUDGET,
+    technicalDepth: (acc.technicalDepth / sum) * CRITERIA_BUDGET,
+    demoAppeal: (acc.demoAppeal / sum) * CRITERIA_BUDGET,
+    sponsorFit,
     themeFit: THEME_FIT_WEIGHT,
   };
 }
@@ -262,18 +272,19 @@ function themeKeywords(theme: string, problemStatement: string): string[] {
 
 /**
  * 1-10 relevance score: how strongly the idea addresses the challenge.
- * Domain match (the idea's domain literally matching the theme/problem) is the
- * dominant signal — the top-matched domain gets a bonus so the theme's own
- * domain always outranks a merely-adjacent one. Domain-keyword overlap (the
- * idea speaking its own domain's language, e.g. "carbon ledger" for climate)
- * and challenge-statement lexical overlap refine it. Purely content-driven
- * (no jitter) so identical challenges always rank identically.
+ * Domain match is the dominant signal, and it is scored relative to the
+ * strongest matched domain so the theme's own domain always outranks a
+ * merely-adjacent one even when both match (without this, both saturate at 10
+ * and the ranking forgets which idea is actually on-theme). Domain-keyword
+ * overlap and challenge-statement lexical overlap refine it. Purely
+ * content-driven (no jitter) so identical challenges rank identically.
  */
 function computeThemeFit(
   angle: IdeaAngle,
   theme: string,
   problemStatement: string,
   domainScore: number,
+  topScore: number,
   isTopDomain: boolean,
 ): number {
   const keywords = themeKeywords(theme, problemStatement);
@@ -282,7 +293,7 @@ function computeThemeFit(
   for (const kw of keywords) {
     if (matchesKeyword(haystack, kw)) challengeHits++;
   }
-  const challengeLexical = keywords.length > 0 ? challengeHits / keywords.length : 0;
+  const challengeLexical = keywords.length > 0 ? Math.min(1, (challengeHits / keywords.length) * 2) : 0;
 
   // Reward the idea speaking its own domain's language (e.g. "carbon ledger"
   // for climate): an idea that cannot name the problem domain reads off-theme.
@@ -291,15 +302,16 @@ function computeThemeFit(
   // purely for flavor when the challenge gives no thematic signal.
   const domain = IDEA_DOMAINS.find((d) => d.angles.some((a) => a.title === angle.title));
   const domainHits = domainScore > 0 && domain
-    ? domain.keywords.filter((kw) => matchesKeyword(haystack, kw)).length
+    ? Math.min(2, domain.keywords.filter((kw) => matchesKeyword(haystack, kw)).length)
     : 0;
 
-  // A matching domain is the strongest signal (2-6); the top-matched domain adds
-  // +1 so the theme's own domain always wins over an adjacent one. Domain-keyword
-  // overlap adds up to 3 more; challenge-statement lexical overlap adds up to 2.
-  const domainComponent = domainScore > 0 ? 2 + Math.min(domainScore, 4) : 0;
+  // A matching domain is the strongest signal, scaled by how strongly it
+  // matches RELATIVE to the top domain (0.5x → ~4, 1x → ~6). The top-matched
+  // domain adds +1 so the theme's own domain always wins over an adjacent one.
+  const ratio = topScore > 0 && domainScore > 0 ? Math.min(1, domainScore / topScore) : 0;
+  const domainComponent = domainScore > 0 ? 1 + 5 * ratio : 0;
   const topBonus = domainScore > 0 && isTopDomain ? 1 : 0;
-  const base = 3 + domainComponent + topBonus + Math.min(3, domainHits * 1.5) + challengeLexical * 2;
+  const base = 3 + domainComponent + topBonus + domainHits + challengeLexical;
   return clamp10(Math.round(base));
 }
 

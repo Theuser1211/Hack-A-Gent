@@ -167,6 +167,61 @@ export const IDEA_DOMAINS: IdeaDomain[] = [
       { title: 'Swarm', user: 'office lunch groups', line: 'a group order that splits delivery fees fairly and gets everyone fed in one trip' },
     ],
   },
+  {
+    id: 'cybersecurity',
+    // NOTE: 'threat' is deliberately excluded — it prefix-matches "threatens"
+    // in unrelated prose ("climate change threatens coastal cities").
+    keywords: ['cybersecurity', 'cyber', 'security', 'privacy', 'breach', 'phishing', 'malware', 'encryption', 'password', 'vulnerab', 'hacker', 'ransomware', 'infosec'],
+    techHints: ['openai', 'twilio'],
+    label: 'security',
+    angles: [
+      { title: 'Sentinel', user: 'security-stretched small teams', line: 'a phishing simulator that trains your staff by attacking them with your own recent real threats' },
+      { title: 'Vault', user: 'password-fatigued consumers', line: 'a breach radar that shows exactly which of your accounts are exposed and fixes the weak ones in one pass' },
+      { title: 'Lockstep', user: 'alert-drowned security analysts', line: 'a triage board that clusters the daily alert flood into the three incidents that actually matter' },
+      { title: 'Cloak', user: 'privacy-wary app users', line: 'a permissions auditor that maps which apps can see what and quietly revokes the silent snoopers' },
+    ],
+  },
+  {
+    id: 'space',
+    // NOTE: 'mission' and 'launch' are excluded — they are business-prose
+    // words ("company mission", "product launch") that leak into other themes.
+    keywords: ['space', 'orbit', 'satellite', 'nasa', 'astronaut', 'telescope', 'mars', 'rocket', 'constellation', 'telemetry', 'downlink', 'cosmos'],
+    techHints: ['mapbox', 'openai'],
+    label: 'space',
+    angles: [
+      { title: 'Orbit', user: 'stargazers with a camera', line: 'a satellite pass predictor that points your lens at the right patch of sky at the exact second' },
+      { title: 'Groundlink', user: 'cube-sat mission teams', line: 'a telemetry translator that turns the raw downlink stream into a plain-language status board' },
+      { title: 'Astra', user: 'launch-curious public', line: 'a live rocket tracker that maps every launch to the moment it crosses your local sky' },
+      { title: 'Compass', user: 'orbit-hungry students', line: 'a collision-risk checker that simulates your satellite path before you deploy' },
+    ],
+  },
+  {
+    id: 'robotics',
+    // NOTE: 'motion' is excluded — it matches legal/civic prose ("council motions").
+    keywords: ['robot', 'robotics', 'drone', 'automation', 'hardware', 'sensor', 'autonomous', 'iot', 'embedded', 'motor', 'actuator'],
+    techHints: ['openai', 'twilio'],
+    label: 'robotics',
+    angles: [
+      { title: 'Calibrate', user: 'robotics student teams', line: 'a tuning board that turns six-axis sensor logs into one readable go/no-go readout before the match' },
+      { title: 'Dock', user: 'drone operators', line: 'a flight planner that maps a safe corridor around obstacles before takeoff, not after' },
+      { title: 'Grip', user: 'warehouse crews', line: 'a pick-planner that sequences the robotic arm to clear today\'s backlog in the right order' },
+      { title: 'Tether', user: 'home robot tinkerers', line: 'a digital-twin simulator that tests the robot brain on a virtual body before it touches the floor' },
+    ],
+  },
+  {
+    id: 'gaming',
+    // NOTE: 'player' and 'level' are excluded — they are generic prose words
+    // ("key player in the market", "energy levels") that leak into other themes.
+    keywords: ['gaming', 'game', 'esports', 'quest', 'matchmaking', 'multiplayer', 'arcade', 'speedrun', 'twitch', 'playtest', 'console'],
+    techHints: ['openai', 'twilio'],
+    label: 'gaming',
+    angles: [
+      { title: 'Questline', user: 'indie game devs', line: 'a playtest replay analyzer that shows exactly where players quit, and why, in one heatmap' },
+      { title: 'Fairplay', user: 'competitive gamers', line: 'a lag radar that shows your real ping before you queue, not after the loss' },
+      { title: 'Rivalry', user: 'speedrunners', line: 'a route optimizer that breaks your splits against the world record and names the one segment to grind' },
+      { title: 'Party', user: 'online friend groups', line: 'a session planner that matches the right game to the group size and the mood in seconds' },
+    ],
+  },
 ];
 
 /** Normalize a string for keyword matching. */
@@ -192,7 +247,7 @@ function singularize(w: string): string {
 }
 
 /**
- * Word-boundary keyword match against a normalized haystack.
+ * Word-boundary keyword match strength against a normalized haystack.
  *
  * Plain `includes()` is a false-positive machine: "edu" matches inside
  * "reduce", "work" matches inside "networks". This matches whole words
@@ -200,20 +255,31 @@ function singularize(w: string): string {
  * and only prefix-matches stems that are long enough to be meaningful
  * (>= 4 chars), so "accessib" still finds "accessibility" but "edu" can never
  * match "reduce". Multi-word phrases ("open data") match as exact substrings.
- * Trade-off: a 4-char prefix can cross-match (health "care" touches "career"),
- * but that is far rarer than the substring false-positives this prevents.
+ *
+ * Strength lets scoring weight an exact keyword hit above a mere stem prefix:
+ * a 4-char prefix can still cross-match (health "care" touching "career"), so
+ * domain scoring gives prefix hits half weight — an exact "career" match must
+ * outrank an accidental "care" prefix on the same theme.
  */
-export function matchesKeyword(haystack: string, kw: string): boolean {
-  if (kw.includes(' ')) return haystack.includes(kw);
+export function keywordMatchStrength(haystack: string, kw: string): 0 | 1 | 2 {
+  if (kw.includes(' ')) return haystack.includes(kw) ? 2 : 0;
   const kwSingular = singularize(kw);
-  const words = haystack.split(' ');
-  for (const raw of words) {
+  for (const raw of haystack.split(' ')) {
     if (!raw) continue;
     const w = singularize(raw);
-    if (w === kw || w === kwSingular) return true;
-    if (kw.length >= 4 && (w.startsWith(kw) || w.startsWith(kwSingular))) return true;
+    if (w === kw || w === kwSingular) return 2;
   }
-  return false;
+  for (const raw of haystack.split(' ')) {
+    if (!raw) continue;
+    const w = singularize(raw);
+    if (kw.length >= 4 && (w.startsWith(kw) || w.startsWith(kwSingular))) return 1;
+  }
+  return 0;
+}
+
+/** Word-boundary keyword match against a normalized haystack. */
+export function matchesKeyword(haystack: string, kw: string): boolean {
+  return keywordMatchStrength(haystack, kw) > 0;
 }
 
 /**
@@ -233,8 +299,13 @@ export function scoreDomains(theme: string, problemStatement: string): DomainMat
     for (const kw of domain.keywords) {
       const norm = kw.toLowerCase();
       const w = norm.length > 3 ? 2 : 1;
-      if (matchesKeyword(themeHaystack, norm)) score += w * 4;
-      if (matchesKeyword(problemHaystack, norm)) score += w;
+      // Exact keyword hits count fully; stem-prefix hits ("care" inside
+      // "career") count half so an accidental cross-match never outranks a
+      // real one on the same theme.
+      const themeStrength = keywordMatchStrength(themeHaystack, norm);
+      const problemStrength = keywordMatchStrength(problemHaystack, norm);
+      if (themeStrength > 0) score += w * 4 * (themeStrength === 2 ? 1 : 0.5);
+      if (problemStrength > 0) score += w * (problemStrength === 2 ? 1 : 0.5);
     }
     return { domain, score };
   });
