@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest';
 
 import { brainstormIdeas } from '../../cli/ideation/idea-engine.js';
 import type { CompetitionAnalysis } from '../../cli/pipeline/types.js';
-import { runProductIntelligence } from '../../cli/product-intelligence/orchestrator.js';
-import { extractJudgingPriorities } from '../../cli/product-intelligence/judging.js';
 import { analyzeFeasibility } from '../../cli/product-intelligence/feasibility.js';
-import { analyzeViability } from '../../cli/product-intelligence/viability.js';
 import { simulateJudges } from '../../cli/product-intelligence/judge-sim.js';
+import { extractJudgingPriorities } from '../../cli/product-intelligence/judging.js';
+import { runProductIntelligence } from '../../cli/product-intelligence/orchestrator.js';
+import { analyzeViability } from '../../cli/product-intelligence/viability.js';
 
 function hackathon(over: Partial<CompetitionAnalysis>): CompetitionAnalysis {
   return {
@@ -60,6 +60,42 @@ const GENERIC = hackathon({
   sponsorAPIs: [],
 });
 
+// Word-boundary traps: "edu" lives inside "reduce" and "work" inside "networks".
+// A substring matcher would call a food hackathon an education hackathon and a
+// community hackathon a productivity hackathon.
+const FOOD = hackathon({
+  challenge: {
+    title: 'Food Hack',
+    problemStatement: 'Reduce food waste and improve access to food',
+    theme: 'food',
+    difficulty: 'intermediate',
+    estimatedParticipants: 100,
+    organizer: 'FoodOrg',
+  },
+});
+
+const COMMUNITY = hackathon({
+  challenge: {
+    title: 'Community Connect',
+    problemStatement: 'Strengthen local neighborhoods and volunteer networks',
+    theme: 'community',
+    difficulty: 'intermediate',
+    estimatedParticipants: 100,
+    organizer: 'LocalOrg',
+  },
+});
+
+const FINANCE = hackathon({
+  challenge: {
+    title: 'Fintech Build',
+    problemStatement: 'Build tools for financial literacy and better money habits',
+    theme: 'finance',
+    difficulty: 'intermediate',
+    estimatedParticipants: 100,
+    organizer: 'MoneyOrg',
+  },
+});
+
 describe('theme-fit ranking', () => {
   it('picks an on-theme winner for a climate hackathon', () => {
     const result = brainstormIdeas(CLIMATE);
@@ -111,6 +147,43 @@ describe('theme-fit ranking', () => {
 
   it('is deterministic with the theme-fit dimension', () => {
     expect(brainstormIdeas(CLIMATE)).toEqual(brainstormIdeas(CLIMATE));
+  });
+
+  it('word-boundary matching — "reduce" is NOT an education hackathon', () => {
+    // "edu" is a substring of "reduce", but the food hackathon must still
+    // produce a food winner, never an education one.
+    const result = brainstormIdeas(FOOD);
+    expect(['Pantry', 'Table', 'Ration', 'Swarm']).toContain(result.winner.title);
+    expect(result.winner.domain).toBe('food');
+  });
+
+  it('word-boundary matching — "networks" is NOT a productivity hackathon', () => {
+    // "work" is a substring of "networks", but this community hackathon must
+    // still produce a community winner.
+    const result = brainstormIdeas(COMMUNITY);
+    expect(['Huddle', 'Handoff', 'Porch', 'Common']).toContain(result.winner.title);
+  });
+
+  it('theme field outweighs a keyword-heavy problem statement', () => {
+    // The problem statement mentions "underserved communities" (community
+    // domain), but the theme title "AI for Good" must win: an AI winner, not
+    // a community one.
+    const result = brainstormIdeas(AI_GOOD);
+    expect(result.winner.domain).toBe('ai');
+  });
+
+  it('matched-domain pool favors the theme across varied hackathons', () => {
+    const cases: Array<[CompetitionAnalysis, string]> = [
+      [FINANCE, 'finance'],
+      [FOOD, 'food'],
+      [COMMUNITY, 'community'],
+      [AI_GOOD, 'ai'],
+    ];
+    for (const [a, expected] of cases) {
+      const result = brainstormIdeas(a);
+      const onTheme = result.generated.filter((i) => i.domain === expected).length;
+      expect(onTheme).toBeGreaterThanOrEqual(4);
+    }
   });
 });
 

@@ -180,13 +180,61 @@ export interface DomainMatch {
   score: number;
 }
 
-/** Score every domain against the theme/problem statement; strongest first. */
+/**
+ * Approximate singular of a word: students→student, communities→community,
+ * courses→course, friends→friend. Only the trailing "s" is dropped (so
+ * "courses" keeps its "e"), and irregular "ies"→"y" is handled first.
+ */
+function singularize(w: string): string {
+  if (w.endsWith('ies') && w.length > 4) return w.slice(0, -3) + 'y';
+  if (w.endsWith('s') && w.length > 2) return w.slice(0, -1);
+  return w;
+}
+
+/**
+ * Word-boundary keyword match against a normalized haystack.
+ *
+ * Plain `includes()` is a false-positive machine: "edu" matches inside
+ * "reduce", "work" matches inside "networks". This matches whole words
+ * (with plural folding on both sides: "courses"↔"course", "friends"↔"friend")
+ * and only prefix-matches stems that are long enough to be meaningful
+ * (>= 4 chars), so "accessib" still finds "accessibility" but "edu" can never
+ * match "reduce". Multi-word phrases ("open data") match as exact substrings.
+ * Trade-off: a 4-char prefix can cross-match (health "care" touches "career"),
+ * but that is far rarer than the substring false-positives this prevents.
+ */
+export function matchesKeyword(haystack: string, kw: string): boolean {
+  if (kw.includes(' ')) return haystack.includes(kw);
+  const kwSingular = singularize(kw);
+  const words = haystack.split(' ');
+  for (const raw of words) {
+    if (!raw) continue;
+    const w = singularize(raw);
+    if (w === kw || w === kwSingular) return true;
+    if (kw.length >= 4 && (w.startsWith(kw) || w.startsWith(kwSingular))) return true;
+  }
+  return false;
+}
+
+/**
+ * Score every domain against the theme/problem statement; strongest first.
+ *
+ * The hackathon's theme field is the single most reliable signal about what the
+ * challenge is really about ("AI for Good", "climate"), so it is weighted 4x
+ * the problem statement. Without this, a long problem statement full of
+ * secondary keywords (e.g. "communities" in an AI-for-Good brief) can outvote
+ * the theme title and pull the winner off-theme.
+ */
 export function scoreDomains(theme: string, problemStatement: string): DomainMatch[] {
-  const haystack = normalizeKeywords(`${theme} ${problemStatement}`);
+  const themeHaystack = normalizeKeywords(theme);
+  const problemHaystack = normalizeKeywords(problemStatement);
   const scored = IDEA_DOMAINS.map((domain) => {
     let score = 0;
     for (const kw of domain.keywords) {
-      if (haystack.includes(kw.toLowerCase())) score += kw.length > 3 ? 2 : 1;
+      const norm = kw.toLowerCase();
+      const w = norm.length > 3 ? 2 : 1;
+      if (matchesKeyword(themeHaystack, norm)) score += w * 4;
+      if (matchesKeyword(problemHaystack, norm)) score += w;
     }
     return { domain, score };
   });

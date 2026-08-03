@@ -1,7 +1,7 @@
 import type { InterviewResult } from '../interview/types.js';
 import type { CompetitionAnalysis } from '../pipeline/types.js';
 
-import { IDEA_DOMAINS, detectDomains, normalizeKeywords, scoreDomains, type IdeaAngle, type IdeaDomain } from './idea-library.js';
+import { IDEA_DOMAINS, detectDomains, matchesKeyword, normalizeKeywords, scoreDomains, type IdeaAngle, type IdeaDomain } from './idea-library.js';
 import { pickName } from './name-engine.js';
 import { hashSeed, seededInt, seededShuffle } from './rng.js';
 import type { IdeaDraft, IdeationResult, ScoredIdea } from './types.js';
@@ -46,9 +46,11 @@ export function brainstormIdeas(
   const apiName = selectApiName(analysis, result);
 
   const domains = detectDomains(theme, problemStatement);
-  const domainScore = new Map(scoreDomains(theme, problemStatement).map((m) => [m.domain.id, m.score]));
+  const matches = scoreDomains(theme, problemStatement);
+  const domainScore = new Map(matches.map((m) => [m.domain.id, m.score]));
+  const topDomainId = matches[0]?.domain.id ?? null;
   const pool = buildAnglePool(domains);
-  const drafts = generateDrafts(pool, theme, problemStatement, domainScore, focusName, apiName, seed);
+  const drafts = generateDrafts(pool, theme, problemStatement, domainScore, topDomainId, focusName, apiName, seed);
 
   const weights = dimensionWeights(criteria);
   const ranked = drafts
@@ -105,6 +107,7 @@ function generateDrafts(
   theme: string,
   problemStatement: string,
   domainScore: Map<string, number>,
+  topDomainId: string | null,
   focusName: string,
   apiName: string | null,
   seed: number,
@@ -129,7 +132,7 @@ function generateDrafts(
       line: angle.line,
       adj,
       lcTheme,
-      themeFit: computeThemeFit(angle, theme, problemStatement, domainScore.get(domain) ?? 0, seed),
+      themeFit: computeThemeFit(angle, theme, problemStatement, domainScore.get(domain) ?? 0, domain === topDomainId),
     };
   });
 }
@@ -260,21 +263,24 @@ function themeKeywords(theme: string, problemStatement: string): string[] {
 /**
  * 1-10 relevance score: how strongly the idea addresses the challenge.
  * Domain match (the idea's domain literally matching the theme/problem) is the
- * dominant signal; lexical overlap between the idea's pitch and the challenge
- * keywords refines it. Deterministic for a fixed seed.
+ * dominant signal — the top-matched domain gets a bonus so the theme's own
+ * domain always outranks a merely-adjacent one. Domain-keyword overlap (the
+ * idea speaking its own domain's language, e.g. "carbon ledger" for climate)
+ * and challenge-statement lexical overlap refine it. Purely content-driven
+ * (no jitter) so identical challenges always rank identically.
  */
 function computeThemeFit(
   angle: IdeaAngle,
   theme: string,
   problemStatement: string,
   domainScore: number,
-  seed: number,
+  isTopDomain: boolean,
 ): number {
   const keywords = themeKeywords(theme, problemStatement);
   const haystack = normalizeKeywords(`${angle.title} ${angle.line} ${angle.user}`);
   let challengeHits = 0;
   for (const kw of keywords) {
-    if (haystack.includes(kw)) challengeHits++;
+    if (matchesKeyword(haystack, kw)) challengeHits++;
   }
   const challengeLexical = keywords.length > 0 ? challengeHits / keywords.length : 0;
 
@@ -285,14 +291,16 @@ function computeThemeFit(
   // purely for flavor when the challenge gives no thematic signal.
   const domain = IDEA_DOMAINS.find((d) => d.angles.some((a) => a.title === angle.title));
   const domainHits = domainScore > 0 && domain
-    ? domain.keywords.filter((kw) => haystack.includes(kw)).length
+    ? domain.keywords.filter((kw) => matchesKeyword(haystack, kw)).length
     : 0;
 
-  // A matching domain is the strongest signal (2-6); its keyword overlap adds up
-  // to 3 more, and challenge-statement lexical overlap adds up to 2.
+  // A matching domain is the strongest signal (2-6); the top-matched domain adds
+  // +1 so the theme's own domain always wins over an adjacent one. Domain-keyword
+  // overlap adds up to 3 more; challenge-statement lexical overlap adds up to 2.
   const domainComponent = domainScore > 0 ? 2 + Math.min(domainScore, 4) : 0;
-  const base = 3 + domainComponent + Math.min(3, domainHits * 1.5) + challengeLexical * 2;
-  return clamp10(Math.round(base + seededInt(hashSeed([angle.title, theme, seed, 'fit']), 0, 1)));
+  const topBonus = domainScore > 0 && isTopDomain ? 1 : 0;
+  const base = 3 + domainComponent + topBonus + Math.min(3, domainHits * 1.5) + challengeLexical * 2;
+  return clamp10(Math.round(base));
 }
 
 function selectApiName(analysis: CompetitionAnalysis, result?: InterviewResult | null): string | null {
