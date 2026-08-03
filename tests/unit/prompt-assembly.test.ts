@@ -131,18 +131,38 @@ describe('assembleGenerationPrompt — Product Intelligence path (strategy block
     expect(p).not.toContain('Key Pages:');
     expect(p).toContain('Key screens:');
 
-    // Feature priority and differentiators stay as full top-level lists — the
-    // STRATEGY block only shows a filtered subset (core/sponsor features and
-    // the singular PI vision differentiator), so dropping them would lose
-    // planning artifacts. Both appear: full list + the block's callout.
-    expect(ids).toContain('feature_priority');
-    expect(ids).toContain('differentiators');
-    expect(p.split('Feature priority:').length - 1).toBe(2);
-    expect(p).toContain('Differentiators: test differentiator');
+    // Feature priority and differentiators are single-sourced: the STRATEGY
+    // block carries the FULL lists, so the top-level copies are dropped — no
+    // artifact is lost and nothing is duplicated.
+    expect(ids).not.toContain('feature_priority');
+    expect(ids).not.toContain('differentiators');
+    expect(p.split('Feature priority:').length - 1).toBe(1);
+    expect(p).not.toContain('Differentiators:');
     expect(p).toContain('Differentiator: ');
+    // No info loss: the vision differentiator AND the judge-facing bullets
+    // reach the prompt through the block.
+    expect(p).toContain(`Differentiator: ${ctx.productIntelligence!.differentiator}`);
+    expect(p).toContain('Live demo URL');
 
     // The old "Hackathon Theme" line was a verbatim copy of the problem.
     expect(p).not.toContain('Hackathon Theme:');
+  });
+
+  it('renders every carried planning artifact at most once', () => {
+    const p = assembly.userPrompt;
+    const count = (label: string) => p.split(label).length - 1;
+    expect(count('Feature priority:')).toBe(1);
+    expect(count('Sponsor APIs to prioritize:')).toBe(1);
+    expect(count('Key screens:')).toBe(1);
+    expect(count('Differentiator:')).toBe(1);
+    expect(count('Winning idea:')).toBe(1);
+    expect(count('Vision:')).toBe(1);
+    expect(count('Target users:')).toBe(1);
+    expect(count('Judging approach:')).toBe(1);
+    expect(count('Architecture:')).toBe(1);
+    expect(count('Data model:')).toBe(1);
+    expect(count('API surfaces:')).toBe(1);
+    expect(count('Risks:')).toBe(1);
   });
 
   it('never mislabels sponsor integrations or features as Judging Criteria', () => {
@@ -158,6 +178,8 @@ describe('assembleGenerationPrompt — Product Intelligence path (strategy block
     expect(reasons).toContain('sponsor_apis:already carried by STRATEGY block');
     expect(reasons).toContain('judging_criteria:already carried by STRATEGY block');
     expect(reasons).toContain('key_pages:already carried by STRATEGY block');
+    expect(reasons).toContain('feature_priority:already carried by STRATEGY block');
+    expect(reasons).toContain('differentiators:already carried by STRATEGY block');
     // Exactly one reason per section — no duplicate diagnostics entries.
     const ids = assembly.removed.map(r => r.id);
     expect(new Set(ids).size).toBe(ids.length);

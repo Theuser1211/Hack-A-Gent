@@ -69,6 +69,8 @@ export interface CodeGenContext {
   taskOrder: FeaturePriority[];
   phases: RoadmapPhase[];
   sponsorApis: string[];
+  /** Judge-facing differentiator bullets (the PI vision differentiator first when it ran). */
+  differentiators: string[];
   judgingCriteria: Array<{ name: string; weight: number }>;
   /**
    * The Product Intelligence summary — everything the LLM needs to build the
@@ -109,6 +111,7 @@ export function buildCodeGenContext(analysis: CompetitionAnalysis, strategy: Win
     taskOrder: strategy.featurePriority ?? [],
     phases: strategy.roadmap ?? [],
     sponsorApis: strategy.prioritizedAPIs ?? [],
+    differentiators: strategy.differentiators ?? [],
     judgingCriteria: (analysis.judgingCriteria ?? []).map(c => ({ name: c.name ?? '', weight: c.weight ?? 25 })),
   };
 
@@ -155,7 +158,6 @@ export function renderStrategyPromptBlock(ctx: CodeGenContext | null): string {
     if (pi.targetUser) lines.push(`Target users: ${pi.targetUser}`);
     if (pi.wowMoment) lines.push(`Wow moment: ${pi.wowMoment}`);
     if (pi.mvpScope.length > 0) lines.push(`MVP scope: ${pi.mvpScope.join('; ')}`);
-    if (pi.differentiator) lines.push(`Differentiator: ${pi.differentiator}`);
     if (pi.demoStrategy) lines.push(`Demo strategy: ${pi.demoStrategy}`);
     if (pi.architectureSummary) lines.push(`Architecture: ${pi.architectureSummary}`);
     if (pi.dataModel.length > 0) lines.push(`Data model: ${pi.dataModel.join('; ')}`);
@@ -171,10 +173,26 @@ export function renderStrategyPromptBlock(ctx: CodeGenContext | null): string {
     }
   }
 
+  // Full differentiator list — the PI vision differentiator first (when it
+  // ran), then the strategy's judge-facing bullets. The singular label keeps
+  // `Differentiator: <vision>` a prefix of the rendered line, so consumers
+  // matching on the vision text still match. This is the single source of the
+  // differentiator artifact; the prompt assembler dedups against it.
+  const diffList =
+    (ctx.differentiators ?? []).length > 0
+      ? ctx.differentiators!
+      : (pi?.differentiator ? [pi.differentiator] : []);
+  if (diffList.length > 0) {
+    lines.push(`Differentiator: ${diffList.join('; ')}`);
+  }
+
   lines.push(`UI direction: ${ctx.uiScaffold.designLanguage} (layout: ${ctx.uiScaffold.layout})`);
   lines.push(`Key screens: ${ctx.uiScaffold.keyScreens.join(', ')}`);
   lines.push(`Sponsor APIs to prioritize: ${ctx.sponsorApis.join(', ') || 'none'}`);
-  lines.push(`Feature priority: ${ctx.taskOrder.filter(f => ['core', 'sponsor'].includes(f.category)).map(f => f.feature).join('; ')}`);
+  // Full feature list (all categories). The prompt assembler dedups the
+  // top-level section against this line, so the category filter is dropped to
+  // avoid losing stretch/delight features while keeping the artifact single.
+  lines.push(`Feature priority: ${ctx.taskOrder.map(f => f.feature).filter(Boolean).join('; ')}`);
 
   return `\nSTRATEGY:\n${lines.join('\n')}\n`;
 }

@@ -148,7 +148,9 @@ export function assembleGenerationPrompt(input: GenerationPromptInput): Generati
   // when Product Intelligence ran. Top-level sections for those fields are
   // therefore redundant and dropped.
   const carriesSponsors = hasStrategy && strategyBlock.includes('Sponsor APIs to prioritize');
+  const carriesFeatures = hasStrategy && strategyBlock.includes('Feature priority');
   const carriesKeyPages = hasStrategy && strategyBlock.includes('Key screens');
+  const carriesDifferentiators = hasStrategy && strategyBlock.includes('Differentiator');
   const carriesJudging = hasStrategy && strategyBlock.includes('Judging approach');
 
   const problem = (input.problemStatement ?? '').trim();
@@ -204,15 +206,16 @@ export function assembleGenerationPrompt(input: GenerationPromptInput): Generati
     input.judgingCriteria.length > 0,
   );
 
-  // Feature priority and differentiators: the STRATEGY block only shows a
-  // filtered subset (core/sponsor features; the singular PI vision
-  // differentiator), so the full top-level lists stay — they are distinct,
-  // additive planning artifacts.
-  add(
+  // Feature priority and differentiators: the STRATEGY block carries the FULL
+  // lists (all feature categories; the vision differentiator followed by the
+  // judge-facing bullets), so the top-level copies are redundant and dropped.
+  addOrDedup(
     'feature_priority',
     'Feature Priority',
     input.featurePriority.length ? `Feature priority: ${input.featurePriority.join('; ')}` : '',
     'strategy.featurePriority',
+    carriesFeatures,
+    input.featurePriority.length > 0,
   );
 
   // Key screens: the STRATEGY block lists every key screen, so the top-level
@@ -226,11 +229,13 @@ export function assembleGenerationPrompt(input: GenerationPromptInput): Generati
     input.keyPages.length > 0,
   );
 
-  add(
+  addOrDedup(
     'differentiators',
     'Differentiators',
     input.differentiators.length ? `Differentiators: ${input.differentiators.join(', ')}` : '',
     'strategy.differentiators',
+    carriesDifferentiators,
+    input.differentiators.length > 0,
   );
 
   // Constraints carry the optimization budget plus the hackathon's real
