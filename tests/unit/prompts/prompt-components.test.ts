@@ -3,7 +3,12 @@ import {
   renderMetaSystem,
   renderHackathonSummary,
   renderStrategyPlanning,
-  renderArchitecture,
+  renderProjectVision,
+  renderArchitectureDesign,
+  renderPlanDatabase,
+  renderPlanAPI,
+  renderPlanFrontend,
+  renderPlanBackend,
   renderJudgingAlignment,
   renderDesignLanguage,
   renderFeatureSpec,
@@ -14,6 +19,7 @@ import {
 import type { CompetitionAnalysis, WinningStrategy } from '../../../cli/pipeline/types.js';
 import type { CodeGenContext } from '../../../cli/pipeline/strategy-adapter.js';
 import type { InterviewResult } from '../../../cli/interview/types.js';
+import type { ArchitectureArtifacts, ProjectVision } from '../../../cli/prompts/types.js';
 import { PromptBuilder, buildGenerationPrompt } from '../../../cli/prompts/prompt-builder.js';
 
 function makeAnalysis(): CompetitionAnalysis {
@@ -136,6 +142,70 @@ function makeInterviewResult(): InterviewResult {
   };
 }
 
+function makeArchitectureArtifacts(): ArchitectureArtifacts {
+  return {
+    componentGraph: {
+      nodes: [
+        { name: 'App', type: 'layout', description: 'Root layout', imports: ['next/font'], exports: ['App'] },
+        { name: 'HomePage', type: 'page', description: 'Landing page', imports: ['App'], exports: ['HomePage'] },
+        { name: 'VoiceInput', type: 'component', description: 'Voice input widget', imports: [], exports: ['VoiceInput'] },
+      ],
+      edges: [
+        { from: 'App', to: 'HomePage', type: 'import' },
+        { from: 'HomePage', to: 'VoiceInput', type: 'import' },
+      ],
+    },
+    apiGraph: {
+      baseUrl: '/api',
+      endpoints: [
+        { method: 'POST', path: '/transcribe', purpose: 'Transcribe voice input', requestParams: ['audio'], responseShape: '{ text: string }' },
+        { method: 'GET', path: '/features', purpose: 'List showcase features', requestParams: [], responseShape: 'Feature[]' },
+      ],
+    },
+    databaseSchema: {
+      tables: [
+        { name: 'features', purpose: 'Store AI features', columns: [
+          { name: 'id', type: 'integer', key: true },
+          { name: 'title', type: 'text', key: false },
+          { name: 'description', type: 'text', key: false },
+        ], indexes: ['title'] },
+      ],
+      seedData: true,
+    },
+    folderStructure: `src/
+  app/
+    page.tsx
+    layout.tsx
+  components/
+    VoiceInput.tsx
+  lib/
+    openai.ts
+`,
+    userFlows: [
+      {
+        name: 'Voice Demo Flow',
+        steps: [
+          { name: 'Landing', description: 'User sees landing page', components: ['HomePage'] },
+          { name: 'Voice Input', description: 'User speaks into mic', components: ['VoiceInput'] },
+          { name: 'Results', description: 'AI transcribes and displays results', components: ['ResultsPage'] },
+        ],
+      },
+    ],
+  };
+}
+
+function makeVision(): ProjectVision {
+  return {
+    projectName: 'accessi-ai',
+    oneLiner: 'AI accessibility toolkit for underrepresented users',
+    problemSolved: 'Make AI tools accessible to users with disabilities',
+    targetUsers: ['Screen reader users', 'Motor-impaired users'],
+    keyFeatures: ['Voice-to-text interface', 'Contrast optimization'],
+    techFeasibility: 'High - uses established OpenAI SDK',
+    demoNarrative: 'User speaks into mic, AI transcribes in real-time with visual feedback',
+  };
+}
+
 describe('Prompt Component Renderers', () => {
   describe('renderMetaSystem', () => {
     it('returns deterministic system instructions', () => {
@@ -153,7 +223,11 @@ describe('Prompt Component Renderers', () => {
 
   describe('renderHackathonSummary', () => {
     it('includes title, theme, and judging criteria', () => {
-      const section = renderHackathonSummary({ analysis: makeAnalysis() });
+      const analysis = makeAnalysis();
+      const section = renderHackathonSummary({
+        analysis,
+        extractionConfidence: analysis.extractionConfidence!,
+      });
       expect(section.title).toBe('Hackathon Summary');
       expect(section.body).toContain('AI Accessibility Hack');
       expect(section.body).toContain('Innovation');
@@ -164,12 +238,19 @@ describe('Prompt Component Renderers', () => {
     it('includes confidence note when extraction is partial', () => {
       const analysisWithUnknown = makeAnalysis();
       analysisWithUnknown.extractionConfidence!.judgingCriteria.confidence = 'unknown';
-      const section = renderHackathonSummary({ analysis: analysisWithUnknown });
+      const section = renderHackathonSummary({
+        analysis: analysisWithUnknown,
+        extractionConfidence: analysisWithUnknown.extractionConfidence!,
+      });
       expect(section.body).toContain('Note');
     });
 
     it('includes restrictions and deadlines', () => {
-      const section = renderHackathonSummary({ analysis: makeAnalysis() });
+      const analysis = makeAnalysis();
+      const section = renderHackathonSummary({
+        analysis,
+        extractionConfidence: analysis.extractionConfidence!,
+      });
       expect(section.body).toContain('12 hour limit');
       expect(section.body).toContain('Submission');
     });
@@ -207,37 +288,134 @@ describe('Prompt Component Renderers', () => {
     });
   });
 
-  describe('renderArchitecture', () => {
-    it('includes tech stack and UI direction', () => {
-      const section = renderArchitecture({
+  describe('renderProjectVision', () => {
+    it('includes project name, one-liner, and key features', () => {
+      const section = renderProjectVision({
+        analysis: makeAnalysis(),
+        vision: makeVision(),
+      });
+      expect(section.title).toBe('Project Vision');
+      expect(section.body).toContain('accessi-ai');
+      expect(section.body).toContain('AI accessibility toolkit');
+      expect(section.body).toContain('Voice-to-text interface');
+    });
+
+    it('includes interview context when provided', () => {
+      const section = renderProjectVision({
+        analysis: makeAnalysis(),
+        vision: makeVision(),
+        interviewResult: makeInterviewResult(),
+      });
+      expect(section.body).toContain('Interview Context');
+      expect(section.body).toContain('Voice-controlled AI assistant');
+    });
+  });
+
+  describe('renderArchitectureDesign', () => {
+    it('includes tech stack and architecture artifacts', () => {
+      const section = renderArchitectureDesign({
         analysis: makeAnalysis(),
         strategy: makeStrategy(),
         codeGenCtx: makeCodeGenCtx(),
+        architectureArtifacts: makeArchitectureArtifacts(),
       });
       expect(section.title).toBe('Architecture Design');
       expect(section.body).toContain('Next.js');
       expect(section.body).toContain('Technology Stack');
-      expect(section.body).toContain('UI Direction');
+      expect(section.body).toContain('Component Graph');
+      expect(section.body).toContain('API Graph');
+      expect(section.body).toContain('Database Schema');
+      expect(section.body).toContain('Folder Structure');
+      expect(section.body).toContain('User Flows');
     });
 
-    it('includes feature priority sorted by weight', () => {
-      const section = renderArchitecture({
+    it('includes component graph nodes and edges', () => {
+      const section = renderArchitectureDesign({
         analysis: makeAnalysis(),
         strategy: makeStrategy(),
         codeGenCtx: makeCodeGenCtx(),
+        architectureArtifacts: makeArchitectureArtifacts(),
       });
-      expect(section.body).toContain('Feature Priority');
-      expect(section.body).toContain('Innovation showcase');
+      expect(section.body).toContain('HomePage');
+      expect(section.body).toContain('VoiceInput');
+      expect(section.body).toContain('App');
     });
 
-    it('includes roadmap', () => {
-      const section = renderArchitecture({
+    it('includes API endpoints', () => {
+      const section = renderArchitectureDesign({
         analysis: makeAnalysis(),
         strategy: makeStrategy(),
         codeGenCtx: makeCodeGenCtx(),
+        architectureArtifacts: makeArchitectureArtifacts(),
       });
-      expect(section.body).toContain('Roadmap');
-      expect(section.body).toContain('Scaffold');
+      expect(section.body).toContain('/transcribe');
+      expect(section.body).toContain('/api');
+    });
+  });
+
+  describe('renderPlanDatabase', () => {
+    it('includes table definitions and seed data setting', () => {
+      const section = renderPlanDatabase({
+        analysis: makeAnalysis(),
+        strategy: makeStrategy(),
+        codeGenCtx: makeCodeGenCtx(),
+        dbSchema: makeArchitectureArtifacts().databaseSchema,
+      });
+      expect(section.title).toBe('Database Plan');
+      expect(section.body).toContain('features');
+      expect(section.body).toContain('Seed Data');
+      expect(section.body).toContain('PRIMARY KEY');
+    });
+  });
+
+  describe('renderPlanAPI', () => {
+    it('includes endpoints with purpose and request params', () => {
+      const section = renderPlanAPI({
+        analysis: makeAnalysis(),
+        strategy: makeStrategy(),
+        codeGenCtx: makeCodeGenCtx(),
+        apiGraph: makeArchitectureArtifacts().apiGraph,
+        dbSchema: makeArchitectureArtifacts().databaseSchema,
+      });
+      expect(section.title).toBe('API Plan');
+      expect(section.body).toContain('/transcribe');
+      expect(section.body).toContain('POST');
+      expect(section.body).toContain('audio');
+      expect(section.body).toContain('Request params');
+      expect(section.body).toContain('Response shape');
+    });
+  });
+
+  describe('renderPlanFrontend', () => {
+    it('includes design language and component plan', () => {
+      const section = renderPlanFrontend({
+        analysis: makeAnalysis(),
+        strategy: makeStrategy(),
+        codeGenCtx: makeCodeGenCtx(),
+        uiDirection: makeStrategy().uiDirection,
+        componentGraph: makeArchitectureArtifacts().componentGraph,
+      });
+      expect(section.title).toBe('Frontend Plan');
+      expect(section.body).toContain('Minimal, data-focused');
+      expect(section.body).toContain('HomePage');
+      expect(section.body).toContain('Landing');
+      expect(section.body).toContain('Responsive Breakpoints');
+    });
+  });
+
+  describe('renderPlanBackend', () => {
+    it('includes API endpoints and database tables', () => {
+      const section = renderPlanBackend({
+        analysis: makeAnalysis(),
+        strategy: makeStrategy(),
+        codeGenCtx: makeCodeGenCtx(),
+        apiGraph: makeArchitectureArtifacts().apiGraph,
+        dbSchema: makeArchitectureArtifacts().databaseSchema,
+      });
+      expect(section.title).toBe('Backend Plan');
+      expect(section.body).toContain('/transcribe');
+      expect(section.body).toContain('/features');
+      expect(section.body).toContain('features');
     });
   });
 
@@ -246,6 +424,8 @@ describe('Prompt Component Renderers', () => {
       const section = renderJudgingAlignment({
         analysis: makeAnalysis(),
         strategy: makeStrategy(),
+        targetedCriteria: makeStrategy().targetedCriteria,
+        prioritizedAPIs: makeStrategy().prioritizedAPIs,
       });
       expect(section.title).toBe('Judging Alignment');
       expect(section.body).toContain('Innovation (40%)');
@@ -256,6 +436,8 @@ describe('Prompt Component Renderers', () => {
       const section = renderJudgingAlignment({
         analysis: makeAnalysis(),
         strategy: makeStrategy(),
+        targetedCriteria: makeStrategy().targetedCriteria,
+        prioritizedAPIs: makeStrategy().prioritizedAPIs,
       });
       expect(section.body).toContain('Sponsor API Integration Priority');
       expect(section.body).toContain('OpenAI');
@@ -268,6 +450,7 @@ describe('Prompt Component Renderers', () => {
         analysis: makeAnalysis(),
         uiDirection: makeStrategy().uiDirection,
         theme: 'AI',
+        sponsorApis: makeAnalysis().sponsorAPIs,
       });
       expect(section.title).toBe('Design Language');
       expect(section.body).toContain('Minimal, data-focused');
@@ -279,14 +462,27 @@ describe('Prompt Component Renderers', () => {
         analysis: makeAnalysis(),
         uiDirection: makeStrategy().uiDirection,
         theme: 'AI',
+        sponsorApis: makeAnalysis().sponsorAPIs,
       });
       const healthPalette = renderDesignLanguage({
         analysis: makeAnalysis(),
         uiDirection: makeStrategy().uiDirection,
         theme: 'Healthcare',
+        sponsorApis: makeAnalysis().sponsorAPIs,
       });
       expect(aiPalette.body).toContain('Deep purples');
       expect(healthPalette.body).toContain('Calming teal');
+    });
+
+    it('includes sponsor API design integration', () => {
+      const section = renderDesignLanguage({
+        analysis: makeAnalysis(),
+        uiDirection: makeStrategy().uiDirection,
+        theme: 'AI',
+        sponsorApis: makeAnalysis().sponsorAPIs,
+      });
+      expect(section.body).toContain('Sponsor API Design Integration');
+      expect(section.body).toContain('OpenAI');
     });
   });
 
@@ -321,6 +517,7 @@ describe('Prompt Component Renderers', () => {
       const section = renderConstraints({
         analysis: makeAnalysis(),
         strategy: makeStrategy(),
+        restrictions: makeAnalysis().restrictions,
       });
       expect(section.title).toBe('Constraints & Rules');
       expect(section.body).toContain('12 hour limit');
@@ -332,6 +529,7 @@ describe('Prompt Component Renderers', () => {
         analysis: makeAnalysis(),
         strategy: makeStrategy(),
         interviewResult: makeInterviewResult(),
+        restrictions: makeAnalysis().restrictions,
       });
       expect(section.body).toContain('OpenAI');
     });
@@ -457,7 +655,9 @@ describe('PromptBuilder', () => {
       .withUIDirection(strategy.uiDirection)
       .withFileType('frontend')
       .withSpecificTask('Build feature')
-      .withRequiredTechs(['openai']);
+      .withRequiredTechs(['openai'])
+      .withArchitectureArtifacts(makeArchitectureArtifacts())
+      .withVision(makeVision());
 
     expect(builder.getStage()).toBe('generation');
     expect(builder.getSeed()).toBe(42);
