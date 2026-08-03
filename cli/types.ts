@@ -59,6 +59,10 @@ export interface CLIResult {
   durationMs?: number;
 }
 
+export function exitCodeForResult(result: CLIResult): number {
+  return result.success ? 0 : 1;
+}
+
 export interface CLIExecutionState {
   projectId: string | null;
   phase: string;

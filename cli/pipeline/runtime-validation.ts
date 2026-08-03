@@ -63,8 +63,14 @@ function freePort(port: number): void {
 
 function killProcessTree(server: ReturnType<typeof spawn>): void {
   try {
-    if (server.pid !== undefined) {
-      execSync(`taskkill /T /F /PID ${server.pid}`, { stdio: 'ignore', timeout: 2000, windowsHide: true });
+    if (server.pid === undefined) return;
+    server.kill('SIGTERM');
+    if (process.platform === 'win32') {
+      try {
+        execSync(`taskkill /T /F /PID ${server.pid}`, { stdio: 'ignore', timeout: 2000, windowsHide: true });
+      } catch { /* may have already exited */ }
+    } else {
+      try { process.kill(-server.pid, 'SIGTERM'); } catch { /* group kill fallback */ }
     }
   } catch {
     return;

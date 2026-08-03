@@ -7,7 +7,8 @@ import { getConfig } from './config-manager.js';
 import { createContext } from './context.js';
 import { formatError, printError } from './errors.js';
 import { success as logSuccess, error as logError, info, dim, showVersion, setVerbose } from './output.js';
-import type { CLIArgs, CLIContext, CLIResult, CommandName } from './types.js';
+import { exitCodeForResult, type CLIArgs, type CLIContext, type CLIResult, type CommandName } from './types.js';
+import { handleTerminationSignal } from './signals.js';
 
 // Feature commands live under features/commands/<name>.ts (kept out of the
 // refactored cli/ production files). Register them here only. The
@@ -286,7 +287,7 @@ async function main(): Promise<void> {
       showVersion(getVersion());
       const { runInteractiveEntry } = await import('./interactive.js');
       const result = await runInteractiveEntry(ctx);
-      process.exitCode = result.success ? 0 : 1;
+      process.exitCode = exitCodeForResult(result);
       return;
     } else if (unknownCommand) {
       showSimpleHelp();
@@ -298,14 +299,10 @@ async function main(): Promise<void> {
   }
 
   process.on('SIGINT', () => {
-    console.log('\n  Interrupted. Use `hag resume` to continue where you left off.');
-    process.exitCode = 130;
-    process.exit();
+    handleTerminationSignal('SIGINT');
   });
   process.on('SIGTERM', () => {
-    console.log('\n  Terminated. Use `hag resume` to continue where you left off.');
-    process.exitCode = 143;
-    process.exit();
+    handleTerminationSignal('SIGTERM');
   });
   ctx.outputFormat = args.flags.json === true ? 'json' : args.flags.quiet === true ? 'quiet' : 'pretty';
   ctx.verbose = args.flags.verbose === true;
@@ -478,10 +475,20 @@ async function main(): Promise<void> {
     console.log();
   }
 
-  process.exitCode = result.success ? 0 : 1;
+  process.exitCode = exitCodeForResult(result);
 
-  // We no longer force exit. The process will exit naturally when the event loop is empty.
-  // process.exit(process.exitCode);
+  // Force process exit after all pipeline work is done to prevent child
+  // processes (npm run dev, next dev, Playwright, etc.) from keeping the
+  // event loop alive indefinitely.
+  //
+  // We schedule an immediate exit after yielding to the event loop once so
+  // that any pending microtasks (checkpoint writes, trace files, telemetry
+  // flushes) get a chance to complete before the process is torn down.
+  //
+  // A safety-net exit fires after 5s in case the first exit is blocked by
+  // a lingering I/O handle that cannot be closed synchronously.
+  setImmediate(() => process.exit(process.exitCode));
+  setTimeout(() => process.exit(process.exitCode), 5000).unref();
 }
 
 main().catch((err) => {
