@@ -1,7 +1,7 @@
 import type { InterviewResult } from '../interview/types.js';
 import type { CompetitionAnalysis } from '../pipeline/types.js';
 
-import { IDEA_DOMAINS, detectDomains, type IdeaAngle, type IdeaDomain } from './idea-library.js';
+import { IDEA_DOMAINS, detectDomains, normalizeKeywords, scoreDomains, type IdeaAngle, type IdeaDomain } from './idea-library.js';
 import { pickName } from './name-engine.js';
 import { hashSeed, seededInt, seededShuffle } from './rng.js';
 import type { IdeaDraft, IdeationResult, ScoredIdea } from './types.js';
@@ -15,12 +15,15 @@ interface DimensionWeights {
   technicalDepth: number;
   demoAppeal: number;
   sponsorFit: number;
+  themeFit: number;
 }
 
 /** A draft with the resolved theme/adjective baked in for deterministic scoring. */
 interface Draft extends IdeaDraft {
   adj: string;
   lcTheme: string;
+  /** How well the idea maps to the challenge theme/problem statement. */
+  themeFit: number;
 }
 
 /**
@@ -43,8 +46,9 @@ export function brainstormIdeas(
   const apiName = selectApiName(analysis, result);
 
   const domains = detectDomains(theme, problemStatement);
+  const domainScore = new Map(scoreDomains(theme, problemStatement).map((m) => [m.domain.id, m.score]));
   const pool = buildAnglePool(domains);
-  const drafts = generateDrafts(pool, theme, focusName, apiName, seed);
+  const drafts = generateDrafts(pool, theme, problemStatement, domainScore, focusName, apiName, seed);
 
   const weights = dimensionWeights(criteria);
   const ranked = drafts
@@ -52,6 +56,7 @@ export function brainstormIdeas(
     .sort(
       (a, b) =>
         b.totalScore - a.totalScore ||
+        b.themeFit - a.themeFit ||
         b.novelty - a.novelty ||
         b.demoAppeal - a.demoAppeal ||
         a.title.localeCompare(b.title),
@@ -82,36 +87,51 @@ export function generateProjectIdea(
 // Idea drafting
 // ---------------------------------------------------------------------------
 
-function buildAnglePool(domains: IdeaDomain[]): IdeaAngle[] {
-  const fromMatched = domains.flatMap((d) => d.angles);
-  if (fromMatched.length >= IDEATION_POOL_SIZE) return fromMatched;
+function buildAnglePool(domains: IdeaDomain[]): { strong: IdeaAngle[]; rest: IdeaAngle[] } {
+  const strongIds = new Set(domains.map((d) => d.id));
+  const strong = domains.flatMap((d) => d.angles);
   // Top up with the rest of the library so a narrow theme still gets 20 ideas.
-  const matchedIds = new Set(domains.map((d) => d.id));
-  const rest = IDEA_DOMAINS.filter((d) => !matchedIds.has(d.id)).flatMap((d) => d.angles);
-  return [...fromMatched, ...rest];
+  const rest = IDEA_DOMAINS.filter((d) => !strongIds.has(d.id)).flatMap((d) => d.angles);
+  return { strong, rest };
 }
 
+/**
+ * Draft the 20-idea pool. Theme-matched domains are guaranteed the majority
+ * share (up to 60%) so the brainstorm itself is on-theme — an idea from an
+ * unrelated domain can no longer crowd out the challenge's own angles.
+ */
 function generateDrafts(
-  pool: IdeaAngle[],
+  pool: { strong: IdeaAngle[]; rest: IdeaAngle[] },
   theme: string,
+  problemStatement: string,
+  domainScore: Map<string, number>,
   focusName: string,
   apiName: string | null,
   seed: number,
 ): Draft[] {
   const adj = criterionAdjective(focusName);
   const lcTheme = (theme || 'technology').toLowerCase();
-  const order = seededShuffle(pool, hashSeed([theme, apiName, focusName, seed, 'drafts']));
-  const chosen = order.slice(0, IDEATION_POOL_SIZE);
+  const strongBudget = Math.min(pool.strong.length, Math.round(IDEATION_POOL_SIZE * 0.6));
+  const strongOrder = seededShuffle(pool.strong, hashSeed([theme, problemStatement, apiName, focusName, seed, 'strong']));
+  const restOrder = seededShuffle(pool.rest, hashSeed([theme, problemStatement, apiName, focusName, seed, 'rest']));
+  const chosen = [
+    ...strongOrder.slice(0, strongBudget),
+    ...restOrder.slice(0, IDEATION_POOL_SIZE - strongBudget),
+  ];
 
-  return chosen.map((angle, i) => ({
-    id: `idea-${String(i + 1).padStart(2, '0')}`,
-    title: angle.title,
-    domain: domainForAngle(angle),
-    user: angle.user,
-    line: angle.line,
-    adj,
-    lcTheme,
-  }));
+  return chosen.map((angle, i) => {
+    const domain = domainForAngle(angle);
+    return {
+      id: `idea-${String(i + 1).padStart(2, '0')}`,
+      title: angle.title,
+      domain,
+      user: angle.user,
+      line: angle.line,
+      adj,
+      lcTheme,
+      themeFit: computeThemeFit(angle, theme, problemStatement, domainScore.get(domain) ?? 0, seed),
+    };
+  });
 }
 
 function domainForAngle(angle: IdeaAngle): string {
@@ -129,17 +149,18 @@ function scoreIdea(draft: Draft, w: DimensionWeights, apiName: string | null, se
   const base = hashSeed([draft.id, draft.title, seed]);
   const line = draft.line;
   // Content-derived signals: an idea's own mechanic determines how novel,
-  // deep, and feasible it reads. A small deterministic jitter breaks ties.
-  const novelty = clamp10(6 + (NOVEL_SIGNALS.test(line) ? 2 : 0) + seededInt(base, 0, 2));
-  const feasibility = clamp10(6 + (COMPLEX_SIGNALS.test(line) ? -2 : 0) + seededInt(base + 1, 0, 2));
-  const technicalDepth = clamp10(5 + (DEPTH_SIGNALS.test(line) ? 3 : 0) + seededInt(base + 2, 0, 2));
-  const demoAppeal = clamp10(7 + wowBoost(line) + seededInt(base + 3, 0, 2));
+  // deep, and feasible it reads. A tiny deterministic jitter only breaks ties.
+  const novelty = clamp10(6 + (NOVEL_SIGNALS.test(line) ? 2 : 0) + seededInt(base, 0, 1));
+  const feasibility = clamp10(6 + (COMPLEX_SIGNALS.test(line) ? -2 : 0) + seededInt(base + 1, 0, 1));
+  const technicalDepth = clamp10(5 + (DEPTH_SIGNALS.test(line) ? 3 : 0) + seededInt(base + 2, 0, 1));
+  const demoAppeal = clamp10(7 + wowBoost(line) + seededInt(base + 3, 0, 1));
   const sponsorFit = computeSponsorFit(draft.domain, apiName);
+  const themeFit = draft.themeFit;
 
   const totalScore = Math.round(
     100 *
       ((w.novelty * novelty + w.feasibility * feasibility + w.technicalDepth * technicalDepth +
-        w.demoAppeal * demoAppeal + w.sponsorFit * sponsorFit) /
+        w.demoAppeal * demoAppeal + w.sponsorFit * sponsorFit + w.themeFit * themeFit) /
         10),
   );
 
@@ -151,6 +172,7 @@ function scoreIdea(draft: Draft, w: DimensionWeights, apiName: string | null, se
     technicalDepth,
     demoAppeal,
     sponsorFit,
+    themeFit,
     totalScore,
     concept: `${draft.title} is ${draft.line} for ${draft.user}.`,
     keyFeatures: [],
@@ -178,6 +200,14 @@ function computeSponsorFit(domainId: string, apiName: string | null): number {
 }
 
 function dimensionWeights(criteria: CompetitionAnalysis['judgingCriteria']): DimensionWeights {
+  // Relevance to the challenge is a structural part of every judge's rubric,
+  // so themeFit always holds a meaningful share of the total weight — enough
+  // to beat a brilliant off-theme idea whose novelty/depth scores are higher.
+  // (When the challenge is generic, themeFit is near-constant across ideas, so
+  // the high weight costs nothing and the other dimensions decide.)
+  const THEME_FIT_WEIGHT = 0.4;
+  const CORE_BUDGET = 1 - THEME_FIT_WEIGHT;
+
   const acc = { novelty: 0, feasibility: 0, technicalDepth: 0, demoAppeal: 0, sponsorFit: 0 };
   for (const c of criteria ?? []) {
     const name = c.name.toLowerCase();
@@ -196,14 +226,73 @@ function dimensionWeights(criteria: CompetitionAnalysis['judgingCriteria']): Dim
     }
   }
   const sum = acc.novelty + acc.feasibility + acc.technicalDepth + acc.demoAppeal + acc.sponsorFit;
-  if (sum <= 0) return { novelty: 0.35, feasibility: 0.15, technicalDepth: 0.2, demoAppeal: 0.2, sponsorFit: 0.1 };
+  if (sum <= 0) {
+    return { novelty: 0.19, feasibility: 0.07, technicalDepth: 0.1, demoAppeal: 0.12, sponsorFit: 0.12, themeFit: THEME_FIT_WEIGHT };
+  }
   return {
-    novelty: acc.novelty / sum,
-    feasibility: acc.feasibility / sum,
-    technicalDepth: acc.technicalDepth / sum,
-    demoAppeal: acc.demoAppeal / sum,
-    sponsorFit: acc.sponsorFit / sum,
+    novelty: (acc.novelty / sum) * CORE_BUDGET,
+    feasibility: (acc.feasibility / sum) * CORE_BUDGET,
+    technicalDepth: (acc.technicalDepth / sum) * CORE_BUDGET,
+    demoAppeal: (acc.demoAppeal / sum) * CORE_BUDGET,
+    sponsorFit: (acc.sponsorFit / sum) * CORE_BUDGET,
+    themeFit: THEME_FIT_WEIGHT,
   };
+}
+
+// Stopwords that carry no thematic signal in a challenge statement.
+const THEME_STOPWORDS = new Set([
+  'the', 'and', 'for', 'with', 'that', 'this', 'from', 'your', 'you', 'are',
+  'using', 'use', 'build', 'help', 'into', 'their', 'them', 'they', 'our',
+  'all', 'its', 'not', 'can', 'will', 'have', 'has', 'who', 'what', 'when',
+  'how', 'make', 'made', 'get', 'out', 'one', 'new', 'more', 'than', 'also',
+  'these', 'those', 'over', 'under', 'such', 'which', 'while', 'should',
+  'would', 'could', 'about', 'across', 'through', 'between', 'toward',
+]);
+
+/** Distinct, meaningful keywords in the theme/problem statement. */
+function themeKeywords(theme: string, problemStatement: string): string[] {
+  const tokens = normalizeKeywords(`${theme} ${problemStatement}`)
+    .split(' ')
+    .filter((w) => w.length > 3 && !THEME_STOPWORDS.has(w));
+  return [...new Set(tokens)];
+}
+
+/**
+ * 1-10 relevance score: how strongly the idea addresses the challenge.
+ * Domain match (the idea's domain literally matching the theme/problem) is the
+ * dominant signal; lexical overlap between the idea's pitch and the challenge
+ * keywords refines it. Deterministic for a fixed seed.
+ */
+function computeThemeFit(
+  angle: IdeaAngle,
+  theme: string,
+  problemStatement: string,
+  domainScore: number,
+  seed: number,
+): number {
+  const keywords = themeKeywords(theme, problemStatement);
+  const haystack = normalizeKeywords(`${angle.title} ${angle.line} ${angle.user}`);
+  let challengeHits = 0;
+  for (const kw of keywords) {
+    if (haystack.includes(kw)) challengeHits++;
+  }
+  const challengeLexical = keywords.length > 0 ? challengeHits / keywords.length : 0;
+
+  // Reward the idea speaking its own domain's language (e.g. "carbon ledger"
+  // for climate): an idea that cannot name the problem domain reads off-theme.
+  // The bonus is gated on the domain actually matching the challenge, so a
+  // generic "anything goes" hackathon stays theme-neutral — no idea is rewarded
+  // purely for flavor when the challenge gives no thematic signal.
+  const domain = IDEA_DOMAINS.find((d) => d.angles.some((a) => a.title === angle.title));
+  const domainHits = domainScore > 0 && domain
+    ? domain.keywords.filter((kw) => haystack.includes(kw)).length
+    : 0;
+
+  // A matching domain is the strongest signal (2-6); its keyword overlap adds up
+  // to 3 more, and challenge-statement lexical overlap adds up to 2.
+  const domainComponent = domainScore > 0 ? 2 + Math.min(domainScore, 4) : 0;
+  const base = 3 + domainComponent + Math.min(3, domainHits * 1.5) + challengeLexical * 2;
+  return clamp10(Math.round(base + seededInt(hashSeed([angle.title, theme, seed, 'fit']), 0, 1)));
 }
 
 function selectApiName(analysis: CompetitionAnalysis, result?: InterviewResult | null): string | null {
@@ -282,6 +371,7 @@ function deriveWow(line: string): string {
 
 function topDimensions(idea: ScoredIdea): [string, number, string, number] {
   const dims: Array<[string, number]> = [
+    ['theme fit', idea.themeFit],
     ['novelty', idea.novelty],
     ['feasibility', idea.feasibility],
     ['technical depth', idea.technicalDepth],

@@ -56,7 +56,11 @@ const NOTE_BY_FOCUS: Record<JudgeCriterionFocus, string> = {
   completeness: 'End-to-end flow fits in scope without dead ends',
 };
 
-/** Score a criterion from the idea's dimension scores through a judge's lens. */
+/**
+ * Score a criterion from the idea's dimension scores through a judge's lens.
+ * Relevance to the challenge (`themeFit`) is blended into every criterion so a
+ * brilliant idea for the wrong problem cannot beat a good idea for this one.
+ */
 function scoreCriterion(
   focus: JudgeCriterionFocus,
   idea: ScoredIdea,
@@ -65,13 +69,14 @@ function scoreCriterion(
   amp: number,
   seed: number,
 ): number {
+  const relevance = idea.themeFit * 0.2;
   const base =
-    focus === 'wow' ? idea.novelty * 0.6 + idea.demoAppeal * 0.4 :
-    focus === 'technical' ? idea.technicalDepth * 0.7 + feasibility.buildability * 0.3 :
-    focus === 'impact' ? viability.urgency * 0.5 + idea.demoAppeal * 0.3 + idea.novelty * 0.2 :
-    focus === 'design' ? idea.demoAppeal * 0.6 + idea.feasibility * 0.2 + idea.novelty * 0.2 :
-    focus === 'feasibility' ? feasibility.buildability * 0.6 + feasibility.scopeRisk * 0.4 :
-    feasibility.buildability * 0.4 + feasibility.scopeRisk * 0.3 + feasibility.dataComplexity * 0.3;
+    focus === 'wow' ? idea.novelty * 0.5 + idea.demoAppeal * 0.3 + relevance :
+    focus === 'technical' ? idea.technicalDepth * 0.6 + feasibility.buildability * 0.2 + relevance :
+    focus === 'impact' ? viability.urgency * 0.4 + idea.demoAppeal * 0.2 + idea.novelty * 0.1 + relevance :
+    focus === 'design' ? idea.demoAppeal * 0.5 + idea.feasibility * 0.2 + relevance :
+    focus === 'feasibility' ? feasibility.buildability * 0.5 + feasibility.scopeRisk * 0.3 + relevance :
+    feasibility.buildability * 0.4 + feasibility.scopeRisk * 0.2 + feasibility.dataComplexity * 0.2 + relevance;
   return clamp10(Math.round(base * amp + seededInt(seed, -1, 1)));
 }
 

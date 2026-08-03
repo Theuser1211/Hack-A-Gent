@@ -174,8 +174,14 @@ export function normalizeKeywords(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9 ]/g, ' ');
 }
 
-/** Rank domains by how strongly they match the hackathon theme/problem statement. */
-export function detectDomains(theme: string, problemStatement: string): IdeaDomain[] {
+/** Domain match strength (0 = no match) for a given theme/problem statement. */
+export interface DomainMatch {
+  domain: IdeaDomain;
+  score: number;
+}
+
+/** Score every domain against the theme/problem statement; strongest first. */
+export function scoreDomains(theme: string, problemStatement: string): DomainMatch[] {
   const haystack = normalizeKeywords(`${theme} ${problemStatement}`);
   const scored = IDEA_DOMAINS.map((domain) => {
     let score = 0;
@@ -184,7 +190,12 @@ export function detectDomains(theme: string, problemStatement: string): IdeaDoma
     }
     return { domain, score };
   });
-  const matched = scored.filter((s) => s.score > 0).sort((a, b) => b.score - a.score);
+  return scored.filter((s) => s.score > 0).sort((a, b) => b.score - a.score);
+}
+
+/** Rank domains by how strongly they match the hackathon theme/problem statement. */
+export function detectDomains(theme: string, problemStatement: string): IdeaDomain[] {
+  const matched = scoreDomains(theme, problemStatement);
   // Always include the generic AI domain as a fallback so the pool is never empty.
   if (matched.length === 0) {
     const ai = IDEA_DOMAINS.find((d) => d.id === 'ai')!;

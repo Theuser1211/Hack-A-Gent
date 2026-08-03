@@ -24,6 +24,8 @@ export interface ScoredIdea extends IdeaDraft {
   sponsorFit: number; // 1-10
   technicalDepth: number; // 1-10
   demoAppeal: number; // 1-10
+  /** 1-10 — how well the idea maps to the challenge theme/problem statement. */
+  themeFit: number;
   totalScore: number; // 0-100, weighted against judging criteria
   concept: string;
   keyFeatures: string[];
