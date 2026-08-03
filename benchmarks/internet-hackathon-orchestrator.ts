@@ -29,6 +29,7 @@ import { TaskGraph, type TaskNode, type TaskCategory } from './task-graph.js';
 import type { UXEvaluationResult } from './ux-evaluation-agent.js';
 import { KNOWN_PACKAGE_VERSIONS, KNOWN_PACKAGE_VERSIONS_FALLBACK, LLM_GENERATION_SYSTEM_PROMPT, LLM_TASK_DESCRIPTIONS } from './orchestrator-templates.js';
 import { renderStrategyPromptBlock, type CodeGenContext, type GenerationInput } from '../cli/pipeline/strategy-adapter.js';
+import { assembleGenerationPrompt, formatGenerationPromptDiagnostics } from '../cli/pipeline/prompt-assembler.js';
 import { extractJSON, executeWithJSONRetry, buildRetryPrompt } from '../kernel/providers/json-extractor.js';
 import { CodeGenOutputSchema } from '../kernel/providers/llm-output-schemas.js';
 
@@ -2790,9 +2791,6 @@ export async function POST(req: Request) {
     const requiredTechs = context.techStack.filter(t =>
       /firebase|twilio|openai|stripe|supabase|aws|azure|vercel|tensorflow|pytorch|graphql|prisma|mongodb|postgres|redis/i.test(t)
     );
-    const requiredSection = requiredTechs.length > 0
-      ? `\nREQUIRED TECHNOLOGIES (you MUST include these in your code — import them, configure them, use them in actual implementation):\n${requiredTechs.map(t => `- ${t}: Include in package.json dependencies AND use in actual code (imports, configuration, API calls)`).join('\n')}\n`
-      : '';
 
     const systemPrompt = LLM_GENERATION_SYSTEM_PROMPT;
 
@@ -2801,47 +2799,42 @@ export async function POST(req: Request) {
     const gi = this.generationInput;
 
     const projectName = gi?.projectName ?? this.devpostData.title;
-    const criteriaDisplay = gi
-      ? gi.sponsorApis.map(a => `${a} integration`).concat(gi.featurePriority.slice(0, 3)).join(', ')
-      : this.devpostData.judgingCriteria.join(', ');
+
     const techStackDisplay = gi
-      ? `Frontend: ${gi.frontend}, Backend: ${gi.backend}, Database: ${gi.database}, Deployment: ${gi.deployment}`
+      ? `Frontend: ${gi.frontend}, Backend: ${gi.backend}, Database: ${gi.database}, Deployment: ${gi.deployment}, Styling: ${gi.styling ?? 'N/A'}, Testing: ${gi.testing ?? 'N/A'}`
       : techStack;
-    const constraintsDisplay = gi
-      ? `Optimization budget: ${gi.optimizationBudget}, Differentiators: ${gi.differentiators.join(', ')}`
-      : this.devpostData.constraints.join(', ');
 
-    const themeDisplay = this.devpostData.problemStatement
-      ? this.devpostData.problemStatement.length > 120
-        ? this.devpostData.problemStatement.slice(0, 117) + '...'
-        : this.devpostData.problemStatement
-      : '';
-    const submissionReqDisplay = this.devpostData.submissionRequirements.length > 0
-      ? `\nSubmission Requirements: ${this.devpostData.submissionRequirements.join(', ')}`
-      : '';
-    const sponsorDetails = this.codeGenContext?.sponsorApis?.length
-      ? `\nSponsor APIs to integrate: ${this.codeGenContext.sponsorApis.join(', ')}`
-      : '';
-    const judgingNames = this.codeGenContext?.judgingCriteria?.map(j => `${j.name} (${j.weight}%)`).join(', ') ?? '';
-    const judgingDisplay = judgingNames ? `\nDetailed Judging Criteria: ${judgingNames}` : '';
-    const differentiators = gi?.differentiators?.length ? `\nDifferentiators: ${gi.differentiators.join(', ')}` : '';
-    const keyPages = gi?.keyPages?.length ? `\nKey Pages: ${gi.keyPages.join(', ')}` : '';
-
-    const userPrompt = `Project: ${projectName}
-Problem: ${this.devpostData.problemStatement}
-Hackathon Theme: ${themeDisplay}${submissionReqDisplay}${sponsorDetails}${judgingDisplay}${differentiators}${keyPages}
-Judging Criteria: ${criteriaDisplay}
-Tech Stack: ${techStackDisplay}
-Constraints: ${constraintsDisplay}
-${requiredSection}${strategySection}
-For package.json use these exact versions: next@^14.2.0, react@^18.3.1, react-dom@^18.3.1, @types/react@^18.3.3, @types/node@^20.14.0, typescript@^5.5.0
-
-Task: ${taskDescriptions[fileType]}
-${fileType === 'scaffold' ? 'Include: package.json, tsconfig.json, next.config.js, .gitignore, .env.example, src/config.ts, .eslintrc.json, tailwind.config.js, postcss.config.js, src/app/globals.css, src/app/layout.tsx, src/app/page.tsx, src/app/loading.tsx, src/app/error.tsx, README.md' : ''}
-${fileType === 'frontend' && context.specificTask ? `Focus on: ${context.specificTask}` : ''}
-${fileType === 'backend' && context.specificTask ? `Focus on: ${context.specificTask}` : ''}
-
-This is a HACKATHON project. Make it stand out — judges will compare it against other projects. Solve the specific challenge, integrate sponsor APIs visibly, and make the demo work end-to-end.`;
+    // Assemble the generation prompt from canonical sections. Deduplication:
+    // fields already carried by the STRATEGY block (sponsor APIs, judging
+    // criteria, feature priority, key screens, differentiators) are not
+    // repeated at the top level, and the old "Hackathon Theme" line (a
+    // verbatim copy of the problem statement) is dropped. The diagnostics
+    // report which sections were included, removed, and their token cost.
+    const assembly = assembleGenerationPrompt({
+      projectName,
+      problemStatement: this.devpostData.problemStatement,
+      submissionRequirements: this.devpostData.submissionRequirements,
+      sponsorApis: this.codeGenContext?.sponsorApis ?? gi?.sponsorApis ?? [],
+      judgingCriteria: this.codeGenContext?.judgingCriteria ?? this.devpostData.judgingCriteria.map(c => ({ name: c, weight: 0 })),
+      featurePriority: gi?.featurePriority ?? [],
+      keyPages: gi?.keyPages ?? [],
+      differentiators: gi?.differentiators ?? [],
+      optimizationBudget: gi?.optimizationBudget ?? '',
+      rawConstraints: this.devpostData.constraints,
+      techStackDisplay,
+      requiredTechs,
+      strategyBlock: strategySection,
+      systemPrompt,
+      packageVersions: 'For package.json use these exact versions: next@^14.2.0, react@^18.3.1, react-dom@^18.3.1, @types/react@^18.3.3, @types/node@^20.14.0, typescript@^5.5.0',
+      taskDescription: taskDescriptions[fileType],
+      fileType,
+      specificTask: context.specificTask,
+      scaffoldIncludeList: fileType === 'scaffold'
+        ? 'Include: package.json, tsconfig.json, next.config.js, .gitignore, .env.example, src/config.ts, .eslintrc.json, tailwind.config.js, postcss.config.js, src/app/globals.css, src/app/layout.tsx, src/app/page.tsx, src/app/loading.tsx, src/app/error.tsx, README.md'
+        : undefined,
+    });
+    const userPrompt = assembly.userPrompt;
+    debug(formatGenerationPromptDiagnostics(assembly));
 
     try {
       const request: LLMRequest = {
