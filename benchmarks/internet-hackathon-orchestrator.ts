@@ -28,7 +28,7 @@ import { RemoteProjectState, type ProjectPhase, type DeploymentSnapshot, type Pr
 import { TaskGraph, type TaskNode, type TaskCategory } from './task-graph.js';
 import type { UXEvaluationResult } from './ux-evaluation-agent.js';
 import { KNOWN_PACKAGE_VERSIONS, KNOWN_PACKAGE_VERSIONS_FALLBACK, LLM_GENERATION_SYSTEM_PROMPT, LLM_TASK_DESCRIPTIONS } from './orchestrator-templates.js';
-import type { CodeGenContext, GenerationInput } from '../cli/pipeline/strategy-adapter.js';
+import { renderStrategyPromptBlock, type CodeGenContext, type GenerationInput } from '../cli/pipeline/strategy-adapter.js';
 import { extractJSON, executeWithJSONRetry, buildRetryPrompt } from '../kernel/providers/json-extractor.js';
 import { CodeGenOutputSchema } from '../kernel/providers/llm-output-schemas.js';
 
@@ -137,6 +137,15 @@ function freePort(port: number): void {
       }
     }
   } catch { /* port is free */ }
+}
+
+/** Serialize arbitrary text into a single-quoted JS string literal (no newlines, backslashes, or quotes left raw). */
+function escapeJsStringLiteral(s: string): string {
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n');
 }
 
 export class InternetHackathonOrchestrator {
@@ -1020,12 +1029,22 @@ export class InternetHackathonOrchestrator {
 
   private async generateScaffoldFiles(plan: InternetExecutionPlan): Promise<Array<{ path: string; content: string }>> {
     const projectName = plan.projectName;
-    const jsTitle = projectName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    const tagline = this.devpostData?.problemStatement
+    // Prefer the Product Intelligence brand name and one-liner so the landing
+    // page, metadata and README reflect the winning idea — not just the slug.
+    const brand = this.codeGenContext?.brandName ?? this.codeGenContext?.strategyName;
+    const jsTitle = brand
+      ? brand.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      : projectName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const piOneLiner = this.codeGenContext?.productIntelligence
+      ? (this.codeGenContext.oneLiner && this.codeGenContext.oneLiner.length > 120
+        ? this.codeGenContext.oneLiner.slice(0, 117) + '...'
+        : this.codeGenContext.oneLiner)
+      : null;
+    const tagline = piOneLiner ?? (this.devpostData?.problemStatement
       ? (this.devpostData.problemStatement.length > 120
         ? this.devpostData.problemStatement.slice(0, 117) + '...'
         : this.devpostData.problemStatement)
-      : 'Built for this hackathon. Modern, responsive, and production-ready.';
+      : 'Built for this hackathon. Modern, responsive, and production-ready.');
     const stackTags = this.devpostData?.recommendedStack?.slice(0, 5) ?? [];
     return [
       {
@@ -1090,7 +1109,7 @@ module.exports = {
         path: 'src/app/layout.tsx',
         content: `import './globals.css';
 
-export const metadata = { title: '${jsTitle}', description: '${tagline.replace(/'/g, "\\'")}' };
+export const metadata = { title: '${escapeJsStringLiteral(jsTitle)}', description: '${escapeJsStringLiteral(tagline)}' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -1773,6 +1792,10 @@ export async function POST(req: Request) {
         const builtinOrScoped = new Set(['next', 'react', 'react-dom', 'fs', 'path', 'http', 'https', 'url', 'stream', 'util', 'events', 'crypto', 'os', 'child_process', 'net', 'tls', 'zlib', 'querystring', 'buffer']);
         const knownVersions = KNOWN_PACKAGE_VERSIONS;
         const existingPkgs = new Set([...Object.keys(pkg.dependencies), ...Object.keys(pkg.devDependencies)]);
+        // A scoped import whose scope matches a top-level dir in this batch is a
+        // local alias the LLM invented (e.g. "@components/ui" → components/ui) —
+        // never an npm package. Adding it would make `npm install` fail.
+        const localDirs = new Set(files.map(f => f.path.split('/')[0]).filter(p => p && !p.includes('.')));
         for (const f of files) {
           if (f.path === 'package.json') continue;
           const importMatches = f.content.matchAll(/(?:import|export)\s+.*?\s+from\s+['"]([^'"]+)['"]/g);
@@ -1782,8 +1805,9 @@ export async function POST(req: Request) {
             const parts = raw.split('/');
             const name = raw.startsWith('@') ? parts.slice(0, 2).join('/') : (parts[0] ?? '');
             if (!name || builtinOrScoped.has(name) || existingPkgs.has(name)) continue;
+            if (raw.startsWith('@') && localDirs.has(parts[1] ?? '')) continue;
             existingPkgs.add(name);
-            pkg.dependencies[name] = knownVersions[name] ?? '^1.0.0';
+            pkg.dependencies[name] = knownVersions[name] ?? '*';
           }
           const requireMatches = f.content.matchAll(/require\s*\(\s*['"]([^'"]+)['"]\s*\)/g);
           for (const m of requireMatches) {
@@ -1792,8 +1816,9 @@ export async function POST(req: Request) {
             const parts = raw.split('/');
             const name = raw.startsWith('@') ? parts.slice(0, 2).join('/') : (parts[0] ?? '');
             if (!name || builtinOrScoped.has(name) || existingPkgs.has(name)) continue;
+            if (raw.startsWith('@') && localDirs.has(parts[1] ?? '')) continue;
             existingPkgs.add(name);
-            pkg.dependencies[name] = knownVersions[name] ?? '^1.0.0';
+            pkg.dependencies[name] = knownVersions[name] ?? '*';
           }
         }
         const configDeps: Record<string, string[]> = {
@@ -1909,6 +1934,130 @@ export async function POST(req: Request) {
       const builtinOrScoped = new Set(['next', 'react', 'react-dom', 'fs', 'path', 'http', 'https', 'url', 'stream', 'util', 'events', 'crypto', 'os', 'child_process', 'net', 'tls', 'zlib', 'querystring', 'buffer', '@/']);
       const knownVersions = KNOWN_PACKAGE_VERSIONS_FALLBACK;
       const existingPkgs = new Set([...Object.keys(pkg.dependencies), ...Object.keys(pkg.devDependencies)]);
+      // A scoped import whose scope matches a top-level dir in the project is a
+      // local alias the LLM invented (e.g. "@components/ui" → components/ui) —
+      // never an npm package. Adding it would make `npm install` fail.
+      const srcDir = path.join(projectDir, 'src');
+      const keepTopDirs = new Set(['src', 'public', 'pages', 'node_modules', '.next', '.git', '.github', '.vscode', 'scripts', 'dist', 'coverage', 'prisma']);
+
+      const collectAliasRefs = (name: string): string[] => {
+        const refs: string[] = [];
+        const walk = (dir: string) => {
+          if (!existsSync(dir)) return;
+          for (const entry of readdirSync(dir, { withFileTypes: true })) {
+            const full = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+              if (entry.name === 'node_modules' || entry.name === '.next') continue;
+              walk(full);
+            } else if (/\.(tsx?|jsx?)$/.test(entry.name)) {
+              try {
+                const content = readFileSync(full, 'utf-8');
+                for (const m of content.matchAll(new RegExp(`['"]@\\/${name}(?:\\/|['"])[^'"]*['"]`, 'g'))) {
+                  refs.push(m[0]);
+                }
+              } catch { /* skip unreadable */ }
+            }
+          }
+        };
+        walk(srcDir);
+        return refs;
+      };
+
+      const hasRelativeRefsInto = (root: string): boolean => {
+        let found = false;
+        const walk = (dir: string) => {
+          if (!existsSync(dir) || found) return;
+          for (const entry of readdirSync(dir, { withFileTypes: true })) {
+            if (found) return;
+            const full = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+              if (entry.name === 'node_modules' || entry.name === '.next') continue;
+              walk(full);
+            } else if (/\.(tsx?|jsx?)$/.test(entry.name)) {
+              try {
+                const content = readFileSync(full, 'utf-8');
+                for (const m of content.matchAll(/(?:import|export)\s+.*?\s+from\s+['"]\.\.?\/[^'"]+['"]|require\s*\(\s*['"]\.\.?\/[^'"]+['"]\s*\)/g)) {
+                  const spec = m[0].match(/['"]([^'"]+)['"]/)![1]!;
+                  const resolved = path.resolve(path.dirname(full), spec);
+                  const rel = path.relative(root, resolved);
+                  if (rel && !rel.startsWith('..') && !path.isAbsolute(rel)) {
+                    found = true;
+                    return;
+                  }
+                }
+              } catch { /* skip unreadable */ }
+            }
+          }
+        };
+        walk(srcDir);
+        return found;
+      };
+
+      const copyDirRecursive = (from: string, to: string) => {
+        if (!existsSync(from)) return;
+        try { mkdirSync(to, { recursive: true }); } catch { /* ignore */ }
+        for (const entry of readdirSync(from, { withFileTypes: true })) {
+          const s = path.join(from, entry.name);
+          const d = path.join(to, entry.name);
+          if (entry.isDirectory()) copyDirRecursive(s, d);
+          else {
+            try { writeFileSync(d, readFileSync(s)); } catch { /* ignore */ }
+          }
+        }
+      };
+
+      // The LLM frequently writes source files to top-level dirs (components/,
+      // styles/, models/, utils/, ...) instead of src/. These islands break the
+      // build (they are matched by `**/*.ts` typecheck) and are usually orphaned.
+      // Resolve them BEFORE scanning imports: if a src file references `@/<name>/x`
+      // the island is copied into src/<name> so the alias resolves; otherwise the
+      // island is deleted (unless a relative import from src points into it). This
+      // also keeps the dependency scan below from seeing imports that only live in
+      // deleted orphaned files.
+      for (const entry of readdirSync(projectDir, { withFileTypes: true })) {
+        if (keepTopDirs.has(entry.name)) continue;
+        if (entry.isDirectory()) {
+          let isSourceDir = false;
+          try {
+            const walk = (d: string): boolean => {
+              if (!existsSync(d)) return false;
+              for (const e of readdirSync(d, { withFileTypes: true })) {
+                if (e.isDirectory()) { if (walk(path.join(d, e.name))) return true; }
+                else if (/\.(tsx?|jsx?)$/.test(e.name)) return true;
+              }
+              return false;
+            };
+            isSourceDir = walk(path.join(projectDir, entry.name));
+          } catch { /* ignore */ }
+          if (!isSourceDir) continue;
+          const rootDir = path.join(projectDir, entry.name);
+          if (collectAliasRefs(entry.name).length > 0) {
+            copyDirRecursive(rootDir, path.join(srcDir, entry.name));
+            try { rmSync(rootDir, { recursive: true, force: true }); } catch { /* ignore */ }
+          } else if (!hasRelativeRefsInto(rootDir)) {
+            try { rmSync(rootDir, { recursive: true, force: true }); } catch { /* ignore */ }
+          }
+        } else if (/\.(tsx?|jsx?)$/.test(entry.name)) {
+          const rootFile = path.join(projectDir, entry.name);
+          const base = entry.name.replace(/\.\w+$/, '');
+          if (collectAliasRefs(base).length > 0) {
+            try { writeFileSync(path.join(srcDir, entry.name), readFileSync(rootFile)); } catch { /* ignore */ }
+            try { rmSync(rootFile, { force: true }); } catch { /* ignore */ }
+          } else if (!hasRelativeRefsInto(rootFile)) {
+            try { rmSync(rootFile, { force: true }); } catch { /* ignore */ }
+          }
+        }
+      }
+
+      // A scoped import whose scope matches a top-level dir in the project is a
+      // local alias the LLM invented (e.g. "@components/ui" → components/ui) —
+      // never an npm package. Adding it would make `npm install` fail.
+      const localDirs = new Set<string>();
+      try {
+        for (const entry of readdirSync(projectDir, { withFileTypes: true })) {
+          if (entry.isDirectory()) localDirs.add(entry.name);
+        }
+      } catch { /* ignore */ }
 
       const scanDir = (dir: string) => {
         if (!existsSync(dir)) return;
@@ -1927,8 +2076,9 @@ export async function POST(req: Request) {
                 const parts = raw.split('/');
                 const name = raw.startsWith('@') ? parts.slice(0, 2).join('/') : (parts[0] ?? '');
                 if (!name || builtinOrScoped.has(name) || existingPkgs.has(name)) continue;
+                if (raw.startsWith('@') && localDirs.has(parts[1] ?? '')) continue;
                 existingPkgs.add(name);
-                pkg.dependencies[name] = knownVersions[name] ?? '^1.0.0';
+                pkg.dependencies[name] = knownVersions[name] ?? '*';
               }
               const requireMatches = content.matchAll(/require\s*\(\s*['"]([^'"]+)['"]\s*\)/g);
               for (const m of requireMatches) {
@@ -1937,8 +2087,9 @@ export async function POST(req: Request) {
                 const parts = raw.split('/');
                 const name = raw.startsWith('@') ? parts.slice(0, 2).join('/') : (parts[0] ?? '');
                 if (!name || builtinOrScoped.has(name) || existingPkgs.has(name)) continue;
+                if (raw.startsWith('@') && localDirs.has(parts[1] ?? '')) continue;
                 existingPkgs.add(name);
-                pkg.dependencies[name] = knownVersions[name] ?? '^1.0.0';
+                pkg.dependencies[name] = knownVersions[name] ?? '*';
               }
             } catch { /* skip unreadable files */ }
           }
@@ -1997,46 +2148,6 @@ export async function POST(req: Request) {
       }
 
       writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
-
-      const srcComponentsDir = path.join(projectDir, 'src', 'components');
-      const rootComponentsDir = path.join(projectDir, 'components');
-      if (existsSync(rootComponentsDir) && existsSync(path.join(projectDir, 'src'))) {
-        const needed: string[] = [];
-        const scanForComponentImports = (dir: string) => {
-          if (!existsSync(dir)) return;
-          for (const entry of readdirSync(dir, { withFileTypes: true })) {
-            const fullPath = path.join(dir, entry.name);
-            if (entry.isDirectory()) {
-              if (entry.name === 'node_modules' || entry.name === '.next') continue;
-              scanForComponentImports(fullPath);
-            } else if (/\.(tsx?|jsx?)$/.test(entry.name)) {
-              try {
-                const content = readFileSync(fullPath, 'utf-8');
-                for (const m of content.matchAll(/['"]@\/components\/([^'"]+)['"]/g)) {
-                  needed.push(m[1]!.replace(/\.\w+$/, ''));
-                }
-              } catch { /* skip unreadable */ }
-            }
-          }
-        };
-        scanForComponentImports(path.join(projectDir, 'src'));
-        if (!existsSync(srcComponentsDir)) {
-          try { mkdirSync(srcComponentsDir, { recursive: true }); } catch { /* ignore */ }
-        }
-        for (const name of [...new Set(needed)]) {
-          const srcTarget = path.join(srcComponentsDir, `${name}.tsx`);
-          if (existsSync(srcTarget)) continue;
-          for (const ext of ['.tsx', '.ts', '.jsx', '.js']) {
-            const rootSource = path.join(rootComponentsDir, `${name}${ext}`);
-            if (existsSync(rootSource)) {
-              try {
-                writeFileSync(srcTarget, readFileSync(rootSource, 'utf-8'));
-              } catch { /* ignore */ }
-              break;
-            }
-          }
-        }
-      }
     } catch { /* leave unchanged */ }
   }
 
@@ -2572,6 +2683,77 @@ export async function POST(req: Request) {
     });
   }
 
+  /**
+   * Strip LLM output that would corrupt the generated project's build:
+   * - placeholder-only stubs ("...") that silently overwrite real files
+   * - files referencing the hallucinated "@components/*" alias (this project
+   *   only defines "@/*" → "./src/*", so such files can never compile)
+   * - files with dangling relative / alias imports (referenced target is neither
+   *   in this batch nor already on disk)
+   * - for non-scaffold tasks, the build-infra files the scaffold task owns
+   *   (package.json, tsconfig.json)
+   */
+  private sanitizeGeneratedFiles(
+    files: Array<{ path: string; content: string }>,
+    fileType: 'scaffold' | 'frontend' | 'backend' | 'database' | 'config',
+  ): Array<{ path: string; content: string }> {
+    const projectDir = this.plan ? path.resolve(this.workspaceRoot, this.plan.projectName) : null;
+    const batch = new Map(files.map(f => [f.path, f.content]));
+
+    const batchResolves = (candidate: string): boolean => {
+      if (batch.has(candidate)) return true;
+      for (const ext of ['.tsx', '.ts', '.jsx', '.js', '.css', '.json']) {
+        if (batch.has(`${candidate}${ext}`)) return true;
+      }
+      for (const ext of ['.tsx', '.ts', '.jsx', '.js']) {
+        if (batch.has(`${candidate}/index${ext}`)) return true;
+      }
+      return false;
+    };
+
+    const importResolves = (fromPath: string, spec: string): boolean => {
+      if (spec.startsWith('.') || spec.startsWith('/')) {
+        const candidate = path.posix.normalize(path.posix.join(path.posix.dirname(fromPath), spec));
+        if (batchResolves(candidate)) return true;
+        return projectDir !== null && this.resolveImportTarget(path.resolve(projectDir, candidate));
+      }
+      if (spec.startsWith('@/')) {
+        const sub = spec.slice(2);
+        const candidate = path.posix.normalize(path.posix.join('src', sub));
+        if (batchResolves(candidate)) return true;
+        if (projectDir !== null && this.resolveImportTarget(path.resolve(projectDir, candidate))) return true;
+        // postProcessProject copies root components/ into src/components/, so an
+        // "@/" import may also be satisfied by a root-level components/ file.
+        if (sub.startsWith('components/')) {
+          const rootCandidate = path.posix.normalize(sub);
+          if (batchResolves(rootCandidate)) return true;
+          return projectDir !== null && this.resolveImportTarget(path.resolve(projectDir, rootCandidate));
+        }
+        return false;
+      }
+      return true;
+    };
+
+    return files.filter(f => {
+      const trimmed = f.content.trim();
+      if (trimmed === '' || /^\.{3}$/.test(trimmed)) return false;
+      if (f.content.includes('@components/')) return false;
+      if (fileType !== 'scaffold' && (f.path === 'package.json' || f.path === 'tsconfig.json')) return false;
+      if (/\.(tsx?|jsx?)$/.test(f.path)) {
+        for (const m of f.content.matchAll(/(?:import|export)\s+.*?\s+from\s+['"]([^'"]+)['"]/g)) {
+          if (!importResolves(f.path, m[1]!)) return false;
+        }
+        for (const m of f.content.matchAll(/import\s*\(\s*['"]([^'"]+)['"]\s*\)/g)) {
+          if (!importResolves(f.path, m[1]!)) return false;
+        }
+        for (const m of f.content.matchAll(/require\s*\(\s*['"]([^'"]+)['"]\s*\)/g)) {
+          if (!importResolves(f.path, m[1]!)) return false;
+        }
+      }
+      return true;
+    });
+  }
+
   private async generateFilesWithLLM(
     fileType: 'scaffold' | 'frontend' | 'backend' | 'database' | 'config',
     context: { projectName: string; description: string; techStack: string[]; judgingCriteria: string[]; constraints: string[]; specificTask?: string },
@@ -2583,14 +2765,17 @@ export async function POST(req: Request) {
       return [];
     }
 
-    // Only attempt LLM once per fileType per pipeline run
-    if (this.generationAttempted.has(fileType)) {
+    // Only attempt LLM once per (fileType, specificTask) per pipeline run.
+    // Each generation task carries a distinct specificTask (node description), so
+    // every task gets its own focused LLM call while retries of the same task still dedupe.
+    const attemptKey = `${fileType}:${context.specificTask ?? ''}`;
+    if (this.generationAttempted.has(attemptKey)) {
       if (fileType === 'scaffold') return this.generateScaffoldFiles(this.plan!);
       if (fileType === 'frontend') return this.generateFrontendFiles({ description: context.specificTask ?? '' } as TaskNode, this.plan!);
       if (fileType === 'backend') return this.generateBackendFiles({ description: context.specificTask ?? '' } as TaskNode, this.plan!);
       return [];
     }
-    this.generationAttempted.add(fileType);
+    this.generationAttempted.add(attemptKey);
 
     const taskDescriptions: Record<string, string> = {
       scaffold: LLM_TASK_DESCRIPTIONS.scaffold!,
@@ -2611,9 +2796,7 @@ export async function POST(req: Request) {
 
     const systemPrompt = LLM_GENERATION_SYSTEM_PROMPT;
 
-    const strategySection = this.codeGenContext
-      ? `\nSTRATEGY:\nProject name: ${this.codeGenContext.strategyName}\nOne-liner: ${this.codeGenContext.oneLiner}\nUI direction: ${this.codeGenContext.uiScaffold.designLanguage} (layout: ${this.codeGenContext.uiScaffold.layout})\nKey screens: ${this.codeGenContext.uiScaffold.keyScreens.join(', ')}\nSponsor APIs to prioritize: ${this.codeGenContext.sponsorApis.join(', ') || 'none'}\nFeature priority: ${this.codeGenContext.taskOrder.filter(f => ['core', 'sponsor'].includes(f.category)).map(f => f.feature).join('; ')}\n`
-      : '';
+    const strategySection = renderStrategyPromptBlock(this.codeGenContext);
 
     const gi = this.generationInput;
 
@@ -2705,8 +2888,9 @@ This is a HACKATHON project. Make it stand out — judges will compare it agains
           content: f.content,
         }));
         const validFiles = rawFiles.filter((f: { path: string; content: string }) => {
-          if (/\.(tsx?|jsx?)$/.test(f.path)) {
-            if (f.content.length < 30) return false;
+if (/\.(tsx?|jsx?)$/.test(f.path)) {
+             if (f.content.length < 30) return false;
+             if (/^\s*\.\.\./.test(f.content)) return false;
             const opens = (f.content.match(/\{/g) ?? []).length;
             const closes = (f.content.match(/\}/g) ?? []).length;
             if (Math.abs(opens - closes) > 2) return false;
@@ -2726,13 +2910,25 @@ This is a HACKATHON project. Make it stand out — judges will compare it agains
         }
         const validatedFiles = validation.valid ? normalized : validation.fixedFiles;
 
+        // Build-integrity sanitization. LLM output frequently ships placeholder
+        // stubs ("..."), files referencing the invented "@components/*" alias
+        // (this project only defines "@/*" → "./src/*"), dangling relative
+        // imports, and — for non-scaffold tasks — its own package.json /
+        // tsconfig.json (the scaffold task owns build infra). Any of these break
+        // the build, so strip them before they reach disk. If sanitization
+        // empties a non-scaffold batch, fall back to the deterministic template.
+        const sanitized = this.sanitizeGeneratedFiles(validatedFiles, fileType);
+
         if (fileType === 'scaffold' && this.plan) {
           const templateFiles = await this.generateScaffoldFiles(this.plan);
           const templateMap = new Map(templateFiles.map(f => [f.path, f.content]));
-          const criticalPaths = new Set(['src/app/layout.tsx', 'src/app/page.tsx', 'tsconfig.json', 'package.json']);
+          // Only build-safety infrastructure stays deterministic. LLM-generated
+          // application files (page.tsx, layout.tsx, components) are the product
+          // and must remain intact when valid. Templates fill gaps only.
+          const criticalPaths = new Set(['tsconfig.json', 'package.json']);
           const result: Array<{ path: string; content: string }> = [];
           const seenPaths = new Set<string>();
-          for (const f of validatedFiles) {
+          for (const f of sanitized) {
             if (criticalPaths.has(f.path) && templateMap.has(f.path)) {
               result.push({ path: f.path, content: templateMap.get(f.path)! });
             } else if (f.path === 'next.config.js' && f.content.includes('target:')) {
@@ -2750,7 +2946,12 @@ This is a HACKATHON project. Make it stand out — judges will compare it agains
           }
           return result;
         }
-        return validatedFiles;
+
+        if (sanitized.length === 0 && this.plan) {
+          if (fileType === 'frontend') return this.enforceRequiredTechnologies(this.normalizePackageVersions(await this.generateFrontendFiles({ description: context.specificTask ?? '' } as TaskNode, this.plan)), requiredTechs);
+          if (fileType === 'backend') return this.enforceRequiredTechnologies(this.normalizePackageVersions(await this.generateBackendFiles({ description: context.specificTask ?? '' } as TaskNode, this.plan)), requiredTechs);
+        }
+        return sanitized;
       }
 
       debug(`LLM response for ${fileType} had empty files, falling back to templates`);
