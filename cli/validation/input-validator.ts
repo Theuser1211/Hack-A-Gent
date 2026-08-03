@@ -111,17 +111,11 @@ export function validateInput(input: string): InputValidationResult {
     return { valid: true, state: 'SUPPORTED', urlType };
   }
 
-  if (VALID_URL_SCHEME.test(trimmed) && HACKATHON_KEYWORDS.test(trimmed)) {
-    return { valid: true, state: 'PARTIALLY_SUPPORTED', urlType: 'hackathon' };
-  }
-
+  // Allow any HTTPS URL — the parser/qualifier will determine whether the
+  // page content is actually a hackathon. The URL itself rarely advertises
+  // the page type (e.g. hack.theinnovationstory.com, hack2skill.com, etc.).
   if (VALID_URL_SCHEME.test(trimmed)) {
-    return {
-      valid: false,
-      state: 'NOT_A_HACKATHON',
-      urlType: 'unknown',
-      error: `"${trimmed}" does not appear to be a hackathon page. Use a Devpost, MLH, or hackathon URL.`,
-    };
+    return { valid: true, state: 'PARTIALLY_SUPPORTED', urlType: 'hackathon' };
   }
 
   return { valid: true, state: 'SUPPORTED', urlType: 'text' };
