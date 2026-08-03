@@ -29,6 +29,14 @@ import { normalizeWithAIRetry, AINormalizationResult } from './ai-normalizer.js'
 import { validateAndRepairSpec, createDefaultSpec } from './validator.js';
 import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
 import { analyzeAndRecord, getLearningSummary } from './parser-learning.js';
+import {
+  analyzeJudgingIntelligence,
+  analyzeSponsorIntelligence,
+  analyzeOpportunity,
+  analyzeChallengeUnderstanding,
+  generateWinningStrategyReport,
+} from './intelligence-analyzer.js';
+import type { WinningStrategyReport } from './intelligence-analyzer.js';
 
 const PARSER_VERSION = '1.1.0';
 
@@ -195,6 +203,9 @@ export async function parseHackathon(
     ctx.warnings.push(...validation.warnings);
     ctx.inferredFields.push(...validation.inferredFields);
     validationTimeMs = Date.now() - validationStart;
+
+    // Step 5.5: Compute intelligence (deterministic fallback if AI didn't provide it)
+    computeIntelligence(ctx);
 
     // Step 6: Build extraction metadata
     const meta: ExtractionMeta = {
@@ -480,6 +491,36 @@ function evaluateStrategyResult(strategy: ParseStrategy, ctx: ParserContext): St
     fieldsMissing,
     timeMs,
   };
+}
+
+/**
+ * Compute intelligence fields deterministically.
+ * AI can override these, but we always compute a baseline.
+ */
+function computeIntelligence(ctx: ParserContext): void {
+  const spec = ctx.finalSpec;
+  const sections = ctx.sections;
+
+  // Only compute if AI didn't already provide intelligence
+  if (!spec.judgingIntelligence || spec.judgingIntelligence.confidence.confidence === 'low') {
+    spec.judgingIntelligence = analyzeJudgingIntelligence(spec, sections);
+  }
+
+  if (!spec.sponsorIntelligence || spec.sponsorIntelligence.confidence.confidence === 'low') {
+    spec.sponsorIntelligence = analyzeSponsorIntelligence(spec, sections);
+  }
+
+  if (!spec.opportunityAnalysis || spec.opportunityAnalysis.confidence.confidence === 'low') {
+    spec.opportunityAnalysis = analyzeOpportunity(spec, sections);
+  }
+
+  if (!spec.challengeUnderstanding || spec.challengeUnderstanding.confidence.confidence === 'low') {
+    spec.challengeUnderstanding = analyzeChallengeUnderstanding(spec, sections);
+  }
+
+  // Always generate winning strategy report (primary output)
+  const report = generateWinningStrategyReport(spec, sections);
+  (spec as Record<string, unknown>)['winningStrategyReport'] = report;
 }
 
 // Re-export for backwards compatibility

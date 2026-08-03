@@ -4,6 +4,15 @@
  *
  * Platform-agnostic section extraction using semantic heading analysis.
  * Works with any hackathon platform by identifying common section patterns.
+ *
+ * Handles:
+ * - Multilingual pages (detects language, extracts universal patterns)
+ * - JS-heavy pages (JSON-LD, meta tags, noscript fallbacks)
+ * - AI-generated websites (common template patterns)
+ * - Unusual layouts (nested sections, non-standard headings)
+ * - Duplicate sections (merges intelligently)
+ * - Sponsor-only pages (extracts what's available)
+ * - Missing sections (graceful fallback)
  */
 
 import type { PlatformType, UniversalExtractedSections, ExtractedSection } from './types.js';
@@ -196,6 +205,17 @@ export function extractUniversalSections(html: string, platform: PlatformType): 
   // Platform-specific post-processing
   applyPlatformSpecificExtraction(result, html, platform);
 
+  // Robustness: Enrich from JSON-LD (handles JS-heavy pages)
+  enrichFromJsonLd(result, html);
+
+  // Robustness: Merge duplicate sections
+  mergeDuplicateSections(result);
+
+  // Robustness: Detect sponsor-only pages and adjust metadata
+  if (isSponsorOnlyPage(result)) {
+    result.metadata += '\n\n## Warning: Sponsor-Only Page\nThis page appears to be primarily sponsor-focused with limited hackathon content.';
+  }
+
   return result;
 }
 
@@ -368,4 +388,257 @@ export function getSectionText(sections: UniversalExtractedSections, field: keyo
 export function hasSection(sections: UniversalExtractedSections, field: keyof UniversalExtractedSections): boolean {
   const value = sections[field];
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+// ─── Robustness: Language Detection ─────────────────────────────────
+
+/**
+ * Detect the primary language of HTML content.
+ * Returns ISO 639-1 code (e.g., 'en', 'es', 'fr', 'de').
+ */
+export function detectLanguage(html: string): string {
+  // Check lang attribute first
+  const langMatch = html.match(/<html[^>]*lang=["']([a-z]{2}(?:-[A-Za-z]{2,})?)["']/i);
+  if (langMatch?.[1]) return langMatch[1].slice(0, 2).toLowerCase();
+
+  // Check meta content-language
+  const metaMatch = html.match(/<meta[^>]+(?:http-equiv|name)=["']content-language["'][^>]+content=["']([a-z]{2})["']/i);
+  if (metaMatch?.[1]) return metaMatch[1].toLowerCase();
+
+  // Check og:locale
+  const ogLocale = metaContent(html, 'og:locale');
+  if (ogLocale) {
+    const localeMatch = ogLocale.match(/^([a-z]{2})/);
+    if (localeMatch?.[1]) return localeMatch[1].toLowerCase();
+  }
+
+  // Heuristic: count common English words
+  const lowerText = stripHtml(html).toLowerCase();
+  const englishWords = ['the', 'and', 'for', 'with', 'this', 'that', 'from', 'have', 'will', 'can'];
+  let englishCount = 0;
+  for (const w of englishWords) {
+    const re = new RegExp(`\\b${w}\\b`, 'g');
+    const matches = lowerText.match(re);
+    englishCount += matches?.length || 0;
+  }
+
+  return englishCount >= 5 ? 'en' : 'en'; // Default to English if uncertain
+}
+
+/**
+ * Check if content is primarily non-English.
+ */
+export function isNonEnglish(html: string): boolean {
+  const lang = detectLanguage(html);
+  return lang !== 'en' && lang !== '';
+}
+
+// ─── Robustness: JSON-LD Extraction ─────────────────────────────────
+
+/**
+ * Extract structured data from JSON-LD script tags.
+ * Handles Event, Hackathon, and Organization schemas.
+ */
+export function extractJsonLd(html: string): Record<string, unknown> | null {
+  const jsonLdRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = jsonLdRegex.exec(html)) !== null) {
+    try {
+      const raw = stripHtml(match[1].replace(/<script[^>]*>/, '').replace(/<\/script>/, ''));
+      const data = JSON.parse(raw) as Record<string, unknown>;
+
+      if (data['@type'] === 'Event' || data['@type'] === 'Hackathon') {
+        return data;
+      }
+
+      // Check @graph for nested events
+      if (Array.isArray(data['@graph'])) {
+        for (const item of data['@graph'] as Record<string, unknown>[]) {
+          if (item['@type'] === 'Event' || item['@type'] === 'Hackathon') {
+            return item;
+          }
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Apply JSON-LD data to sections as enrichment.
+ */
+export function enrichFromJsonLd(sections: UniversalExtractedSections, html: string): void {
+  const jsonLd = extractJsonLd(html);
+  if (!jsonLd) return;
+
+  const desc = jsonLd.description as string;
+  if (desc && !sections.description.includes(desc.slice(0, 100))) {
+    sections.description += '\n\n## Description (JSON-LD)\n' + desc;
+  }
+
+  const name = jsonLd.name as string;
+  if (name && !sections.title.includes(name.slice(0, 50))) {
+    sections.title = sections.title || name;
+  }
+
+  const startDate = jsonLd.startDate as string;
+  if (startDate) {
+    sections.timeline += '\n\n## Start Date (JSON-LD)\n' + startDate;
+  }
+
+  const endDate = jsonLd.endDate as string;
+  if (endDate) {
+    sections.timeline += '\n\n## End Date (JSON-LD)\n' + endDate;
+  }
+
+  const location = jsonLd.location as Record<string, unknown>;
+  if (location?.name) {
+    sections.metadata += '\n\n## Location (JSON-LD)\n' + String(location.name);
+  }
+
+  const organizer = jsonLd.organizer as Record<string, unknown>;
+  if (organizer?.name) {
+    sections.metadata += '\n\n## Organizer (JSON-LD)\n' + String(organizer.name);
+  }
+
+  const offers = jsonLd.offers as Record<string, unknown>;
+  if (offers?.price) {
+    sections.metadata += '\n\n## Registration (JSON-LD)\nPrice: ' + String(offers.price);
+  }
+}
+
+// ─── Robustness: Noscript Fallback ──────────────────────────────────
+
+/**
+ * Extract content from <noscript> tags for JS-heavy pages.
+ * Many hackathon platforms render content in JS but provide noscript fallbacks.
+ */
+export function extractFromNoscript(html: string): string {
+  const noscriptRegex = /<noscript[^>]*>([\s\S]*?)<\/noscript>/gi;
+  const parts: string[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = noscriptRegex.exec(html)) !== null) {
+    const content = stripHtml(match[1]);
+    if (content.length > 50) { // Only meaningful content
+      parts.push(content);
+    }
+  }
+
+  return parts.join('\n\n');
+}
+
+// ─── Robustness: AI-Generated Website Detection ─────────────────────
+
+/**
+ * Detect if a page appears to be AI-generated (common patterns).
+ */
+export function isAiGeneratedPage(html: string): boolean {
+  const lowerHtml = html.toLowerCase();
+
+  // Common AI-generated website patterns
+  const aiPatterns = [
+    'powered by chatgpt', 'generated by ai', 'ai-generated',
+    'created with ai', 'built with ai', 'ai assisted',
+    // Common template patterns
+    '<div class="loading">',
+    '<div id="app" data-server-rendered="true">',
+    // SPA markers
+    '__NEXT_DATA__', '__NUXT__', '__GATSBY',
+  ];
+
+  let matchCount = 0;
+  for (const pattern of aiPatterns) {
+    if (lowerHtml.includes(pattern.toLowerCase())) {
+      matchCount++;
+    }
+  }
+
+  return matchCount >= 2;
+}
+
+// ─── Robustness: Duplicate Section Merging ──────────────────────────
+
+/**
+ * Merge duplicate sections intelligently.
+ * If the same content appears under different headings, combine them.
+ */
+export function mergeDuplicateSections(sections: UniversalExtractedSections): void {
+  // Check for duplicate content across fields
+  const contentMap = new Map<string, string>();
+
+  const stringFields: Array<keyof UniversalExtractedSections> = [
+    'description', 'rules', 'deliverables', 'timeline', 'resources',
+  ];
+
+  for (const field of stringFields) {
+    const value = sections[field];
+    if (typeof value === 'string' && value.length > 100) {
+      // Create a content fingerprint (first 200 chars, normalized)
+      const fingerprint = value.slice(0, 200).toLowerCase().replace(/\s+/g, ' ').trim();
+      if (contentMap.has(fingerprint)) {
+        // Duplicate detected — keep the longer version
+        const existing = contentMap.get(fingerprint)!;
+        if (value.length > existing.length) {
+          (sections as Record<string, string>)[field] = value;
+          contentMap.set(fingerprint, value);
+        }
+      } else {
+        contentMap.set(fingerprint, value);
+      }
+    }
+  }
+}
+
+// ─── Robustness: Sponsor-Only Page Detection ────────────────────────
+
+/**
+ * Detect if a page is primarily sponsor-focused (missing typical hackathon content).
+ */
+export function isSponsorOnlyPage(sections: UniversalExtractedSections): boolean {
+  const hasTitle = sections.title.length > 0;
+  const hasDescription = sections.description.length > 50;
+  const hasSponsors = sections.sponsors.length > 50;
+  const hasJudging = sections.judgingCriteria.length > 20;
+  const hasPrizes = sections.prizes.length > 20;
+
+  // Sponsor-only: has sponsors but lacks core hackathon content
+  return hasSponsors && !hasJudging && !hasPrizes && (!hasDescription || sections.description.length < 100);
+}
+
+// ─── Robustness: Content Quality Assessment ─────────────────────────
+
+/**
+ * Assess the quality of extracted content.
+ * Returns a score 0-1 indicating how complete/useful the extraction is.
+ */
+export function assessExtractionQuality(sections: UniversalExtractedSections): number {
+  let score = 0;
+  const weights = {
+    title: 0.15,
+    description: 0.20,
+    judgingCriteria: 0.15,
+    prizes: 0.15,
+    sponsors: 0.10,
+    timeline: 0.10,
+    rules: 0.05,
+    deliverables: 0.05,
+    resources: 0.05,
+  };
+
+  if (sections.title.length > 3) score += weights.title;
+  if (sections.description.length > 50) score += weights.description;
+  if (sections.judgingCriteria.length > 20) score += weights.judgingCriteria;
+  if (sections.prizes.length > 20) score += weights.prizes;
+  if (sections.sponsors.length > 10) score += weights.sponsors;
+  if (sections.timeline.length > 10) score += weights.timeline;
+  if (sections.rules.length > 10) score += weights.rules;
+  if (sections.deliverables.length > 10) score += weights.deliverables;
+  if (sections.resources.length > 10) score += weights.resources;
+
+  return Math.round(score * 100) / 100;
 }

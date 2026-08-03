@@ -106,6 +106,33 @@ export interface HackathonSpec {
 
   /** Detailed diagnostic report for this parse */
   diagnostics: ParserDiagnostics;
+
+  /** Master winning strategy report — primary output for downstream intelligence */
+  winningStrategyReport?: WinningStrategyReport;
+}
+
+/** Master winning strategy report — primary intelligence output */
+export interface WinningStrategyReport {
+  /** Easiest path to a winning submission */
+  easiestPath: string;
+  /** Highest ROI track to enter */
+  highestRoiTrack: string;
+  /** Recommended technology stack */
+  recommendedTechStack: string[];
+  /** Recommended MVP scope and approach */
+  recommendedMvpScope: string;
+  /** Recommended demo and presentation strategy */
+  demoStrategy: string;
+  /** Biggest risks to avoid */
+  biggestRisks: string[];
+  /** Biggest opportunities to exploit */
+  biggestOpportunities: string[];
+  /** Sponsor integration opportunities */
+  sponsorOpportunities: string[];
+  /** Summary of judging priorities */
+  judgingPrioritiesSummary: string;
+  /** Overall confidence in this report */
+  overallConfidence: FieldConfidence;
 }
 
 export interface ParserQualityMetrics {
