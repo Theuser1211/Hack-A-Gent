@@ -1,10 +1,13 @@
 import { describe, it, expect } from 'vitest';
+
 import { generateProjectName } from '../../cli/improvement/improvement-instrumentor.js';
 
 describe('generateProjectName', () => {
-  it('generates memorable names', () => {
+  it('generates memorable startup-style names', () => {
     const result = generateProjectName('AI Hackathon 2026', 'AI');
-    expect(result.displayName).toMatch(/^[A-Z][a-z]+[A-Z][a-z]+$/);
+    expect(result.displayName).toMatch(/^[A-Z][A-Za-z]*$/);
+    expect(result.displayName.length).toBeGreaterThan(4);
+    expect(result.displayName.length).toBeLessThan(12);
     expect(result.slug).toBe(result.displayName.toLowerCase());
     expect(result.folderName).toBe(result.slug);
   });
@@ -32,6 +35,6 @@ describe('generateProjectName', () => {
   it('generates startup-style names', () => {
     const result = generateProjectName('Healthcare AI Challenge', 'Healthcare');
     expect(result.displayName.length).toBeGreaterThan(4);
-    expect(result.displayName.length).toBeLessThan(15);
+    expect(result.displayName.length).toBeLessThan(12);
   });
 });

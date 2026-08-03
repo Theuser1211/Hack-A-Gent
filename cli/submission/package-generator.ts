@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
+
 import type { PipelineContext } from '../pipeline/types.js';
 
 export interface PackageResult {
@@ -14,7 +15,7 @@ export function generatePackage(projectDir: string, context: PipelineContext): P
   const report = context.report;
 
   const title = analysis?.challenge.title ?? 'Hackathon Project';
-  const oneLiner = strategy?.projectName ?? 'My Hackathon Project';
+  const oneLiner = strategy?.brandName ?? strategy?.projectName ?? 'My Hackathon Project';
   const theme = analysis?.challenge.theme ?? 'technology';
   const criteria = analysis?.judgingCriteria ?? [];
   const sponsorAPIs = analysis?.sponsorAPIs ?? [];

@@ -1,4 +1,5 @@
 import type { ExtractedField } from '../confidence.js';
+import type { IdeationResult } from '../ideation/types.js';
 
 export interface DevpostParseResult {
   title: string;
@@ -102,6 +103,10 @@ export interface RoadmapPhase {
 // Phase 2: Winning Strategy Types
 export interface WinningStrategy {
   projectName: string;
+  /** Startup-quality display brand name (e.g. "Lumen") — folder/slug stays in `projectName`. */
+  brandName?: string;
+  /** Full ideation result when the idea was auto-generated. */
+  ideation?: IdeationResult | null;
   oneLiner: string;
   whyScoreWell: string[];
   targetedCriteria: Array<{ name: string; weight: number; approach: string }>;
