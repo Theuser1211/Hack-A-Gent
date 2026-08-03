@@ -19,7 +19,7 @@ import {
   analyzeChallengeUnderstanding,
   generateWinningStrategyReport,
 } from '../../features/universal-parser/intelligence-analyzer.js';
-import type { WinningStrategyReport } from '../../features/universal-parser/intelligence-analyzer.js';
+import type { WinningStrategyReport } from '../../features/universal-parser/types.js';
 import {
   detectLanguage,
   isNonEnglish,

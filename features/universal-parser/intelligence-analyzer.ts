@@ -32,26 +32,16 @@ import type {
   Prize,
   SponsorAPI,
   PlatformType,
+  WinningStrategyReport,
 } from './types.js';
 
 // ─── Keyword Banks for Pattern Detection ────────────────────────────
-
-const HIGH_VALUE_KEYWORDS = [
-  'innovation', 'novel', 'creative', 'unique', 'original', 'inventive',
-  'impact', 'real-world', 'production-ready', 'deployable', 'scalable',
-  'user experience', 'UX', 'polish', 'demo', 'presentation',
-  'technical depth', 'architecture', 'engineering',
-  'AI', 'machine learning', 'deep learning', 'neural',
-  'blockchain', 'web3', 'decentralized',
-  'sustainability', 'climate', 'environment', 'green',
-  'social impact', 'accessibility', 'inclusion',
-];
 
 const OVERUSED_IDEAS = [
   'todo app', 'task manager', 'weather app', 'chat app', 'social media clone',
   'recipe app', 'fitness tracker', 'budget tracker', 'notes app', 'calculator',
   'portfolio website', 'blog platform', 'ecommerce store', 'food delivery',
-  'ride sharing', ' dating app', 'job board', 'marketplace',
+  'ride sharing', 'dating app', 'job board', 'marketplace',
   'AI chatbot', 'AI image generator', 'AI text summarizer',
   'blockchain voting', 'crypto wallet', 'NFT marketplace',
 ];
@@ -311,21 +301,6 @@ export function generateWinningStrategyReport(
   };
 }
 
-// ─── Winning Strategy Report Type ───────────────────────────────────
-
-export interface WinningStrategyReport {
-  easiestPath: string;
-  highestRoiTrack: string;
-  recommendedTechStack: string[];
-  recommendedMvpScope: string;
-  demoStrategy: string;
-  biggestRisks: string[];
-  biggestOpportunities: string[];
-  sponsorOpportunities: string[];
-  judgingPrioritiesSummary: string;
-  overallConfidence: FieldConfidence;
-}
-
 // ─── Judging Intelligence Helpers ───────────────────────────────────
 
 function inferActualPriorities(
@@ -557,9 +532,8 @@ function rankSponsors(
     .sort((a, b) => b.strategicValue - a.strategicValue);
 }
 
-function generateUseCases(sponsor: SponsorAPI, allText: string): string[] {
+function generateUseCases(sponsor: SponsorAPI, _allText: string): string[] {
   const useCases: string[] = [];
-  const name = sponsor.name.toLowerCase();
 
   if (sponsor.category === 'ai' || sponsor.category === 'ml') {
     useCases.push('AI-powered feature in your project');
@@ -796,8 +770,8 @@ function findStrongestDirection(
   allText: string
 ): ProjectDirection {
   // Find the direction with highest score potential and lowest effort
-  const criteria = spec.judgingCriteria;
-  const topCriterion = criteria.sort((a, b) => (b.weight || 0) - (a.weight || 0))[0];
+  const criteria = [...spec.judgingCriteria].sort((a, b) => (b.weight || 0) - (a.weight || 0));
+  const topCriterion = criteria[0];
 
   let name = 'Focused MVP';
   let rationale = 'Build a focused, working MVP that excels in the highest-weighted criterion';
@@ -1080,7 +1054,7 @@ function selectEasiestPath(
   }
 
   if (judging.likelyWinningStrategies.length > 0) {
-    const easiest = judging.likelyWinningStrategies.sort((a, b) => a.difficulty - b.difficulty)[0];
+    const easiest = [...judging.likelyWinningStrategies].sort((a, b) => a.difficulty - b.difficulty)[0];
     parts.push(`Consider the "${easiest.name}" strategy (difficulty ${easiest.difficulty}/10, estimated +${easiest.scoreBoost} points)`);
   }
 

@@ -520,7 +520,7 @@ function computeIntelligence(ctx: ParserContext): void {
 
   // Always generate winning strategy report (primary output)
   const report = generateWinningStrategyReport(spec, sections);
-  (spec as Record<string, unknown>)['winningStrategyReport'] = report;
+  spec.winningStrategyReport = report;
 }
 
 // Re-export for backwards compatibility
