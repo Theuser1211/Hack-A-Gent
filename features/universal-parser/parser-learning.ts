@@ -12,8 +12,15 @@
  * - Unusual layouts
  * - Platform detection failures
  * - Extraction failures per field
+ *
+ * Persistence:
+ * - Data is stored in .hackagent/data/parser-learning.json
+ * - Auto-loads on first access, auto-saves after recording
+ * - Falls back to in-memory only if disk is unavailable
  */
 
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
 import type { HackathonSpec, PlatformType, FieldConfidence, UniversalExtractedSections } from './types.js';
 
 /** Classification of parser failure */
@@ -105,6 +112,85 @@ const learningRecords: ParseLearningRecord[] = [];
 const MAX_RECORDS = 1000;
 const MAX_FAILURES = 500;
 
+// ─── Disk Persistence ──────────────────────────────────────────────
+
+let diskLoaded = false;
+let diskSaveQueued = false;
+let persistenceEnabled = true;
+
+/**
+ * Enable or disable disk persistence.
+ * Disable for testing to avoid polluting shared state.
+ */
+export function setPersistenceEnabled(enabled: boolean): void {
+  persistenceEnabled = enabled;
+  if (!enabled) {
+    diskLoaded = true; // Prevent loading from disk
+  } else {
+    diskLoaded = false;
+  }
+}
+
+function getDataPath(): string {
+  const stateDir = join(process.cwd(), '.hackagent', 'data');
+  return join(stateDir, 'parser-learning.json');
+}
+
+function ensureDataDir(): void {
+  try {
+    const dir = dirname(getDataPath());
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+  } catch {
+    // Silently ignore — we'll fall back to in-memory only
+  }
+}
+
+function loadFromDisk(): void {
+  if (diskLoaded || !persistenceEnabled) return;
+  try {
+    const path = getDataPath();
+    if (existsSync(path)) {
+      const raw = readFileSync(path, 'utf-8');
+      const data = JSON.parse(raw) as { failures: ParserFailure[]; records: ParseLearningRecord[] };
+      if (data.failures && Array.isArray(data.failures)) {
+        for (const f of data.failures) {
+          failureStore.set(f.id, f);
+        }
+      }
+      if (data.records && Array.isArray(data.records)) {
+        // Keep only recent records up to MAX_RECORDS
+        const recent = data.records.slice(-MAX_RECORDS);
+        learningRecords.push(...recent);
+      }
+    }
+  } catch {
+    // Silently ignore — start fresh
+  }
+  diskLoaded = true;
+}
+
+function saveToDisk(): void {
+  if (diskSaveQueued || !persistenceEnabled) return;
+  diskSaveQueued = true;
+  // Debounce saves to avoid excessive I/O
+  setTimeout(() => {
+    try {
+      ensureDataDir();
+      const data = {
+        failures: [...failureStore.values()],
+        records: learningRecords.slice(-MAX_RECORDS),
+        savedAt: new Date().toISOString(),
+      };
+      writeFileSync(getDataPath(), JSON.stringify(data, null, 2), 'utf-8');
+    } catch {
+      // Silently ignore — data stays in memory
+    }
+    diskSaveQueued = false;
+  }, 100);
+}
+
 // ─── Recording Functions ───────────────────────────────────────────
 
 /**
@@ -129,6 +215,7 @@ export function recordFailure(
   sectionName?: string,
   rawSnippet?: string
 ): ParserFailure {
+  loadFromDisk();
   const id = failureId(category, sectionName ?? 'none', platform);
   const now = new Date().toISOString();
 
@@ -136,6 +223,7 @@ export function recordFailure(
   if (existing) {
     existing.occurrenceCount++;
     existing.lastSeen = now;
+    saveToDisk();
     return existing;
   }
 
@@ -153,6 +241,7 @@ export function recordFailure(
   };
 
   failureStore.set(id, failure);
+  saveToDisk();
   return failure;
 }
 
@@ -160,6 +249,7 @@ export function recordFailure(
  * Record a complete parse learning record.
  */
 export function recordParseLearning(record: ParseLearningRecord): void {
+  loadFromDisk();
   learningRecords.push(record);
   // Trim old records
   if (learningRecords.length > MAX_RECORDS) {
@@ -175,6 +265,7 @@ export function recordParseLearning(record: ParseLearningRecord): void {
       failureStore.set(f.id, f);
     }
   }
+  saveToDisk();
 }
 
 /**
@@ -312,6 +403,7 @@ export function markFailureResolved(id: string, fixNotes: string): boolean {
  * Get a summary of all learning data.
  */
 export function getLearningSummary(): ParserLearningSummary {
+  loadFromDisk();
   const failures = [...failureStore.values()];
 
   // Category counts
@@ -354,7 +446,7 @@ export function getLearningSummary(): ParserLearningSummary {
     if (r.confidence < 0.5) current.failures++;
     platformTotals.set(r.platform, current);
   }
-  const platformFailureRates: Record<PlatformType, { total: number; failures: number; rate: number }> = {} as any;
+  const platformFailureRates: Record<PlatformType, { total: number; failures: number; rate: number }> = Object.create(null) as Record<PlatformType, { total: number; failures: number; rate: number }>;
   for (const [platform, data] of platformTotals) {
     platformFailureRates[platform] = {
       ...data,
@@ -389,6 +481,7 @@ export function getLearningSummary(): ParserLearningSummary {
  * Get recent learning records.
  */
 export function getRecentRecords(count: number = 10): ParseLearningRecord[] {
+  loadFromDisk();
   return learningRecords.slice(-count);
 }
 
@@ -398,12 +491,14 @@ export function getRecentRecords(count: number = 10): ParseLearningRecord[] {
 export function resetLearningData(): void {
   failureStore.clear();
   learningRecords.length = 0;
+  diskLoaded = false;
 }
 
 /**
  * Export learning data as JSON (for persistence).
  */
 export function exportLearningData(): string {
+  loadFromDisk();
   return JSON.stringify({
     failures: [...failureStore.values()],
     records: learningRecords,
@@ -415,6 +510,7 @@ export function exportLearningData(): string {
  * Import learning data from JSON (for persistence).
  */
 export function importLearningData(json: string): boolean {
+  loadFromDisk();
   try {
     const data = JSON.parse(json) as { failures: ParserFailure[]; records: ParseLearningRecord[] };
     if (data.failures) {
@@ -425,6 +521,7 @@ export function importLearningData(json: string): boolean {
     if (data.records) {
       learningRecords.push(...data.records);
     }
+    saveToDisk();
     return true;
   } catch {
     return false;

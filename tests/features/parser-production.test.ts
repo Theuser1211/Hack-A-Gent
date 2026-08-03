@@ -22,6 +22,7 @@ import {
   exportLearningData,
   importLearningData,
   resetLearningData,
+  setPersistenceEnabled,
 } from '../../features/universal-parser/parser-learning.js';
 import type { HackathonSpec, FieldConfidence } from '../../features/universal-parser/types.js';
 import { extractUniversalSections } from '../../features/universal-parser/section-extractor.js';
@@ -202,6 +203,7 @@ describe('Multi-Strategy Parsing', () => {
 
 describe('Parser Learning', () => {
   beforeEach(() => {
+    setPersistenceEnabled(false);
     resetLearningData();
   });
 

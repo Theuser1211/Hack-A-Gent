@@ -23,6 +23,7 @@ import type {
   MultiStrategyConfig,
 } from './types.js';
 import { detectHackathon, detectPlatform, isKnownNonHackathonHost } from './platform-detector.js';
+import type { DetectionResult } from './platform-detector.js';
 import { extractUniversalSections } from './section-extractor.js';
 import { normalizeWithAIRetry, AINormalizationResult } from './ai-normalizer.js';
 import { validateAndRepairSpec, createDefaultSpec } from './validator.js';
@@ -43,7 +44,7 @@ interface ParserContext {
   html: string;
   options: UniversalParserOptions;
   router?: RouterEngine;
-  detectionResult: any;
+  detectionResult: DetectionResult | null;
   platform: PlatformType;
   sections: UniversalExtractedSections;
   aiResult: AINormalizationResult | null;
@@ -69,7 +70,7 @@ export async function parseHackathon(
 
   const multiStrategy: MultiStrategyConfig = {
     ...DEFAULT_MULTI_STRATEGY,
-    ...(options as any).multiStrategy,
+    ...options.multiStrategy,
   };
 
   const ctx: ParserContext = {
@@ -283,7 +284,7 @@ function createFailureResult(
   ctx: ParserContext,
   error: string,
   confidence: number,
-  detectionSignals?: any
+  detectionSignals?: DetectionResult
 ): UniversalParseResult {
   const spec = createDefaultSpec(ctx.url, ctx.html.length);
   spec.confidence = confidence;
@@ -348,7 +349,7 @@ function deduplicate<T>(arr: T[]): T[] {
   return [...new Set(arr)];
 }
 
-function deduplicateObjects<T extends Record<string, any>>(base: T[], ai: T[], key: string): T[] {
+function deduplicateObjects<T extends Record<string, unknown>>(base: T[], ai: T[], key: string): T[] {
   const seen = new Set<string>();
   const result: T[] = [];
 
@@ -438,30 +439,43 @@ function sectionsToRecord(sections: UniversalExtractedSections): Record<string, 
  */
 function evaluateStrategyResult(strategy: ParseStrategy, ctx: ParserContext): StrategyResult {
   const start = Date.now();
-  const requiredFields = ['title', 'description', 'organizer', 'judgingCriteria', 'prizes', 'timeline'];
   const sections = ctx.sections;
 
+  // Weighted field evaluation — title and description are more critical than tagline
+  const fieldWeights: Array<{ field: keyof UniversalExtractedSections; weight: number; minLength?: number }> = [
+    { field: 'title', weight: 0.25, minLength: 3 },
+    { field: 'description', weight: 0.20, minLength: 20 },
+    { field: 'judgingCriteria', weight: 0.15 },
+    { field: 'prizes', weight: 0.15 },
+    { field: 'timeline', weight: 0.10 },
+    { field: 'organizer', weight: 0.08, minLength: 2 },
+    { field: 'sponsors', weight: 0.07 },
+  ];
+
+  let weightedScore = 0;
   let fieldsExtracted = 0;
   let fieldsMissing = 0;
 
-  for (const field of requiredFields) {
-    const value = sections[field as keyof UniversalExtractedSections];
-    if (typeof value === 'string' && value.trim().length > 0) {
-      fieldsExtracted++;
-    } else if (Array.isArray(value) && value.length > 0) {
+  for (const { field, weight, minLength } of fieldWeights) {
+    const value = sections[field];
+    const hasValue = typeof value === 'string'
+      ? value.trim().length > (minLength ?? 1)
+      : Array.isArray(value) && value.length > 0;
+
+    if (hasValue) {
+      weightedScore += weight;
       fieldsExtracted++;
     } else {
       fieldsMissing++;
     }
   }
 
-  const confidence = fieldsExtracted / requiredFields.length;
   const timeMs = Date.now() - start;
 
   return {
     strategy,
     spec: {},
-    confidence,
+    confidence: Math.round(weightedScore * 100) / 100,
     fieldsExtracted,
     fieldsMissing,
     timeMs,

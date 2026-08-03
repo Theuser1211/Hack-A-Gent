@@ -543,7 +543,7 @@ export interface ExtractionMeta {
 /** Options for the universal parser */
 export interface UniversalParserOptions {
   /** Optional RouterEngine for AI normalization */
-  router?: any; // RouterEngine type - kept loose to avoid circular deps
+  router?: { execute: (taskType: string, request: unknown) => Promise<unknown> };
   /** Seed for deterministic behavior */
   seed?: number;
   /** Force platform detection (skip auto-detect) */
@@ -552,6 +552,8 @@ export interface UniversalParserOptions {
   minConfidence?: number;
   /** Maximum HTML length to process */
   maxHtmlLength?: number;
+  /** Multi-strategy parsing configuration */
+  multiStrategy?: MultiStrategyConfig;
 }
 
 /** Result of universal parsing */
