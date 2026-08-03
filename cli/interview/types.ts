@@ -1,4 +1,5 @@
 import type { IdeationResult } from '../ideation/types.js';
+import type { ProductIntelligenceResult } from '../product-intelligence/types.js';
 
 export type QuestionCategory = 'prize_selection' | 'sponsor_selection' | 'optimization' | 'project_idea';
 
@@ -50,4 +51,11 @@ export interface InterviewResult {
    * one-liner for backward compatibility.
    */
   ideation?: IdeationResult | null;
+  /**
+   * The full product intelligence pass (judging priorities, sponsor
+   * opportunities, 20-idea brainstorm, viability + feasibility + judge
+   * simulation on the top 5, winner, product vision and architecture plan)
+   * produced before code generation.
+   */
+  productIntelligence?: ProductIntelligenceResult | null;
 }

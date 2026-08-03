@@ -1,5 +1,6 @@
 import type { ExtractedField } from '../confidence.js';
 import type { IdeationResult } from '../ideation/types.js';
+import type { ProductIntelligenceResult } from '../product-intelligence/types.js';
 
 export interface DevpostParseResult {
   title: string;
@@ -107,6 +108,8 @@ export interface WinningStrategy {
   brandName?: string;
   /** Full ideation result when the idea was auto-generated. */
   ideation?: IdeationResult | null;
+  /** Full product intelligence pass (judging, viability, judge sim, vision, architecture). */
+  productIntelligence?: ProductIntelligenceResult | null;
   oneLiner: string;
   whyScoreWell: string[];
   targetedCriteria: Array<{ name: string; weight: number; approach: string }>;
