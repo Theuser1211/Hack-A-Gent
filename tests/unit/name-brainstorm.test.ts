@@ -25,8 +25,18 @@ describe('brainstormNames', () => {
     for (const c of result.candidates) {
       const lower = c.name.toLowerCase();
       expect(GENERIC_NAME_TOKENS.includes(lower as (typeof GENERIC_NAME_TOKENS)[number])).toBe(false);
-      expect(lower).not.toMatch(/(app|assistant|platform|tool|smart|hub|cloud|tech|bot|mate|io|ai|labs|360)$/);
+      expect(lower).not.toMatch(/(app|assistant|platform|tool|smart|hub|cloud|tech|bot|mate|io|ai|labs|360|generator|dashboard)$/);
       expect(lower).not.toMatch(/^(smart|my|ai|chat|easy|super)/);
+    }
+  });
+
+  it('rejects Dashboard and Generator style names', () => {
+    // Feed the engine names that would be generic and confirm the tokens are banned.
+    expect(GENERIC_NAME_TOKENS).toContain('dashboard');
+    expect(GENERIC_NAME_TOKENS).toContain('generator');
+    const result = brainstormNames('Dashboard Hackathon', 'Dashboard');
+    for (const c of result.candidates) {
+      expect(c.name.toLowerCase()).not.toMatch(/(dashboard|generator)$/);
     }
   });
 

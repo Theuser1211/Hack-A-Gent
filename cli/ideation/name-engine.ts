@@ -122,7 +122,7 @@ function rejectionReason(name: string): string | null {
   if (/(^smart|^my|^ai|^chat|^easy|^super)/.test(lower)) {
     return 'generic prefix';
   }
-  if (/(app|assistant|platform|tool|smart|hub|cloud|tech|bot|mate|io|ai|labs|360|online|finder|tracker|manager)$/.test(lower)) {
+  if (/(app|assistant|platform|tool|smart|hub|cloud|tech|bot|mate|io|ai|labs|360|online|finder|tracker|manager|generator|dashboard)$/.test(lower)) {
     return 'generic suffix';
   }
   if (name.length < NAME_MIN_LENGTH || name.length > NAME_MAX_LENGTH) {

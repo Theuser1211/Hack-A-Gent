@@ -68,5 +68,5 @@ export const GENERIC_NAME_TOKENS = [
   'app', 'apps', 'assistant', 'platform', 'tool', 'tools', 'smart', 'hub',
   'cloud', 'tech', 'bot', 'mate', 'pro', 'plus', 'wizard', 'genius', 'buddy',
   'solutions', 'systems', 'labs', 'online', 'finder', 'tracker', 'manager',
-  'maker', 'generator', 'suite', 'assist', 'ai', 'io', '360', 'box', 'kit',
+  'maker', 'generator', 'dashboard', 'suite', 'assist', 'ai', 'io', '360', 'box', 'kit',
 ] as const;
