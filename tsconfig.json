@@ -34,5 +34,5 @@
     "scripts/**/*.ts",
     "tests/**/*.ts"
   ],
-  "exclude": ["node_modules", "dist", "projects"]
+  "exclude": ["node_modules", "dist", "projects", "tests/project-from-*", "tests/build-*"]
 }
