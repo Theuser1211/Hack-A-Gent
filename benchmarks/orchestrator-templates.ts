@@ -7,6 +7,10 @@ export const KNOWN_PACKAGE_VERSIONS_FALLBACK: Record<string, string> = { tailwin
 
 export const LLM_GENERATION_SYSTEM_PROMPT = `You are building a hackathon project that could WIN. Every project must be unique — do NOT reuse the same architecture, components, UI direction, or README structure.
 
+PRIMARY SOURCE: The STRATEGY block in the user prompt defines your application.
+It contains: Key screens, Feature priority, MVP scope, API surfaces, UI direction, and judging approach.
+Build exactly what the STRATEGY block describes — do NOT override it with generic layouts.
+
 GOAL: A working demo that solves the SPECIFIC hackathon challenge. Judges should immediately see how your project addresses the problem, uses sponsor APIs, and aligns with judging criteria.
 
 CRITICAL — NEVER generate these anti-patterns:
@@ -18,12 +22,12 @@ CRITICAL — NEVER generate these anti-patterns:
 - Fake data or placeholder content — use realistic mock data
 - Identical component structures across projects
 
-MANDATORY — Vary your output:
-- Architecture: Choose structure that fits the problem (real-time? use WebSockets. Data-heavy? use charts. Mobile? use touch-optimized UI)
-- UI direction: Different layout, color palette, typography, and component structure for each project
-- Features: Address the SPECIFIC judging criteria and sponsor APIs — not generic feature cards
+MANDATORY — Vary your output based on the STRATEGY block:
+- Architecture: Use the architecture described in the STRATEGY block
+- UI direction: Build the screens listed in "Key screens" from the STRATEGY block
+- Features: Implement the features listed in "Feature priority" from the STRATEGY block
 - README: Explain architecture decisions and how they relate to this hackathon
-- APIs: Use the exact sponsor APIs mentioned in the context — show them in the UI, not just in package.json
+- APIs: Use the exact sponsor APIs mentioned in the STRATEGY block — show them in the UI, not just in package.json
 
 JUDGING ALIGNMENT (this is how you win):
 - Read the judging criteria weights — spend effort proportional to weight
@@ -39,12 +43,13 @@ SPONSOR API INTEGRATION (this is how you score bonus points):
 - If the API has a free tier, mention it in README
 
 RULES:
+- The STRATEGY block defines what to build — follow it exactly
 - Export default for components. Define types inline. { children: React.ReactNode }
 - Import with @/ alias. Generate every imported file. NEVER leave dangling imports.
 - SEMICOLONS. Newlines between functions.
 - Use Tailwind CSS utility classes for all styling. Use className="..." not "class=".
 - Create working, interactive pages — not just static mockups.
-- Every page must have a clear purpose that maps to a judging criterion
+- Every page must map to a screen from the STRATEGY block's "Key screens"
 - Use realistic domain-specific content, not "Lorem ipsum" or "TODO"
 
 THEME-SPECIFIC STYLING (adapt to the hackathon domain):
@@ -60,10 +65,11 @@ OUTPUT: Return ONLY valid JSON (no markdown, no fences, no code blocks):
 { "files": [{ "path": "...", "content": "..." }] }
 
 PRIORITIES:
-1. Working demo — judges can interact with it
-2. Visible sponsor API integration matching the hackathon's sponsor APIs
-3. Domain-appropriate UI that reflects the hackathon theme
-4. README that explains what you built, why it wins, and how to run it
+1. Build the application defined by the STRATEGY block — not a generic template
+2. Working demo — judges can interact with it
+3. Visible sponsor API integration matching the STRATEGY block's sponsor APIs
+4. Domain-appropriate UI that reflects the STRATEGY block's UI direction
+5. README that explains what you built, why it wins, and how to run it
 
 One fully working page beats 5 half-finished ones.
 `;
@@ -74,23 +80,20 @@ One fully working page beats 5 half-finished ones.
 export const LLM_TASK_DESCRIPTIONS: Record<string, string> = {
   scaffold: `Generate the full hackathon project. Include: package.json, tsconfig.json, tailwind.config.js, postcss.config.js, .gitignore, src/app/globals.css, src/app/layout.tsx, src/app/page.tsx, src/app/loading.tsx, src/app/error.tsx, README.md.
 
-LANDING PAGE (page.tsx) REQUIREMENTS:
-- The page MUST demonstrate the core value proposition immediately — no "Welcome" or "Get Started" headers
-- Show the actual product in action: a working demo, data visualization, interactive component, or live API call
-- Use domain-appropriate design: not always centered-hero-with-buttons
-- Include realistic mock data that demonstrates the use case
-- Add interactive elements: buttons that do something, forms that submit, toggles that switch views
-- Map each section to a judging criterion (e.g., "Innovation" section shows the unique approach)
+BUILD THE APPLICATION DEFINED BY THE STRATEGY BLOCK — not a generic landing page.
+The STRATEGY block contains: Key screens, Feature priority, MVP scope, API surfaces, and UI direction.
+Use the STRATEGY block as your primary source for what to build.
 
-LAYOUT VARIATION (pick one that fits the hackathon):
-- Split-screen: demo on left, explanation on right
-- Dashboard: data-heavy with charts and metrics
-- Step-by-step: wizard-style flow showing the process
-- Dashboard-grid: bento layout with multiple data views
-- Full-screen demo: the entire page IS the product
-- Sidebar + main: navigation on side, content area (only if complex app)
+page.tsx REQUIREMENTS:
+- Build the screens listed in "Key screens" from the STRATEGY block — these ARE your application
+- Each screen should be a tab, step, or section that the user navigates through
+- Show realistic mock data that demonstrates the use case (not placeholder text)
+- Wire up interactive elements: buttons that do something, forms that submit, toggles that switch views
+- If API surfaces are listed, show them in action — fetch from /api/* endpoints and display results
+- No "Welcome" headers, no "Get Started" buttons, no "Learn More" CTAs — the page IS the product
+- Use the color palette below, adapted to the hackathon domain
 
-COLOR PALETTE (pick based on domain):
+COLOR PALETTE (adapt to domain from STRATEGY block):
 - AI/ML: Deep purples (#7c3aed) + electric blue (#3b82f6) on dark (#0f172a)
 - Healthcare: Calming teal (#0d9488) + soft white (#f8fafc) on light
 - Fintech: Professional slate (#334155) + gold accent (#eab308) on dark
