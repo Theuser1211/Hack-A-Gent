@@ -189,9 +189,35 @@ export class WinningStrategyGenerator {
       'Centered card-based layout with top navigation bar';
 
     const keyScreens: string[] = [];
-    keyScreens.push('Landing / Hero');
-    keyScreens.push('Core Feature / Dashboard');
-    keyScreens.push('Submission / Result');
+    if (theme.includes('health') || theme.includes('medical') || theme.includes('wellness')) {
+      keyScreens.push('Patient onboarding — capture health context');
+      keyScreens.push('Core workflow — the specific health action the product automates');
+      keyScreens.push('Impact view — outcomes, reminders, or adherence metrics');
+    } else if (theme.includes('ai') || theme.includes('ml') || theme.includes('llm')) {
+      keyScreens.push('Input — provide data or prompt to the AI model');
+      keyScreens.push('Processing — show model working, streaming, or reasoning');
+      keyScreens.push('Output — display results, confidence scores, or generated content');
+    } else if (theme.includes('fintech') || theme.includes('finance') || theme.includes('money')) {
+      keyScreens.push('Account overview — balances, transactions, or portfolio');
+      keyScreens.push('Core action — the specific financial workflow the product solves');
+      keyScreens.push('Insights — analytics, projections, or recommendations');
+    } else if (theme.includes('education') || theme.includes('learn') || theme.includes('teach')) {
+      keyScreens.push('Learner entry — skill assessment or topic selection');
+      keyScreens.push('Learning activity — the specific educational interaction');
+      keyScreens.push('Progress — mastery tracking, scores, or completion');
+    } else if (theme.includes('environment') || theme.includes('climate') || theme.includes('green')) {
+      keyScreens.push('Data input — sensor readings, reports, or manual entry');
+      keyScreens.push('Analysis — impact visualization, trends, or comparisons');
+      keyScreens.push('Action — recommended steps, goals, or community impact');
+    } else if (theme.includes('social') || theme.includes('community')) {
+      keyScreens.push('Feed — what the community sees first');
+      keyScreens.push('Interaction — the specific social action the product enables');
+      keyScreens.push('Profile — reputation, history, or group membership');
+    } else {
+      keyScreens.push(`${analysis.challenge.theme || 'Main'} — primary demo entry point`);
+      keyScreens.push('Core workflow — the specific user flow the product solves');
+      keyScreens.push('Results — what the user achieved or received');
+    }
 
     const responsiveBreakpoints = 'Mobile (375px), Tablet (768px), Desktop (1280px)';
 
@@ -204,10 +230,13 @@ export class WinningStrategyGenerator {
   private generateFeaturePriority(analysis: CompetitionAnalysis): FeaturePriority[] {
     const features: FeaturePriority[] = [];
     const topCriteria = [...analysis.judgingCriteria].sort((a, b) => b.weight - a.weight);
+    const problemSnippet = analysis.challenge.problemStatement
+      ? analysis.challenge.problemStatement.slice(0, 100).replace(/\s+$/, '')
+      : analysis.challenge.theme;
 
     topCriteria.forEach((c, i) => {
       features.push({
-        feature: `${c.name} showcase — demo that explicitly highlights ${c.name}`,
+        feature: `${c.name}: working demo showing how the project addresses "${problemSnippet}"`,
         weight: c.weight,
         effort: i === 0 ? 'high' : i === 1 ? 'medium' : 'low',
         category: 'core',
