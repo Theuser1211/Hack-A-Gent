@@ -13,12 +13,21 @@ Turn Hack-A-Gent into a production-quality CLI that any developer can install gl
 
 ## Current Status (v1.1.1)
 
-- **Build**: `npx tsc --noEmit` — 0 errors; `npm run build` — succeeds
-- **Tests**: 856 unit/feature tests pass (44s), 3 pre-existing benchmark failures (starter ESM syntax, evaluateProject timeout, history race condition — all timeout/environmental)
+- **Build**: `npx tsc -p tsconfig.json` emits 133 pre-existing type-error lines (134 baseline at HEAD via `git stash`); the markdown-extraction work adds **zero** new errors. Runtime (CLI via `tsx`) works. `tsc`/`build` typechecking is not yet green repo-wide — unrelated pre-existing debt in `tests/`, `intelligence-analyzer.ts`, `section-extractor.ts`, and a `router` type mismatch in `universal-parser/index.ts`.
+- **Tests**: 111 test files / 1677 tests pass (`npx vitest run --testTimeout=45000`). Suite takes several minutes (some tests 27–55s each). Run vitest single-process and kill orphaned node processes first to avoid OOM/hangs.
 - **Pipeline**: 11-stage spec pipeline: Challenge Analysis → **Challenge Validation** → Dynamic Interview → Winning Strategy → Project Generation → Auto Repair → Runtime Validation → Browser Validation → Internal Judge → Improvement Pass → Submission Package
 - **Version**: 1.1.1
 
 ## Completed Work
+
+### Session: Experimental Markdown Extraction Strategy + Benchmark
+- `features/extraction/` — pluggable extractor system with strategies `'dom' | 'markdown' | 'jsonld'`: types, metadata, html-cleaner (boilerplate/nav/footer/script removal via iterative same-element backreference loop), html-to-markdown (GFM tables, entity-decoded img alt, `javascript:`/hash link guard), sections (`sectionsFromMarkdown` composing structured metadata + intro content), dom/markdown/jsonld extractors, registry (falls back to `'dom'` = unchanged production path), benchmark-fixtures, benchmark.
+- Wired into parser: `features/universal-parser/index.ts` uses `runExtractor(extractor, {...})`, `ParserContext` gained `aiInput`; `ai-normalizer.ts` gained `sectionsTextOverride` param. Production DOM path unchanged by default.
+- CLI: `hackagent benchmark extraction` — `--seed <n>`, `--jsonld`, `--ai` flags; AI leg uses `initializeProviders().router`.
+- **Benchmark result (4 fixtures, seed 42): VERDICT markdown_wins.** completeness dom=0.821 vs markdown=1.000; sponsorRecall 0→1 (img alt logos); judgingRecall 0.75→1 (tables); hallucinationRate 0/0; noiseRatio 0/0; only dom wins: aiInputBytes 805 vs 1046, runtimeMs 1.8 vs 2 (negligible).
+- `tests/features/extraction-strategies.test.ts` — 21 tests, all passing.
+- Known parser limitation: `stripHtml` drops `<img>` tags, so the DOM strategy loses logo-based sponsors — key reason markdown wins.
+- Report: `docs/markdown-extraction-benchmark.md`
 
 ### Session: v1.1.0 / v1.1.1 — Pipeline Implementation (21 tasks, 6 phases)
 

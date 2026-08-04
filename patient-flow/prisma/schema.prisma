@@ -1,0 +1,21 @@
+model AiContext {
+  id       String   @id @default(cuid())
+  userId   String
+  inputs   Json
+  timestamps
+}
+
+model WorkItem {
+  id       String   @id @default(cuid())
+  type     String
+  status   String
+  outputSnapshot Json
+  timestamps
+}
+
+model UserPrefs {
+  id       String   @id @default(cuid())
+  userId   String
+  seedable Boolean
+  timestamps
+}

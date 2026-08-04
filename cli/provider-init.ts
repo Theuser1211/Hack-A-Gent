@@ -42,28 +42,34 @@ export function initializeProviders(config?: LLMConfig): ProviderInitializationR
   }
 
   const apiKeyManager = ProviderFactory.createApiKeyManager(
-    llmConfig.baseUrl ? { baseUrls: { [llmConfig.provider]: llmConfig.baseUrl } } : undefined
+    llmConfig.baseUrl ? { baseUrls: { [llmConfig.provider]: llmConfig.baseUrl } } : undefined,
   );
   const rateLimitTracker = ProviderFactory.createRateLimitTracker();
   const tokenUsageTracker = ProviderFactory.createTokenUsageTracker();
 
   const providers: LLMProvider[] = [];
   const providerErrors: string[] = [];
+  const registeredIds = new Set<string>();
 
-  for (const providerId of [llmConfig.provider]) {
+  const tryRegister = (providerId: string): void => {
+    if (registeredIds.has(providerId)) return;
     try {
       const provider = ProviderFactory.createLLMProvider(
         providerId,
         apiKeyManager,
         rateLimitTracker,
         tokenUsageTracker,
-        llmConfig.baseUrl ? { baseUrls: { [providerId]: llmConfig.baseUrl } } : undefined
+        llmConfig.baseUrl && providerId === 'nvidia' ? { baseUrls: { [providerId]: llmConfig.baseUrl } } : undefined,
       );
       providers.push(provider);
+      registeredIds.add(providerId);
     } catch (err) {
       providerErrors.push(`${providerId}: ${err instanceof Error ? err.message : String(err)}`);
     }
-  }
+  };
+
+  for (const providerId of ['nvidia', 'openrouter']) tryRegister(providerId);
+  // TODO(provider-routing): integrate Ollama after a dedicated provider adapter exists.
 
   if (providers.length === 0) {
     throw new Error(`No LLM providers available. Errors: ${providerErrors.join('; ')}`);
@@ -71,7 +77,7 @@ export function initializeProviders(config?: LLMConfig): ProviderInitializationR
 
   const perfTracker = new ModelPerformanceTracker();
   const router = new RouterEngine(providers, {
-    configuredProvider: llmConfig.provider,
+    configuredProvider: 'nvidia',
     configuredModel: llmConfig.model,
     perfTracker,
   });

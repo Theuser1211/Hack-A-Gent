@@ -1,3 +1,5 @@
+import type { ModelPerformanceTracker } from '../routing/model-performance-tracker.js';
+
 import type { LLMProvider } from './llm-provider.js';
 import type {
   ModelSpec,
@@ -8,7 +10,6 @@ import type {
   LLMResponse,
   ModelCapability,
 } from './llm-types.js';
-import type { ModelPerformanceTracker } from '../routing/model-performance-tracker.js';
 
 export interface RouterConfig {
   degraded_threshold: number;
@@ -41,12 +42,28 @@ const DEFAULT_CONFIG: RouterConfig = {
 
 export const DEFAULT_ROUTING_TABLE: Record<string, { preferred: string; fallback: string; emergency: string }> = {
   planning: { preferred: 'gemini-2.5-pro', fallback: 'claude-sonnet-4-20250514', emergency: 'gpt-4o-mini-2024-07-18' },
-  architecture: { preferred: 'gemini-2.5-pro', fallback: 'claude-sonnet-4-20250514', emergency: 'gpt-4o-mini-2024-07-18' },
+  architecture: {
+    preferred: 'gemini-2.5-pro',
+    fallback: 'claude-sonnet-4-20250514',
+    emergency: 'gpt-4o-mini-2024-07-18',
+  },
   coding: { preferred: 'gpt-4o-mini-2024-07-18', fallback: 'gemini-2.5-flash', emergency: 'claude-haiku-3-5-20241022' },
-  implementation: { preferred: 'gpt-4o-mini-2024-07-18', fallback: 'gemini-2.5-flash', emergency: 'claude-haiku-3-5-20241022' },
-  testing: { preferred: 'gpt-4o-mini-2024-07-18', fallback: 'gemini-2.5-flash', emergency: 'claude-haiku-3-5-20241022' },
+  implementation: {
+    preferred: 'gpt-4o-mini-2024-07-18',
+    fallback: 'gemini-2.5-flash',
+    emergency: 'claude-haiku-3-5-20241022',
+  },
+  testing: {
+    preferred: 'gpt-4o-mini-2024-07-18',
+    fallback: 'gemini-2.5-flash',
+    emergency: 'claude-haiku-3-5-20241022',
+  },
   judging: { preferred: 'gemini-2.5-pro', fallback: 'claude-sonnet-4-20250514', emergency: 'gpt-4o-mini-2024-07-18' },
-  documentation: { preferred: 'gemini-2.5-flash', fallback: 'claude-haiku-3-5-20241022', emergency: 'gpt-4o-mini-2024-07-18' },
+  documentation: {
+    preferred: 'gemini-2.5-flash',
+    fallback: 'claude-haiku-3-5-20241022',
+    emergency: 'gpt-4o-mini-2024-07-18',
+  },
 };
 
 export class RouterEngine {
@@ -54,6 +71,8 @@ export class RouterEngine {
   private config: RouterConfig;
   private routingTable: Record<string, { preferred: string; fallback: string; emergency: string }>;
   private projectCost: number = 0;
+  private failedModels = new Set<string>();
+  private failedProviders = new Set<string>();
 
   constructor(
     providers: LLMProvider[],
@@ -94,7 +113,7 @@ export class RouterEngine {
     if (configuredProvider && configuredModel) {
       const provider = this.providers.get(configuredProvider);
       if (provider) {
-        const model = provider.getModels().find(m => m.model_id === configuredModel);
+        const model = provider.getModels().find((m) => m.model_id === configuredModel);
         if (model) {
           const health = provider.getHealth();
           if (health.status !== 'unhealthy') {
@@ -165,16 +184,17 @@ export class RouterEngine {
   }
 
   async execute(taskType: string, request: LLMRequest): Promise<{ response: LLMResponse; decision: RoutingDecision }> {
-    const estimatedTokens = request.messages.reduce((s, m) => s + m.content.length, 0);
     const requiredCaps: ModelCapability[] = [];
     if (request.response_format === 'json_object') requiredCaps.push('json_output');
 
     const configuredProvider = this.config.configuredProvider;
     const configuredModel = this.config.configuredModel;
+    const pt = this.config.perfTracker;
 
     const triedModels = new Set<string>();
     let lastError: Error | null = null;
 
+    // Build candidate list: configured provider first, then all others.
     const candidateProviders: string[] = [];
     if (configuredProvider && this.providers.has(configuredProvider)) {
       candidateProviders.push(configuredProvider);
@@ -186,50 +206,49 @@ export class RouterEngine {
     if (candidateProviders.length === 0) {
       throw new Error(
         `No suitable provider for task type "${taskType}": No provider available. ` +
-        `Run \`hag doctor\` to check provider health, or \`hag models\` to see available models.`
+          `Run \`hag doctor\` to check provider health, or \`hag models\` to see available models.`,
       );
     }
 
     for (const providerId of candidateProviders) {
+      if (this.failedProviders.has(providerId)) continue;
+
       const provider = this.providers.get(providerId);
       if (!provider) continue;
       const health = provider.getHealth();
       if (health.status === 'unhealthy') continue;
 
-      const models = provider.getModels();
-      let modelsToTry: string[];
-
-      if (configuredProvider && providerId !== configuredProvider) {
+      try {
+        await provider.prepare?.();
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        this.failedProviders.add(providerId);
         continue;
       }
 
-      if (configuredModel) {
-        const configuredModelExists = models.some(m => m.model_id === configuredModel);
-        modelsToTry = configuredModelExists
-          ? [configuredModel, ...models.filter(m => m.model_id !== configuredModel).map(m => m.model_id).slice(0, 2)]
-          : models.slice(0, 3).map(m => m.model_id);
-      } else {
+      const models = provider
+        .getModels()
+        .filter((model) => requiredCaps.every((capability) => model.capabilities.includes(capability)));
+      const modelIds = this.rankFallbacks(this.config.perfTracker, models).map((model) => model.model_id);
+      let modelsToTry = modelIds;
+
+      if (configuredProvider === providerId && configuredModel && modelIds.includes(configuredModel)) {
+        modelsToTry = [configuredModel, ...modelIds.filter((modelId) => modelId !== configuredModel)];
+      } else if (!configuredProvider) {
         const entry = this.routingTable[taskType];
         const chain = entry
           ? [entry.preferred, entry.fallback, entry.emergency]
           : ['gemini-2.5-flash', 'gpt-4o-mini-2024-07-18', 'claude-haiku-3-5-20241022'];
-        const chainModels = chain.filter(id => models.some(m => m.model_id === id));
-        if (chainModels.length > 0) {
-          modelsToTry = chainModels;
-        } else {
-          const pt = this.config.perfTracker;
-          const candidate = pt ? pt.getRanked(models) : models;
-          modelsToTry = candidate.slice(0, 3).map(m => m.model_id);
-        }
+        const preferred = chain.filter((modelId) => modelIds.includes(modelId));
+        modelsToTry = [...preferred, ...modelIds.filter((modelId) => !preferred.includes(modelId))];
       }
 
-      const pt = this.config.perfTracker;
-
       for (const modelId of modelsToTry) {
-        if (triedModels.has(modelId)) continue;
-        triedModels.add(modelId);
+        const modelKey = `${providerId}:${modelId}`;
+        if (triedModels.has(modelKey) || this.failedModels.has(modelKey)) continue;
+        triedModels.add(modelKey);
 
-        const model = models.find(m => m.model_id === modelId);
+        const model = models.find((m) => m.model_id === modelId);
         if (!model) continue;
 
         const actualRequest: LLMRequest = { ...request, model_id: modelId };
@@ -237,6 +256,16 @@ export class RouterEngine {
 
         try {
           const response = await provider.execute(actualRequest);
+          if (!response.content.trim()) {
+            throw this.invalidResponseError('Provider returned empty content');
+          }
+          if (request.response_format === 'json_object') {
+            try {
+              JSON.parse(response.content);
+            } catch {
+              throw this.invalidResponseError('Provider returned invalid JSON content');
+            }
+          }
           const latencyMs = Date.now() - startTime;
           pt?.recordSuccess(providerId, modelId, latencyMs);
           const cost = this.estimateCost(modelId, response.usage.prompt_tokens, response.usage.completion_tokens);
@@ -248,21 +277,28 @@ export class RouterEngine {
               provider: providerId as ProviderId,
               confidence: 1.0,
               fallback_level: 0,
-              reason: configuredModel && modelId === configuredModel
-                ? `Using configured model "${modelId}"`
-                : `Model "${modelId}" from provider "${providerId}"`,
+              reason:
+                configuredModel && modelId === configuredModel
+                  ? `Using configured model "${modelId}"`
+                  : `Model "${modelId}" from provider "${providerId}"`,
             },
           };
         } catch (err) {
           lastError = err instanceof Error ? err : new Error(String(err));
           if (pt) {
-            const isAbort = (err instanceof DOMException && err.name === 'AbortError') ||
+            const isAbort =
+              (err instanceof DOMException && err.name === 'AbortError') ||
               (err instanceof Error && err.name === 'AbortError');
             if (isAbort) {
               pt.recordTimeout(providerId, modelId);
             } else {
               pt.recordFailure(providerId, modelId);
             }
+          }
+          if (this.isProviderUnavailable(err)) {
+            this.failedProviders.add(providerId);
+          } else if (this.shouldBlacklistModel(err)) {
+            this.failedModels.add(modelKey);
           }
           if (health) {
             health.consecutive_failures++;
@@ -273,6 +309,7 @@ export class RouterEngine {
               health.status = 'degraded';
             }
           }
+          if (this.failedProviders.has(providerId)) break;
         }
       }
     }
@@ -281,8 +318,8 @@ export class RouterEngine {
     const lastMsg = lastError?.message ?? 'unknown error';
     throw new Error(
       `All models failed for task "${taskType}". Tried: [${triedList}]. ` +
-      `Last error: ${lastMsg}. ` +
-      `Run \`hag doctor\` to check provider health, or \`hag models\` to see available models.`
+        `Last error: ${lastMsg}. ` +
+        `Run \`hag doctor\` to check provider health, or \`hag models\` to see available models.`,
     );
   }
 
@@ -292,6 +329,55 @@ export class RouterEngine {
 
   resetProjectCost(): void {
     this.projectCost = 0;
+  }
+
+  private getErrorStatus(err: unknown): number {
+    if (typeof err !== 'object' || err === null) return 0;
+    return Number((err as Record<string, unknown>).status ?? 0);
+  }
+
+  private shouldBlacklistModel(err: unknown): boolean {
+    const status = this.getErrorStatus(err);
+    return (
+      status === 404 ||
+      status === 410 ||
+      (err instanceof Error && (err.name === 'AbortError' || err.name === 'InvalidProviderResponseError')) ||
+      err instanceof SyntaxError
+    );
+  }
+
+  private isProviderUnavailable(err: unknown): boolean {
+    const status = this.getErrorStatus(err);
+    if (status === 401 || status === 403 || status === 429 || status >= 500) return true;
+    if (!(err instanceof Error)) return false;
+    return /no api key|rate limit|provider unavailable|fetch failed|econnrefused|enotfound/i.test(err.message);
+  }
+
+  private invalidResponseError(message: string): Error {
+    return Object.assign(new Error(message), { name: 'InvalidProviderResponseError' });
+  }
+
+  /** Reset run-scoped health before reusing this router for a separate hag run. */
+  resetBlacklist(): void {
+    this.failedModels.clear();
+    this.failedProviders.clear();
+  }
+
+  /**
+   * Order models for fallback: measured-successful and never-tried models first,
+   * models with a proven 0% success history last. Prevents the router from
+   * burning time on endpoints that always fail (e.g. NVIDIA model zoo entries).
+   */
+  private rankFallbacks(pt: ModelPerformanceTracker | undefined, models: ModelSpec[]): ModelSpec[] {
+    if (!pt) return models;
+    const ranked = pt.getRanked(models);
+    const MIN_DEAD_ATTEMPTS = 3;
+    const dead = ranked.filter((m) => {
+      const rec = pt.getRecord(m.provider, m.model_id);
+      return rec !== undefined && rec.attempts >= MIN_DEAD_ATTEMPTS && rec.successes === 0;
+    });
+    const rest = ranked.filter((m) => !dead.includes(m));
+    return rest.length > 0 ? [...rest, ...dead] : ranked;
   }
 
   private tryModel(

@@ -24,9 +24,9 @@ import type {
 } from './types.js';
 import { detectHackathon, detectPlatform, isKnownNonHackathonHost } from './platform-detector.js';
 import type { DetectionResult } from './platform-detector.js';
-import { extractUniversalSections } from './section-extractor.js';
 import { normalizeWithAIRetry, AINormalizationResult } from './ai-normalizer.js';
 import { validateAndRepairSpec, createDefaultSpec } from './validator.js';
+import { runExtractor } from '../extraction/index.js';
 import { createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
 import { analyzeAndRecord, getLearningSummary } from './parser-learning.js';
 import {
@@ -55,6 +55,7 @@ interface ParserContext {
   detectionResult: DetectionResult | null;
   platform: PlatformType;
   sections: UniversalExtractedSections;
+  aiInput: string;
   aiResult: AINormalizationResult | null;
   finalSpec: HackathonSpec;
   warnings: string[];
@@ -90,11 +91,13 @@ export async function parseHackathon(
       seed: options.seed,
       forcePlatform: options.forcePlatform,
       router: options.router,
+      extractor: options.extractor,
     },
     router: options.router,
     detectionResult: null,
     platform: 'generic',
     sections: createEmptySections(),
+    aiInput: '',
     aiResult: null,
     finalSpec: createDefaultSpec(url, html.length),
     warnings: [],
@@ -142,7 +145,15 @@ export async function parseHackathon(
 
     // Step 3: Universal section extraction
     const extractionStart = Date.now();
-    ctx.sections = extractUniversalSections(html, ctx.platform);
+    const extraction = runExtractor(ctx.options.extractor, {
+      url,
+      html: ctx.html,
+      platform: ctx.platform,
+      options: ctx.options,
+    });
+    ctx.sections = extraction.sections;
+    ctx.aiInput = extraction.aiInput;
+    ctx.warnings.push(...extraction.warnings);
 
     // Multi-strategy: Evaluate DOM heading extraction quality
     const domResult = evaluateStrategyResult('dom_heading', ctx);
@@ -167,7 +178,9 @@ export async function parseHackathon(
         url,
         ctx.platform,
         ctx.router,
-        ctx.options
+        ctx.options,
+        1,
+        ctx.aiInput
       );
       aiTimeMs = Date.now() - aiStart;
 

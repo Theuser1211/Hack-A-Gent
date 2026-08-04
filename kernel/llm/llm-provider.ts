@@ -2,6 +2,7 @@ import type { LLMRequest, LLMResponse, ProviderHealth, ModelSpec } from './llm-t
 
 export interface LLMProvider {
   readonly providerId: string;
+  prepare?(): Promise<void>;
   getModels(): ModelSpec[];
   getHealth(): ProviderHealth;
   checkHealth(): Promise<ProviderHealth>;

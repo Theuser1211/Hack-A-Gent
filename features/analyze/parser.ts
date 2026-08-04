@@ -1,14 +1,14 @@
 /**
- * Devpost Intelligence — Parser
- * ==============================
+ * Hackathon Intelligence — Parser
+ * ===============================
  *
- * Securely fetches and extracts structured fields from a Devpost hackathon
- * page. Designed to work WITHOUT an LLM (deterministic, heuristic parse)
+ * Securely fetches and extracts structured fields from a hackathon page.
+ * Designed to work WITHOUT an LLM (deterministic, heuristic parse)
  * and to fall back to caller-supplied raw HTML for tests / offline use.
  *
- * Security: the fetcher enforces an SSRF guard — only devpost.com /
- * www.devpost.com are allowed, with a hard timeout. This mirrors the
- * guard used by the production `run` pipeline.
+ * Security: the fetcher enforces an SSRF guard — denylist of internal and
+ * known non-hackathon hosts. Only safe hosts are allowed, with a hard
+ * timeout. This mirrors the guard used by the production `run` pipeline.
  */
 
 import { getSeededRandom } from '../../benchmarks/determinism-kernel.js';

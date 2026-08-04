@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import type { LLMRequest } from '../../kernel/llm/llm-types.js';
 import { AnthropicProvider } from '../../kernel/providers/anthropic-provider.js';
+import { CustomEndpointProvider } from '../../kernel/providers/custom-endpoint-provider.js';
 import { GeminiProvider } from '../../kernel/providers/gemini-provider.js';
 import { OpenAIProvider } from '../../kernel/providers/openai-provider.js';
 import { OpenRouterProvider } from '../../kernel/providers/openrouter-provider.js';
@@ -54,6 +55,7 @@ describe('Provider Integration', () => {
       gemini: MOCK_KEY,
       openai: MOCK_KEY,
       openrouter: MOCK_KEY,
+      nvidia: MOCK_KEY,
     });
     rateLimitTracker = new RateLimitTracker();
     tokenUsageTracker = new TokenUsageTracker();
@@ -264,6 +266,16 @@ describe('Provider Integration', () => {
 
   describe('OpenRouterProvider', () => {
     it('executes and returns a valid response', async () => {
+      const discoveredModels = {
+        data: [
+          {
+            id: 'qwen/qwen3-coder:free',
+            context_length: 131072,
+            pricing: { prompt: '0', completion: '0' },
+            supported_parameters: ['response_format'],
+          },
+        ],
+      };
       const mockBody = {
         choices: [
           { message: { content: 'OpenRouter response via any model', role: 'assistant' }, finish_reason: 'stop' },
@@ -271,7 +283,9 @@ describe('Provider Integration', () => {
         usage: { prompt_tokens: 8, completion_tokens: 15, total_tokens: 23 },
       };
 
-      fetchSpy.mockImplementation(makeMockFetch(200, mockBody));
+      fetchSpy
+        .mockImplementationOnce(makeMockFetch(200, discoveredModels))
+        .mockImplementationOnce(makeMockFetch(200, mockBody));
 
       const provider = new OpenRouterProvider({
         providerId: 'openrouter',
@@ -284,6 +298,77 @@ describe('Provider Integration', () => {
       expect(response.content).toBe('OpenRouter response via any model');
       expect(response.provider).toBe('openrouter');
       expect(response.usage.prompt_tokens).toBe(8);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('discovers only free coding models in preference order', async () => {
+      fetchSpy.mockImplementationOnce(
+        makeMockFetch(200, {
+          data: [
+            { id: 'meta-llama/llama-free', pricing: { prompt: '0', completion: '0' } },
+            { id: 'openai/paid-coder', pricing: { prompt: '0.1', completion: '0.1' } },
+            { id: 'deepseek/deepseek-free', pricing: { prompt: '0', completion: '0' } },
+            { id: 'qwen/qwen-free', pricing: { prompt: '0', completion: '0' } },
+            { id: 'mistralai/mixtral-free', pricing: { prompt: '0', completion: '0' } },
+          ],
+        }),
+      );
+
+      const provider = new OpenRouterProvider({
+        providerId: 'openrouter',
+        apiKeyManager,
+        rateLimitTracker,
+        tokenUsageTracker,
+      });
+      await provider.prepare();
+
+      expect(provider.getModels().map((model) => model.model_id)).toEqual([
+        'qwen/qwen-free',
+        'deepseek/deepseek-free',
+        'meta-llama/llama-free',
+      ]);
+    });
+
+    it('rejects malformed completion responses without retrying', async () => {
+      fetchSpy
+        .mockImplementationOnce(
+          makeMockFetch(200, {
+            data: [{ id: 'qwen/qwen-free', pricing: { prompt: '0', completion: '0' } }],
+          }),
+        )
+        .mockImplementationOnce(makeMockFetch(200, { choices: [] }));
+
+      const provider = new OpenRouterProvider({
+        providerId: 'openrouter',
+        apiKeyManager,
+        rateLimitTracker,
+        tokenUsageTracker,
+      });
+
+      await expect(provider.execute({ ...sampleRequest, model_id: 'qwen/qwen-free' })).rejects.toMatchObject({
+        name: 'InvalidProviderResponseError',
+      });
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('NVIDIA provider', () => {
+    it('exposes the required model priority without Mixtral', () => {
+      const provider = new CustomEndpointProvider({
+        providerId: 'nvidia',
+        apiKeyManager,
+        rateLimitTracker,
+        tokenUsageTracker,
+      });
+
+      expect(provider.getModels().map((model) => model.model_id)).toEqual([
+        'meta/llama-3.3-70b-instruct',
+        'meta/llama-3.1-70b-instruct',
+        'meta/llama-3.1-8b-instruct',
+        'meta/llama-3.2-3b-instruct',
+        'meta/llama-3.2-1b-instruct',
+      ]);
+      expect(provider.getModels().some((model) => /mixtral/i.test(model.model_id))).toBe(false);
     });
   });
 

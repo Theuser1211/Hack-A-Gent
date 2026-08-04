@@ -7,9 +7,11 @@ import { buildLeaderboard, compareConfigs, suggestImprovements, type GroupKey } 
 import { measureProject } from '../../benchmarks/measurement/measure.js';
 import { runBenchmark, runAllBenchmarks, formatBenchmarkResult, formatBenchmarkSummary } from '../../benchmarks/real-benchmark-runner.js';
 import { REAL_BENCHMARKS, getBenchmark, getAllBenchmarkIds } from '../../benchmarks/real-benchmark-suite.js';
+import { runExtractionBenchmark, formatBenchmarkResult as formatExtractionBenchmarkResult } from '../../features/extraction/benchmark.js';
 import type { ArchitectureBlueprint } from '../../kernel/planning/architect-types.js';
 import type { PlannerOutput } from '../../kernel/planning/planner-types.js';
 import { color, dim, log, logRaw, success, info, warn, labeled } from '../output.js';
+import { initializeProviders } from '../provider-init.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../types.js';
 
 /** Build a RunConfig from CLI flags (used to tag benchmark runs). */
@@ -293,6 +295,32 @@ export async function benchmarkCommand(ctx: CLIContext, args: CLIArgs): Promise<
         labeled(color(s.type, 'magenta'), s.text);
       }
       return { success: true, message: 'Suggestions generated', data: { suggestions } as unknown as Record<string, unknown> };
+    }
+
+    case 'extraction': {
+      const seed = typeof args.flags.seed === 'number' ? args.flags.seed : 42;
+      const includeJsonLd = args.flags.jsonld === true;
+      const runAiLeg = args.flags.ai === true;
+
+      log('Running extraction strategy benchmark (dom vs markdown)...');
+      if (includeJsonLd) dim('Including jsonld strategy for reference.');
+      if (runAiLeg) {
+        dim('AI leg enabled — normalizing each strategy with the configured LLM.');
+      } else {
+        dim('AI leg disabled. Pass --ai to normalize each strategy with the configured LLM.');
+      }
+      log('');
+
+      const router = runAiLeg ? initializeProviders().router : undefined;
+      const result = await runExtractionBenchmark({ seed, includeJsonLd, runAiLeg, router });
+      logRaw(formatExtractionBenchmarkResult(result));
+
+      return {
+        success: true,
+        message: `Extraction benchmark complete: ${result.verdict} (dom=${result.overallQuality.dom} markdown=${result.overallQuality.markdown})`,
+        data: { verdict: result.verdict, overallQuality: result.overallQuality, metrics: result.metrics },
+        metrics: { dom: result.overallQuality.dom, markdown: result.overallQuality.markdown },
+      };
     }
 
     default:

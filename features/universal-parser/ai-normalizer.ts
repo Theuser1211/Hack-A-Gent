@@ -248,9 +248,10 @@ export async function normalizeWithAI(
   platform: string,
   router: RouterEngine,
   options: UniversalParserOptions,
-  previousErrors?: string[]
+  previousErrors?: string[],
+  sectionsTextOverride?: string
 ): Promise<AINormalizationResult | null> {
-  const sectionsText = buildSectionsText(sections);
+  const sectionsText = sectionsTextOverride ?? buildSectionsText(sections);
   const maxContentLength = options.maxHtmlLength || 50000;
   const truncatedSections = truncateContent(sectionsText, maxContentLength);
 
@@ -290,12 +291,13 @@ export async function normalizeWithAIRetry(
   platform: string,
   router: RouterEngine,
   options: UniversalParserOptions,
-  maxRetries = 1
+  maxRetries = 1,
+  sectionsTextOverride?: string
 ): Promise<AINormalizationResult | null> {
   let lastErrors: string[] = [];
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const result = await normalizeWithAI(sections, url, platform, router, options, lastErrors.length > 0 ? lastErrors : undefined);
+    const result = await normalizeWithAI(sections, url, platform, router, options, lastErrors.length > 0 ? lastErrors : undefined, sectionsTextOverride);
 
     if (result) {
       // Validate the result has required fields if it's a hackathon

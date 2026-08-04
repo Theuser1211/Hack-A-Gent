@@ -581,6 +581,12 @@ export interface UniversalParserOptions {
   maxHtmlLength?: number;
   /** Multi-strategy parsing configuration */
   multiStrategy?: MultiStrategyConfig;
+  /**
+   * Extraction strategy to use for producing sections + AI input.
+   * `dom` (default) is the current production extractor; `markdown` and
+   * `jsonld` are experimental.
+   */
+  extractor?: 'dom' | 'markdown' | 'jsonld';
 }
 
 /** Result of universal parsing */

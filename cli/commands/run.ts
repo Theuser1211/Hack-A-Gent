@@ -10,7 +10,9 @@ import { RouterEngine } from '../../kernel/llm/router-engine.js';
 import { qualifyHackathon } from '../../kernel/qualification/hackathon-qualifier.js';
 import { validateWithBrowser } from '../../kernel/validation/browser-validator.js';
 import { formatDuration } from '../context.js';
-import { parseDevpostUrl, normalizeUrl, WinningStrategyGenerator, HackathonPipelineOrchestrator } from '../devpost-parser.js';
+import { parseDevpostUrl, normalizeUrl } from '../pipeline/parsing.js';
+import { WinningStrategyGenerator } from '../pipeline/strategy.js';
+import { HackathonPipelineOrchestrator } from '../pipeline/orchestrator.js';
 import { generateQuestions, runInterview } from '../interview/index.js';
 import type { InterviewResult } from '../interview/types.js';
 import { adaptStrategyToGeneration, buildCodeGenContext } from '../pipeline/strategy-adapter.js';
@@ -973,20 +975,21 @@ export async function parseInput(input: string): Promise<ParsedInput | null> {
   const hasScheme = /^https?:\/\//i.test(trimmed);
   const urlToTry = looksLikeDevpost && !hasScheme ? normalizeUrl(trimmed) : trimmed;
 
-  if (urlToTry.includes('devpost.com')) {
-    try {
-      return await parseDevpostUrl(urlToTry);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      throw new Error(`Failed to fetch Devpost URL: ${msg}`);
+  // Try as hackathon URL (non-devpost allowed via SSRF guard)
+  try {
+    return await parseDevpostUrl(urlToTry);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // If it's an SSRF guard error, rethrow (safe blocking)
+    if (msg.includes('SSRF guard') || msg.includes('unsafe host')) {
+      throw err;
     }
-  }
-
-  // Non-Devpost URL — use as context
-  if (/^https?:\/\//i.test(trimmed)) {
+    // For other errors (network, parse, etc.), fall back to context stub
+    // This ensures a best-effort project even for problematic hackathons
+    const title = input.includes('/') ? input.split('/')[2] || `Project from ${input}` : `Project from ${input}`;
     return {
-      title: `Project from ${input}`,
-      problemStatement: `Build a solution based on ${input}`,
+      title: title.slice(0, 200),
+      problemStatement: input.slice(0, 5000),
       judgingCriteria: ['Innovation', 'Technical Complexity', 'Impact', 'UX'],
       constraints: ['12 hour limit'],
       recommendedStack: ['React', 'Node.js', 'Vercel'],
@@ -1015,6 +1018,23 @@ export async function parseInput(input: string): Promise<ParsedInput | null> {
     }
   }
 
+  // If input looks like a plain hostname (no scheme), treat it as a hackathon URL
+  if (!/^https?:/i.test(trimmed) && !trimmed.includes('/') && !trimmed.includes('.') && trimmed.length > 3) {
+    // Not a file, not a URL, not a text spec — treat as plain hostname like "hack.theinnovationstory.com"
+    const title = input.length > 60 ? input.slice(0, 60) + '...' : input;
+    return {
+      title,
+      problemStatement: `Build a solution based on ${input}`,
+      judgingCriteria: ['Innovation', 'Technical Complexity', 'Impact', 'UX'],
+      constraints: ['12 hour limit'],
+      recommendedStack: ['React', 'Node.js', 'Vercel'],
+      rawText: input,
+      submissionRequirements: [],
+      confidence: makeFallbackConfidence(),
+    };
+  }
+
+  // Fallback: text spec
   return {
     title: input.length > 60 ? input.slice(0, 60) + '...' : input,
     problemStatement: input.slice(0, 2000),

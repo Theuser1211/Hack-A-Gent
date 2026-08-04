@@ -289,12 +289,12 @@ export async function withRetry<T>(
         (err instanceof DOMException && err.name === 'AbortError') ||
         (err instanceof Error && err.name === 'AbortError');
       if (isAbortError) throw err;
+      if (err instanceof SyntaxError) throw err;
 
       const errRecord: Record<string, unknown> | undefined =
         typeof err === 'object' && err !== null ? (err as Record<string, unknown>) : undefined;
 
-      const status =
-        err instanceof Response ? err.status : Number(errRecord?.status ?? errRecord?.statusCode ?? 0);
+      const status = err instanceof Response ? err.status : Number(errRecord?.status ?? errRecord?.statusCode ?? 0);
 
       if (status !== 0 && !isRetryable(status)) throw err;
 
@@ -306,7 +306,7 @@ export async function withRetry<T>(
       } else {
         delay = Math.min(config.baseDelayMs * Math.pow(2, i), config.maxDelayMs);
       }
-      const jitter = config.useJitter ? delay * (0.5 + ((Date.now() % 1000) / 2000)) : delay;
+      const jitter = config.useJitter ? delay * (0.5 + (Date.now() % 1000) / 2000) : delay;
 
       await sleep(jitter);
     }

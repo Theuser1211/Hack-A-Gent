@@ -69,7 +69,9 @@ export class ProviderFactory {
       case 'custom':
         return new CustomEndpointProvider(providerConfig);
       default:
-        throw new Error(`Unknown LLM provider: "${providerId}". Supported: anthropic, gemini, openai, openrouter, nvidia, custom`);
+        throw new Error(
+          `Unknown LLM provider: "${providerId}". Supported: anthropic, gemini, openai, openrouter, nvidia, custom`,
+        );
     }
   }
 

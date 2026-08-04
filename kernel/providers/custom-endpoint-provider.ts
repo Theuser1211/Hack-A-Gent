@@ -6,6 +6,17 @@ import { withRetry, DEFAULT_RETRY_CONFIG, sleep } from './provider-types.js';
 
 const DEFAULT_MODELS: ModelSpec[] = [
   {
+    model_id: 'meta/llama-3.3-70b-instruct',
+    provider: 'nvidia',
+    capabilities: ['reasoning', 'code_generation', 'long_context', 'json_output', 'streaming', 'multilingual'],
+    context_window: 128000,
+    supports_json_mode: true,
+    supports_tool_calling: false,
+    typical_latency_ms: 3000,
+    cost_per_1k_input: 0.0009,
+    cost_per_1k_output: 0.0009,
+  },
+  {
     model_id: 'meta/llama-3.1-70b-instruct',
     provider: 'nvidia',
     capabilities: ['reasoning', 'code_generation', 'long_context', 'json_output', 'streaming', 'multilingual'],
@@ -17,15 +28,37 @@ const DEFAULT_MODELS: ModelSpec[] = [
     cost_per_1k_output: 0.0009,
   },
   {
-    model_id: 'mistralai/mixtral-8x7b-instruct-v0.1',
+    model_id: 'meta/llama-3.1-8b-instruct',
     provider: 'nvidia',
     capabilities: ['reasoning', 'code_generation', 'json_output', 'streaming'],
-    context_window: 32000,
+    context_window: 128000,
     supports_json_mode: true,
     supports_tool_calling: false,
     typical_latency_ms: 2000,
     cost_per_1k_input: 0.00024,
     cost_per_1k_output: 0.00024,
+  },
+  {
+    model_id: 'meta/llama-3.2-3b-instruct',
+    provider: 'nvidia',
+    capabilities: ['reasoning', 'code_generation', 'json_output', 'streaming'],
+    context_window: 128000,
+    supports_json_mode: true,
+    supports_tool_calling: false,
+    typical_latency_ms: 1500,
+    cost_per_1k_input: 0.0001,
+    cost_per_1k_output: 0.0001,
+  },
+  {
+    model_id: 'meta/llama-3.2-1b-instruct',
+    provider: 'nvidia',
+    capabilities: ['reasoning', 'code_generation', 'json_output', 'streaming'],
+    context_window: 128000,
+    supports_json_mode: true,
+    supports_tool_calling: false,
+    typical_latency_ms: 1000,
+    cost_per_1k_input: 0.00005,
+    cost_per_1k_output: 0.00005,
   },
 ];
 
@@ -50,11 +83,15 @@ export class CustomEndpointProvider implements LLMProvider {
     this.apiKeyManager = config.apiKeyManager;
     this.rateLimitTracker = config.rateLimitTracker;
     this.tokenUsageTracker = config.tokenUsageTracker;
-    this.baseUrl = config.config?.baseUrls?.custom ?? config.config?.baseUrls?.nvidia ?? 'https://integrate.api.nvidia.com/v1';
+    this.baseUrl =
+      config.config?.baseUrls?.custom ?? config.config?.baseUrls?.nvidia ?? 'https://integrate.api.nvidia.com/v1';
     this.apiKeyEnvVar = config.providerId === 'nvidia' ? 'NVIDIA_API_KEY' : 'CUSTOM_LLM_API_KEY';
-    this.maxRetries = config.config?.maxRetries ?? DEFAULT_RETRY_CONFIG.maxRetries;
-    this.timeoutMs = config.config?.timeoutMs ?? 120000;
-    this.models = config.providerId === 'nvidia' ? DEFAULT_MODELS : DEFAULT_MODELS.map(m => ({ ...m, provider: 'custom' as const }));
+    this.maxRetries = config.config?.maxRetries ?? 0;
+    this.timeoutMs = config.config?.timeoutMs ?? 30000;
+    this.models =
+      config.providerId === 'nvidia'
+        ? DEFAULT_MODELS
+        : DEFAULT_MODELS.map((m) => ({ ...m, provider: 'custom' as const }));
     this.health = {
       provider_id: config.providerId as 'nvidia' | 'custom',
       status: 'healthy',
@@ -65,7 +102,7 @@ export class CustomEndpointProvider implements LLMProvider {
       avg_latency_ms: 0,
     };
 
-    this.discoverModels();
+    if (config.providerId === 'custom') this.discoverModels();
   }
 
   getModels(): ModelSpec[] {
@@ -86,17 +123,20 @@ export class CustomEndpointProvider implements LLMProvider {
       if (res.ok) {
         const data = (await res.json()) as { data?: Array<{ id: string }> };
         if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
-          const discovered = data.data.map(m => ({
-            model_id: m.id,
-            provider: this.providerId as 'nvidia' | 'custom',
-            capabilities: ['code_generation', 'reasoning'] as string[],
-            context_window: 128000,
-            supports_json_mode: true,
-            supports_tool_calling: false,
-            typical_latency_ms: 3000,
-            cost_per_1k_input: 0,
-            cost_per_1k_output: 0,
-          } as ModelSpec));
+          const discovered = data.data.map(
+            (m) =>
+              ({
+                model_id: m.id,
+                provider: this.providerId as 'nvidia' | 'custom',
+                capabilities: ['code_generation', 'reasoning'] as string[],
+                context_window: 128000,
+                supports_json_mode: true,
+                supports_tool_calling: false,
+                typical_latency_ms: 3000,
+                cost_per_1k_input: 0,
+                cost_per_1k_output: 0,
+              }) as ModelSpec,
+          );
           this.models = discovered;
           this.modelsDiscovered = true;
         }
@@ -141,12 +181,12 @@ export class CustomEndpointProvider implements LLMProvider {
   private async waitIfThrottled(): Promise<void> {
     const now = Date.now();
     const windowStart = now - this.throttleWindowMs;
-    this.requestTimestamps = this.requestTimestamps.filter(t => t > windowStart);
+    this.requestTimestamps = this.requestTimestamps.filter((t) => t > windowStart);
     if (this.requestTimestamps.length >= this.maxRpm) {
       const oldest = this.requestTimestamps[0]!;
       const waitMs = oldest + this.throttleWindowMs - now + 100;
       if (waitMs > 0) await sleep(waitMs);
-      this.requestTimestamps = this.requestTimestamps.filter(t => t > (Date.now() - this.throttleWindowMs));
+      this.requestTimestamps = this.requestTimestamps.filter((t) => t > Date.now() - this.throttleWindowMs);
     }
   }
 
@@ -154,8 +194,8 @@ export class CustomEndpointProvider implements LLMProvider {
     const apiKey = this.apiKeyManager.getKey(this.providerId);
     const startTime = Date.now();
 
-    const systemMsg = request.messages.find(m => m.role === 'system');
-    const userMsg = request.messages.find(m => m.role === 'user');
+    const systemMsg = request.messages.find((m) => m.role === 'system');
+    const userMsg = request.messages.find((m) => m.role === 'user');
     const promptTotalChars = request.messages.reduce((s, m) => s + m.content.length, 0);
     const bodyStr = JSON.stringify({
       model: request.model_id,
@@ -239,7 +279,10 @@ export class CustomEndpointProvider implements LLMProvider {
 
         if (!res.ok) {
           const text = await res.text().catch(() => '‹response body unavailable›');
-          throw Object.assign(new Error(`${this.providerId} API error ${res.status}: ${text}`), { status: res.status, retryAfter: res.headers.get('Retry-After') });
+          throw Object.assign(new Error(`${this.providerId} API error ${res.status}: ${text}`), {
+            status: res.status,
+            retryAfter: res.headers.get('Retry-After'),
+          });
         }
 
         const t3 = Date.now();
@@ -378,7 +421,9 @@ export class CustomEndpointProvider implements LLMProvider {
                   finish_reason: null,
                 });
               }
-            } catch { /* Ignore incomplete streaming JSON chunks. */ }
+            } catch {
+              /* Ignore incomplete streaming JSON chunks. */
+            }
           }
         }
       }
