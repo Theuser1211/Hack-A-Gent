@@ -229,7 +229,7 @@ export class RouterEngine {
       const models = provider
         .getModels()
         .filter((model) => requiredCaps.every((capability) => model.capabilities.includes(capability)));
-      const modelIds = this.rankFallbacks(this.config.perfTracker, models).map((model) => model.model_id);
+      const modelIds = models.map((model) => model.model_id);
       let modelsToTry = modelIds;
 
       if (configuredProvider === providerId && configuredModel && modelIds.includes(configuredModel)) {
@@ -361,23 +361,6 @@ export class RouterEngine {
   resetBlacklist(): void {
     this.failedModels.clear();
     this.failedProviders.clear();
-  }
-
-  /**
-   * Order models for fallback: measured-successful and never-tried models first,
-   * models with a proven 0% success history last. Prevents the router from
-   * burning time on endpoints that always fail (e.g. NVIDIA model zoo entries).
-   */
-  private rankFallbacks(pt: ModelPerformanceTracker | undefined, models: ModelSpec[]): ModelSpec[] {
-    if (!pt) return models;
-    const ranked = pt.getRanked(models);
-    const MIN_DEAD_ATTEMPTS = 3;
-    const dead = ranked.filter((m) => {
-      const rec = pt.getRecord(m.provider, m.model_id);
-      return rec !== undefined && rec.attempts >= MIN_DEAD_ATTEMPTS && rec.successes === 0;
-    });
-    const rest = ranked.filter((m) => !dead.includes(m));
-    return rest.length > 0 ? [...rest, ...dead] : ranked;
   }
 
   private tryModel(

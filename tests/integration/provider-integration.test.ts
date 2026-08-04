@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+import { initializeProviders } from '../../cli/provider-init.js';
 import type { LLMRequest } from '../../kernel/llm/llm-types.js';
 import { AnthropicProvider } from '../../kernel/providers/anthropic-provider.js';
 import { CustomEndpointProvider } from '../../kernel/providers/custom-endpoint-provider.js';
@@ -399,6 +400,20 @@ describe('Provider Integration', () => {
       expect(() =>
         ProviderFactory.createLLMProvider('unknown', apiKeyManager, rateLimitTracker, tokenUsageTracker),
       ).toThrow('Unknown LLM provider');
+    });
+  });
+
+  describe('provider initialization', () => {
+    it('locks production routing to NVIDIA then OpenRouter without a model override', () => {
+      const { router, providers } = initializeProviders({
+        provider: 'nvidia',
+        apiKey: MOCK_KEY,
+        model: 'meta/llama-3.1-8b-instruct',
+      });
+
+      expect(providers.map((provider) => provider.providerId)).toEqual(['nvidia', 'openrouter']);
+      expect(router.getConfiguredProvider()).toBe('nvidia');
+      expect(router.getConfiguredModel()).toBeUndefined();
     });
   });
 });

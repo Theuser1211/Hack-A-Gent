@@ -78,7 +78,6 @@ export function initializeProviders(config?: LLMConfig): ProviderInitializationR
   const perfTracker = new ModelPerformanceTracker();
   const router = new RouterEngine(providers, {
     configuredProvider: 'nvidia',
-    configuredModel: llmConfig.model,
     perfTracker,
   });
 
