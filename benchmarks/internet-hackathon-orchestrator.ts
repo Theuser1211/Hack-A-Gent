@@ -149,6 +149,30 @@ function escapeJsStringLiteral(s: string): string {
     .replace(/\n/g, '\\n');
 }
 
+/**
+ * Render a value as a JS object literal safe to embed inside a backtick
+ * template literal: escape backticks and `${` sequences that could come from
+ * user-supplied text (problem statements, sponsor names, one-liners).
+ */
+function jsonLiteral(value: unknown): string {
+  return JSON.stringify(value).replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
+}
+
+/**
+ * Map a hackathon's text to a deterministic visual theme for the template
+ * demo page. Keyword-scan the title, one-liner, features and problem so the
+ * fallback output is domain-appropriate instead of always purple-on-dark.
+ */
+function detectTheme(text: string): string {
+  const t = text.toLowerCase();
+  if (/(game|gamin|phaser|arcade|esport|playable|level|quest)/.test(t)) return 'gaming';
+  if (/(health|medic|clinic|care|wellness|patient|therap)/.test(t)) return 'health';
+  if (/(fintech|finance|financ|bank|payment|payments|crypto|invest|budget|loan)/.test(t)) return 'fintech';
+  if (/(climat|green|sustain|envir|planet|eco|carbon)/.test(t)) return 'climate';
+  if (/(developer|developer-tool|api|sdk|terminal|cli|devops|infra)/.test(t)) return 'dev';
+  return 'ai';
+}
+
 export class InternetHackathonOrchestrator {
   private readonly seed: number;
   private readonly orchestratorId: string;
@@ -968,25 +992,33 @@ export class InternetHackathonOrchestrator {
     }
 
     if (node.category === 'frontend') {
+      const keyScreens = this.codeGenContext?.uiScaffold?.keyScreens ?? [];
+      const specificTask = node.description.includes('core pages') && keyScreens.length > 0
+        ? `Build the main workflow screens: ${keyScreens.join('; ')}`
+        : node.description;
       await this.toolGateway.writeProjectFiles(plan.projectName, await this.generateFilesWithLLM('frontend', {
         projectName: plan.projectName,
         description: plan.projectName,
         techStack: this.devpostData?.recommendedStack ?? [],
         judgingCriteria: this.devpostData?.judgingCriteria ?? [],
         constraints: this.devpostData?.constraints ?? [],
-        specificTask: node.description,
+        specificTask,
       }));
       return;
     }
 
     if (node.category === 'backend') {
+      const apiSurfaces = this.codeGenContext?.productIntelligence?.apiSurfaces ?? [];
+      const specificTask = node.description.includes('core API') && apiSurfaces.length > 0
+        ? `Implement API routes for: ${apiSurfaces.join('; ')}`
+        : node.description;
       await this.toolGateway.writeProjectFiles(plan.projectName, await this.generateFilesWithLLM('backend', {
         projectName: plan.projectName,
         description: plan.projectName,
         techStack: this.devpostData?.recommendedStack ?? [],
         judgingCriteria: this.devpostData?.judgingCriteria ?? [],
         constraints: this.devpostData?.constraints ?? [],
-        specificTask: node.description,
+        specificTask,
       }));
       return;
     }
@@ -1123,143 +1155,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       },
       {
         path: 'src/app/page.tsx',
-        content: [
-          "'use client';",
-          '',
-          "import { useState } from 'react';",
-          '',
-          'export default function Home() {',
-          '  const [activeTab, setActiveTab] = useState(\'overview\');',
-          '',
-          '  return (',
-          '    <main className="min-h-screen bg-slate-950 text-white">',
-          '      {/* Hero Section */}',
-          '      <section className="relative overflow-hidden border-b border-slate-800">',
-          '        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-blue-900/20" />',
-          '        <div className="relative max-w-6xl mx-auto px-6 py-24">',
-          '          <div className="flex items-center gap-2 mb-6">',
-          '            <span className="px-3 py-1 text-xs font-medium bg-purple-500/20 text-purple-300 rounded-full border border-purple-500/30">Hackathon Project</span>',
-          '          </div>',
-          '          <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-white via-purple-100 to-blue-100 bg-clip-text text-transparent">',
-          '            ' + jsTitle,
-          '          </h1>',
-          '          <p className="text-xl text-slate-400 max-w-2xl mb-8">',
-          '            ' + tagline.replace(/'/g, "\\'"),
-          '          </p>',
-          '          <div className="flex gap-4">',
-          '            <button className="px-6 py-3 bg-purple-600 hover:bg-purple-500 rounded-lg font-semibold transition-colors">',
-          '              Try Demo',
-          '            </button>',
-          '            <button className="px-6 py-3 border border-slate-700 hover:border-slate-500 rounded-lg font-semibold transition-colors">',
-          '              View Code',
-          '            </button>',
-          '          </div>',
-          '        </div>',
-          '      </section>',
-          '',
-          '      {/* Demo Section */}',
-          '      <section className="max-w-6xl mx-auto px-6 py-16">',
-          '        <div className="flex gap-4 mb-8 border-b border-slate-800 pb-4">',
-          '          {[\'overview\', \'features\', \'architecture\'].map((tab) => (',
-          '            <button',
-          '              key={tab}',
-          '              onClick={() => setActiveTab(tab)}',
-          '              className={`px-4 py-2 rounded-lg font-medium transition-colors ${',
-          '                activeTab === tab',
-          '                  ? \'bg-slate-800 text-white\'',
-          '                  : \'text-slate-400 hover:text-white\'',
-          '              }`}',
-          '            >',
-          '              {tab.charAt(0).toUpperCase() + tab.slice(1)}',
-          '            </button>',
-          '          ))}',
-          '        </div>',
-          '',
-          '        {activeTab === \'overview\' && (',
-          '          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">',
-          '            {[{',
-          '              title: \'Core Innovation\',',
-          '              desc: \'Novel approach to solving the problem using cutting-edge technology\',',
-          '              icon: \'💡\'',
-          '            }, {',
-          '              title: \'Technical Depth\',',
-          '              desc: \'Real API integration, complex state management, and data processing\',',
-          '              icon: \'⚡\'',
-          '            }, {',
-          '              title: \'User Experience\',',
-          '              desc: \'Intuitive interface designed for the target audience\',',
-          '              icon: \'🎯\'',
-          '            }].map((item) => (',
-          '              <div key={item.title} className="p-6 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-colors">',
-          '                <div className="text-3xl mb-4">{item.icon}</div>',
-          '                <h3 className="text-lg font-semibold mb-2">{item.title}</h3>',
-          '                <p className="text-slate-400 text-sm">{item.desc}</p>',
-          '              </div>',
-          '            ))}',
-          '          </div>',
-          '        )}',
-          '',
-          '        {activeTab === \'features\' && (',
-          '          <div className="space-y-4">',
-          '            {[{',
-          '              name: \'Feature 1\',',
-          '              status: \'Implemented\',',
-          '              desc: \'Core functionality that solves the main problem\'',
-          '            }, {',
-          '              name: \'Feature 2\',',
-          '              status: \'Implemented\',',
-          '              desc: \'Advanced integration with sponsor APIs\'',
-          '            }, {',
-          '              name: \'Feature 3\',',
-          '              status: \'In Progress\',',
-          '              desc: \'Real-time data processing and visualization\'',
-          '            }].map((feature) => (',
-          '              <div key={feature.name} className="flex items-center justify-between p-4 rounded-lg bg-slate-900/50 border border-slate-800">',
-          '                <div>',
-          '                  <h4 className="font-medium">{feature.name}</h4>',
-          '                  <p className="text-sm text-slate-400">{feature.desc}</p>',
-          '                </div>',
-          '                <span className={`px-3 py-1 text-xs font-medium rounded-full ${',
-          '                  feature.status === \'Implemented\'',
-          '                    ? \'bg-green-500/20 text-green-300\'',
-          '                    : \'bg-yellow-500/20 text-yellow-300\'',
-          '                }`}>',
-          '                  {feature.status}',
-          '                </span>',
-          '              </div>',
-          '            ))}',
-          '          </div>',
-          '        )}',
-          '',
-          '        {activeTab === \'architecture\' && (',
-          '          <div className="p-6 rounded-xl bg-slate-900/50 border border-slate-800">',
-          '            <h3 className="text-lg font-semibold mb-4">System Architecture</h3>',
-          '            <pre className="text-sm text-slate-400 overflow-x-auto">{`',
-          '┌─────────────┐     ┌──────────────┐     ┌─────────────┐',
-          '│   Frontend   │────▶│    API Layer  │────▶│  Database   │',
-          '│  (Next.js)   │     │  (Routes)     │     │  (SQLite)   │',
-          '└─────────────┘     └──────────────┘     └─────────────┘',
-          '       │                    │                    │',
-          '       ▼                    ▼                    ▼',
-          '┌─────────────┐     ┌──────────────┐     ┌─────────────┐',
-          '│   UI State   │     │  Business    │     │   Data      │',
-          '│  Management  │     │  Logic       │     │   Access    │',
-          '└─────────────┘     └──────────────┘     └─────────────┘`}</pre>',
-          '          </div>',
-          '        )}',
-          '      </section>',
-          '',
-          '      {/* Footer */}',
-          '      <footer className="border-t border-slate-800 py-8">',
-          '        <div className="max-w-6xl mx-auto px-6 text-center text-slate-500 text-sm">',
-          '          <p>Built for the hackathon. Open source.</p>',
-          '        </div>',
-          '      </footer>',
-          '    </main>',
-          '  );',
-          '}',
-          '',
-        ].join('\n'),
+        content: this.buildDemoPage(plan),
       },
       {
         path: 'src/app/loading.tsx',
@@ -1275,82 +1171,401 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       },
       {
         path: 'README.md',
-        content: [
-          '# ' + jsTitle,
-          '',
-          '## Problem Statement',
-          '',
-          this.devpostData?.problemStatement || 'Built for hackathon submission.',
-          '',
-          '## Why This Wins',
-          '',
-          '- **Innovation**: Novel approach that addresses the core challenge in a unique way',
-          '- **Technical Depth**: Real API integration, complex state management, production-quality code',
-          '- **Execution**: Fully working demo that judges can interact with immediately',
-          '- **Design**: Polished UI with consistent typography, spacing, and color palette',
-          '',
-          '## Tech Stack',
-          '',
-          '- **Frontend**: Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS',
-          '- **Backend**: Next.js API Routes with input validation',
-          '- **Database**: SQLite (via better-sqlite3)',
-          '- **Deployment**: Vercel-ready',
-          ...stackTags.map(s => '- ' + s),
-          '',
-          '## Quick Start',
-          '',
-          '```bash',
-          '# Install dependencies',
-          'npm install',
-          '',
-          '# Start development server',
-          'npm run dev',
-          '',
-          '# Open http://localhost:3000',
-          '```',
-          '',
-          '## Key Features',
-          '',
-          '1. **Core Feature**: Solves the main hackathon challenge',
-          '2. **Sponsor Integration**: Uses sponsor APIs visibly in the UI',
-          '3. **Interactive Demo**: Judges can try it immediately',
-          '4. **Error Handling**: Graceful failures with user-friendly messages',
-          '',
-          '## Architecture',
-          '',
-          '```',
-          'src/',
-          '├── app/              # Pages and API routes',
-          '│   ├── page.tsx      # Main demo page',
-          '│   ├── layout.tsx    # Root layout',
-          '│   └── api/          # Backend API routes',
-          '├── components/       # Reusable UI components',
-          '└── lib/              # Utilities and helpers',
-          '```',
-          '',
-          '## Judging Criteria Alignment',
-          '',
-          '| Criterion | Weight | How We Address It |',
-          '|-----------|--------|-------------------|',
-          '| Innovation | High | Novel technical approach |',
-          '| Technical Depth | Medium | Real API integration |',
-          '| Design | Medium | Polished, consistent UI |',
-          '| Completeness | Low | All features working |',
-          '',
-          '## Deployment',
-          '',
-          '```bash',
-          '# Deploy to Vercel',
-          'npx vercel',
-          '```',
-          '',
-          '## License',
-          '',
-          'MIT',
-        ].join('\n'),
+        content: this.buildReadme(plan),
       },
     ];
   }
+  /**
+   * Build the deterministic demo page (src/app/page.tsx). Unlike the old
+   * hardcoded landing page (hero + "Feature 1/2/3" + dead CTA buttons), this
+   * is a data-driven, interactive product demo: it renders the actual problem
+   * statement, judging criteria with weights, sponsor APIs and feature priority
+   * from the parsed challenge + winning strategy, and ships working state
+   * (demo stepper, live /api/health call) instead of placeholder copy. It is
+   * the output that no-LLM runs and LLM-failure fallbacks ship, so it must be
+   * a submission, not a landing page.
+   */
+  private buildDemoPage(plan: InternetExecutionPlan): string {
+    const projectName = plan.projectName;
+    const brand = this.codeGenContext?.brandName ?? this.codeGenContext?.strategyName;
+    const jsTitle = brand
+      ? brand.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+      : projectName.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const piOneLiner = this.codeGenContext?.productIntelligence
+      ? (this.codeGenContext.oneLiner && this.codeGenContext.oneLiner.length > 120
+        ? this.codeGenContext.oneLiner.slice(0, 117) + '...'
+        : this.codeGenContext.oneLiner)
+      : null;
+    const tagline = piOneLiner ?? (this.devpostData?.problemStatement
+      ? (this.devpostData.problemStatement.length > 120
+        ? this.devpostData.problemStatement.slice(0, 117) + '...'
+        : this.devpostData.problemStatement)
+      : 'A working demo built for this hackathon challenge.');
+    const problem = this.devpostData?.problemStatement ?? '';
+
+    const gi = this.generationInput;
+    const features =
+      gi?.featurePriority && gi.featurePriority.length > 0
+        ? gi.featurePriority
+        : (this.codeGenContext?.taskOrder ?? []).map((f) => f.feature).filter(Boolean);
+    const criteria =
+      this.codeGenContext?.judgingCriteria && this.codeGenContext.judgingCriteria.length > 0
+        ? this.codeGenContext.judgingCriteria.map((c) => ({ name: c.name ?? '', weight: c.weight ?? 0 }))
+        : (this.devpostData?.judgingCriteria ?? []).map((name) => ({ name, weight: 0 }));
+    const sponsors =
+      this.codeGenContext?.sponsorApis && this.codeGenContext.sponsorApis.length > 0
+        ? this.codeGenContext.sponsorApis
+        : (gi?.sponsorApis ?? []);
+    const screens =
+      gi?.keyPages && gi.keyPages.length > 0
+        ? gi.keyPages
+        : (this.codeGenContext?.uiScaffold?.keyScreens ?? []);
+
+    const theme = detectTheme([jsTitle, tagline, problem, ...features].join(' '));
+    const primaryFeature = features[0] ?? 'Run analysis';
+    const inputLabel = theme === 'gaming' ? 'Describe your game idea'
+      : theme === 'health' ? 'Describe a patient scenario'
+      : theme === 'fintech' ? 'Paste a transaction description'
+      : theme === 'climate' ? 'Describe your sustainability initiative'
+      : theme === 'dev' ? 'Paste code or describe the bug'
+      : 'Describe what you want to analyze';
+    const analyzeVerb = theme === 'gaming' ? 'Generate concept'
+      : theme === 'health' ? 'Assess risk'
+      : theme === 'fintech' ? 'Categorize spend'
+      : theme === 'climate' ? 'Estimate impact'
+      : theme === 'dev' ? 'Diagnose'
+      : 'Analyze';
+    const sample = theme === 'gaming' ? 'A puzzle-platformer where the player manipulates gravity by tilting the world. Levels include floating islands and time-based obstacles.'
+      : theme === 'health' ? 'A 62-year-old patient with chest pain, shortness of breath, and a history of hypertension. Symptoms started 2 hours ago.'
+      : theme === 'fintech' ? 'Subscription to a streaming service, $14.99 monthly, paid via credit card on the 3rd of each month.'
+      : theme === 'climate' ? 'Replace 50 delivery vans with electric vehicles across a regional logistics fleet, including charging infrastructure.'
+      : theme === 'dev' ? 'TypeError: Cannot read properties of undefined (reading "map") in Dashboard.tsx at line 42, after the recent API response shape change.'
+      : 'A customer support ticket complaining about slow checkout on mobile devices, with intermittent payment failures.';
+    const appData = { name: jsTitle, tagline, problem, features, criteria, sponsors, screens, theme, primaryFeature, inputLabel, analyzeVerb, sample };
+
+    return `'use client';
+
+import { useState } from 'react';
+
+const APP = ${jsonLiteral(appData)};
+
+type Theme = {
+  bg: string;
+  text: string;
+  sub: string;
+  border: string;
+  card: string;
+  accent: string;
+  accentText: string;
+  chip: string;
+  chipText: string;
+  bar: string;
+  badge: string;
+};
+
+const THEMES: Record<string, Theme> = {
+  ai: { bg: 'bg-slate-950', text: 'text-white', sub: 'text-slate-400', border: 'border-slate-800', card: 'bg-slate-900/50 border-slate-800', accent: 'bg-violet-600 hover:bg-violet-500', accentText: 'text-white', chip: 'bg-violet-500/10 border-violet-500/30', chipText: 'text-violet-300', bar: 'bg-violet-500', badge: 'bg-violet-500/20 border-violet-500/30 text-violet-200' },
+  gaming: { bg: 'bg-slate-950', text: 'text-white', sub: 'text-slate-400', border: 'border-slate-800', card: 'bg-slate-900/50 border-slate-800', accent: 'bg-fuchsia-600 hover:bg-fuchsia-500', accentText: 'text-white', chip: 'bg-fuchsia-500/10 border-fuchsia-500/30', chipText: 'text-fuchsia-300', bar: 'bg-cyan-400', badge: 'bg-fuchsia-500/20 border-fuchsia-500/30 text-fuchsia-200' },
+  health: { bg: 'bg-slate-50', text: 'text-slate-900', sub: 'text-slate-500', border: 'border-slate-200', card: 'bg-white border-slate-200', accent: 'bg-teal-600 hover:bg-teal-500', accentText: 'text-white', chip: 'bg-teal-500/10 border-teal-500/30', chipText: 'text-teal-700', bar: 'bg-teal-500', badge: 'bg-teal-500/10 border-teal-500/30 text-teal-700' },
+  fintech: { bg: 'bg-slate-950', text: 'text-white', sub: 'text-slate-400', border: 'border-slate-800', card: 'bg-slate-900/50 border-slate-800', accent: 'bg-amber-500 hover:bg-amber-400', accentText: 'text-black', chip: 'bg-amber-500/10 border-amber-500/30', chipText: 'text-amber-300', bar: 'bg-amber-400', badge: 'bg-amber-500/10 border-amber-500/30 text-amber-200' },
+  climate: { bg: 'bg-emerald-50', text: 'text-emerald-950', sub: 'text-emerald-700', border: 'border-emerald-200', card: 'bg-white border-emerald-200', accent: 'bg-emerald-600 hover:bg-emerald-500', accentText: 'text-white', chip: 'bg-emerald-500/10 border-emerald-500/30', chipText: 'text-emerald-700', bar: 'bg-emerald-600', badge: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700' },
+  dev: { bg: 'bg-black', text: 'text-lime-300', sub: 'text-slate-500', border: 'border-slate-800', card: 'bg-zinc-950 border-slate-800', accent: 'bg-lime-500 hover:bg-lime-400', accentText: 'text-black', chip: 'bg-lime-500/10 border-lime-500/30', chipText: 'text-lime-300', bar: 'bg-lime-400', badge: 'bg-lime-500/10 border-lime-500/30 text-lime-300' },
+  default: { bg: 'bg-slate-950', text: 'text-white', sub: 'text-slate-400', border: 'border-slate-800', card: 'bg-slate-900/50 border-slate-800', accent: 'bg-violet-600 hover:bg-violet-500', accentText: 'text-white', chip: 'bg-violet-500/10 border-violet-500/30', chipText: 'text-violet-300', bar: 'bg-violet-500', badge: 'bg-violet-500/20 border-violet-500/30 text-violet-200' },
+};
+
+export default function Home() {
+  const t: Theme = THEMES[APP.theme] ?? THEMES.default;
+  const [view, setView] = useState(0);
+  const [inputText, setInputText] = useState(APP.sample);
+  const [analyzeState, setAnalyzeState] = useState('idle');
+  const [analyzeBody, setAnalyzeBody] = useState('');
+
+  const tabs = ['Live demo', 'Judging fit', 'Integrations'];
+
+  const runAnalyze = async () => {
+    setAnalyzeState('loading');
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: inputText }),
+      });
+      const body = await res.json();
+      setAnalyzeBody(JSON.stringify(body, null, 2) ?? '');
+      setAnalyzeState('ok');
+    } catch {
+      setAnalyzeState('error');
+    }
+  };
+
+  return (
+    <main className={'min-h-screen ' + t.bg + ' ' + t.text}>
+      <header className={'sticky top-0 z-50 border-b backdrop-blur ' + t.border + ' ' + t.bg}>
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className={'w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ' + t.accent + ' ' + t.accentText}>
+              {APP.name.charAt(0)}
+            </span>
+            <span className="text-lg font-bold">{APP.name}</span>
+          </div>
+          <nav className="hidden md:flex items-center gap-1">
+            {tabs.map((label, i) => (
+              <button
+                key={label}
+                onClick={() => setView(i)}
+                className={'px-4 py-2 text-sm rounded-lg transition-colors ' + (view === i ? 'bg-slate-800 text-white' : t.sub + ' hover:text-white hover:bg-slate-800/50')}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      <section className={'relative overflow-hidden border-b ' + t.border}>
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <span className={'inline-block px-3 py-1 text-xs font-medium rounded-full border mb-6 ' + t.badge}>
+            {APP.theme === 'gaming' ? 'Game jam entry' : APP.theme === 'health' ? 'Health & care' : APP.theme === 'fintech' ? 'Finance & money' : APP.theme === 'climate' ? 'Climate & sustainability' : APP.theme === 'dev' ? 'Developer tool' : 'AI-powered product'}
+          </span>
+          <h1 className="text-5xl font-bold mb-5">{APP.name}</h1>
+          <p className={'text-xl max-w-2xl mb-6 ' + t.sub}>{APP.tagline}</p>
+          {APP.problem.length > 0 && (
+            <p className={'text-sm max-w-3xl leading-relaxed mb-8 ' + t.sub}>
+              <span className="font-semibold">The challenge: </span>
+              {APP.problem}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-4">
+            <button
+              onClick={() => setView(0)}
+              className={'px-6 py-3 rounded-lg font-semibold transition-colors ' + t.accent + ' ' + t.accentText}
+            >
+              Open live demo
+            </button>
+            <button
+              onClick={() => setView(1)}
+              className={'px-6 py-3 rounded-lg font-semibold border transition-colors ' + t.border + ' hover:opacity-80'}
+            >
+              See judging fit
+            </button>
+          </div>
+          {APP.screens.length > 0 && (
+            <div className={'mt-10 pt-6 border-t flex flex-wrap gap-2 ' + t.border}>
+              <span className={'text-xs uppercase tracking-wider pt-1 ' + t.sub}>Key screens:</span>
+              {APP.screens.map((s) => (
+                <span key={s} className={'px-3 py-1 text-xs rounded-full border ' + t.chip + ' ' + t.chipText}>{s}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-6 py-12">
+        <div className={'flex gap-4 mb-8 border-b pb-4 ' + t.border}>
+          {tabs.map((label, i) => (
+            <button
+              key={label}
+              onClick={() => setView(i)}
+              className={'px-4 py-2 rounded-lg font-medium transition-colors ' + (view === i ? 'bg-slate-800 text-white' : t.sub + ' hover:text-white')}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {view === 0 && (
+          <div className={'p-6 rounded-xl border ' + t.card}>
+            <h2 className="text-lg font-semibold mb-1">{APP.primaryFeature}</h2>
+            <p className={'text-sm mb-6 ' + t.sub}>{APP.analyzeVerb} your input — the frontend calls the backend, the backend runs the logic, the result renders below. This is the full demo loop, end to end.</p>
+            <div className="flex flex-col gap-3">
+              <label className={'text-xs uppercase tracking-wider ' + t.sub}>{APP.inputLabel}</label>
+              <textarea
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                rows={4}
+                placeholder={APP.inputLabel + '...'}
+                className={'w-full p-3 rounded-lg border font-mono text-sm ' + t.card + ' ' + t.text}
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={runAnalyze}
+                  disabled={analyzeState === 'loading' || inputText.trim().length === 0}
+                  className={'px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 ' + t.accent + ' ' + t.accentText}
+                >
+                  {analyzeState === 'loading' ? 'Running...' : APP.analyzeVerb}
+                </button>
+                <button
+                  onClick={() => { setInputText(APP.sample); }}
+                  className={'px-5 py-3 rounded-lg border font-medium transition-colors ' + t.border + ' hover:opacity-80'}
+                >
+                  Try sample
+                </button>
+              </div>
+            </div>
+            <div className={'mt-5 p-4 rounded-lg border font-mono text-xs overflow-x-auto ' + t.card}>
+              {analyzeState === 'idle' && <span className={t.sub}>Result will appear here.</span>}
+              {analyzeState === 'loading' && <span className={t.sub}>Calling /api/analyze...</span>}
+              {analyzeState === 'error' && <span className="text-red-400">API unreachable — start the dev server.</span>}
+              {analyzeState === 'ok' && <pre className="whitespace-pre-wrap">{analyzeBody}</pre>}
+            </div>
+          </div>
+        )}
+
+        {view === 1 && (
+          <div className="max-w-2xl">
+            <h2 className="text-lg font-semibold mb-1">Judging criteria fit</h2>
+            <p className={'text-sm mb-6 ' + t.sub}>Each capability in this demo maps to a stated judging criterion.</p>
+            {APP.criteria.length > 0 ? (
+              <div className="space-y-5">
+                {APP.criteria.map((c) => {
+                  const pct = c.weight > 0 ? c.weight : Math.max(10, Math.round(100 / APP.criteria.length));
+                  return (
+                    <div key={c.name}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium">{c.name}</span>
+                        <span className={'text-sm ' + t.sub}>{c.weight > 0 ? c.weight + '%' : 'priority'}</span>
+                      </div>
+                      <div className={'h-2 rounded-full overflow-hidden bg-slate-800'}>
+                        <div className={'h-full rounded-full ' + t.bar} style={{ width: pct + '%' }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className={t.sub}>Judging criteria were not parsed from the challenge page.</p>
+            )}
+          </div>
+        )}
+
+        {view === 2 && (
+          <div className="max-w-2xl">
+            <h2 className="text-lg font-semibold mb-1">Sponsor &amp; API integrations</h2>
+            <p className={'text-sm mb-6 ' + t.sub}>The APIs this project prioritizes, surfaced in the UI.</p>
+            {APP.sponsors.length > 0 ? (
+              <div className="flex flex-wrap gap-3">
+                {APP.sponsors.map((s) => (
+                  <span key={s} className={'px-4 py-2 rounded-full border text-sm font-medium ' + t.chip + ' ' + t.chipText}>{s}</span>
+                ))}
+              </div>
+            ) : (
+              <p className={t.sub}>No sponsor APIs were flagged for this challenge.</p>
+            )}
+          </div>
+        )}
+      </section>
+
+      <footer className={'border-t py-8 ' + t.border}>
+        <div className={'max-w-6xl mx-auto px-6 text-center text-sm ' + t.sub}>
+          <p>{APP.name} — a working demo generated for this challenge.</p>
+        </div>
+      </footer>
+    </main>
+  );
+}
+`;
+  }
+
+  /**
+   * Build the deterministic README from real strategy data instead of the old
+   * placeholder bullets ("Core Feature: Solves the main hackathon challenge").
+   */
+  private buildReadme(plan: InternetExecutionPlan): string {
+    const projectName = plan.projectName;
+    const brand = this.codeGenContext?.brandName ?? this.codeGenContext?.strategyName;
+    const jsTitle = brand
+      ? brand.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+      : projectName.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const tagline = this.codeGenContext?.oneLiner || this.devpostData?.problemStatement || '';
+    const problem = this.devpostData?.problemStatement || '';
+    const gi = this.generationInput;
+    const features =
+      gi?.featurePriority && gi.featurePriority.length > 0
+        ? gi.featurePriority
+        : (this.codeGenContext?.taskOrder ?? []).map((f) => f.feature).filter(Boolean);
+    const differentiators = this.codeGenContext?.differentiators ?? gi?.differentiators ?? [];
+    const sponsors =
+      this.codeGenContext?.sponsorApis && this.codeGenContext.sponsorApis.length > 0
+        ? this.codeGenContext.sponsorApis
+        : (gi?.sponsorApis ?? []);
+    const criteria =
+      this.codeGenContext?.judgingCriteria && this.codeGenContext.judgingCriteria.length > 0
+        ? this.codeGenContext.judgingCriteria
+        : (this.devpostData?.judgingCriteria ?? []).map((name) => ({ name, weight: 0 }));
+
+    const lines: string[] = [];
+    lines.push('# ' + jsTitle);
+    if (tagline) lines.push('', '> ' + tagline);
+    if (problem) lines.push('', '## Problem Statement', '', problem);
+    if (features.length > 0) {
+      lines.push('', '## Key Features');
+      for (const f of features) lines.push('- ' + f);
+    }
+    if (differentiators.length > 0) {
+      lines.push('', '## Why This Wins');
+      for (const d of differentiators) lines.push('- ' + d);
+    }
+    if (sponsors.length > 0) {
+      lines.push('', '## Sponsor / API Integrations');
+      for (const s of sponsors) lines.push('- ' + s);
+    }
+    if (criteria.length > 0) {
+      lines.push('', '## Judging Criteria Alignment', '', '| Criterion | Weight | How We Address It |', '|-----------|--------|-------------------|');
+      criteria.forEach((c, i) => {
+        const feature = features[i % Math.max(features.length, 1)] ?? 'Core workflow';
+        lines.push(`| ${c.name} | ${c.weight > 0 ? c.weight + '%' : '—'} | Built into the "${feature}" capability in the demo |`);
+      });
+    }
+    lines.push(
+      '',
+      '## Tech Stack',
+      '',
+      '- **Frontend**: ' + (gi?.frontend ?? 'Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS'),
+      '- **Backend**: ' + (gi?.backend ?? 'Next.js API Routes with input validation'),
+      '- **Database**: ' + (gi?.database ?? 'SQLite (via better-sqlite3)'),
+      '- **Deployment**: ' + (gi?.deployment ?? 'Vercel-ready'),
+      ...(gi?.styling ? ['- **Styling**: ' + gi.styling] : []),
+      ...(gi?.testing ? ['- **Testing**: ' + gi.testing] : []),
+      ...(this.devpostData?.recommendedStack?.slice(0, 5) ?? []).map((s) => '- ' + s),
+      '',
+      '## Quick Start',
+      '',
+      '```bash',
+      '# Install dependencies',
+      'npm install',
+      '',
+      '# Start development server',
+      'npm run dev',
+      '',
+      '# Open http://localhost:3000',
+      '```',
+      '',
+      '## Architecture',
+      '',
+      '```',
+      'src/',
+      '├── app/              # Pages and API routes',
+      '│   ├── page.tsx      # Main demo page',
+      '│   ├── layout.tsx    # Root layout',
+      '│   └── api/          # Backend API routes',
+      '├── components/       # Reusable UI components',
+      '└── lib/              # Utilities and helpers',
+      '```',
+      '',
+      '## Deployment',
+      '',
+      '```bash',
+      '# Deploy to Vercel',
+      'npx vercel',
+      '```',
+      '',
+      '## License',
+      '',
+      'MIT',
+    );
+    return lines.join('\n');
+  }
+
   private generateFrontendFiles(node: TaskNode, plan: InternetExecutionPlan): Array<{ path: string; content: string }> {
     const desc = node.description.toLowerCase();
     const navTitle = plan.projectName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -1666,6 +1881,81 @@ export async function GET() {
       version: '0.1.0',
     },
   });
+}
+`,
+      }, {
+        path: 'src/app/api/analyze/route.ts',
+        content: `import { NextResponse } from 'next/server';
+
+interface AnalyzeRequest {
+  input: string;
+}
+
+interface AnalyzeResult {
+  summary: string;
+  score: number;
+  category: string;
+  signals: Array<{ name: string; value: number }>;
+  recommendation: string;
+}
+
+const KEYWORDS: Record<string, string[]> = {
+  bug: ['error', 'bug', 'broken', 'fails', 'crash', 'exception', 'undefined', 'null', 'throws'],
+  feature: ['feature', 'request', 'want', 'need', 'add', 'support', 'implement'],
+  performance: ['slow', 'latency', 'timeout', 'lag', 'bottleneck', 'memory', 'cpu'],
+  ux: ['ux', 'ui', 'design', 'confusing', 'hard to use', 'unclear'],
+};
+
+function analyzeText(input: string): AnalyzeResult {
+  const text = input.toLowerCase();
+  const wordCount = input.trim().split(/\s+/).filter(Boolean).length;
+
+  const signals = Object.entries(KEYWORDS).map(([name, kws]) => ({
+    name: name.charAt(0).toUpperCase() + name.slice(1),
+    value: kws.reduce((s, kw) => s + (text.includes(kw) ? 1 : 0), 0),
+  }));
+
+  const top = signals.reduce((a, b) => (a.value >= b.value ? a : b));
+  const category = top.value > 0 ? top.name : 'General';
+
+  const score = Math.min(100, Math.round(40 + wordCount * 1.5 + top.value * 8));
+
+  const sentences = input.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
+  const summary = sentences[0] ? sentences[0].slice(0, 200) : input.slice(0, 200);
+
+  const recMap: Record<string, string> = {
+    Bug: 'Open a focused investigation: reproduce locally, isolate the failing input, and write a regression test before patching.',
+    Feature: 'Validate the request against the roadmap. If aligned, spec the smallest end-to-end slice and ship behind a flag.',
+    Performance: 'Profile the hot path. Measure before optimising — a single metric will tell you where to look.',
+    Ux: 'Watch three users try the flow. Their confusion will localise the redesign.',
+    General: 'Route to the appropriate team and follow up within one business day.',
+  };
+  const recommendation = recMap[category] ?? recMap.General!;
+
+  return { summary, score, category, signals, recommendation };
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = (await req.json()) as AnalyzeRequest;
+    if (!body.input || typeof body.input !== 'string' || body.input.trim().length === 0) {
+      return NextResponse.json(
+        { error: { message: 'Input text is required', code: 'VALIDATION_ERROR' } },
+        { status: 400 }
+      );
+    }
+    const result = analyzeText(body.input);
+    return NextResponse.json({ data: result });
+  } catch {
+    return NextResponse.json(
+      { error: { message: 'Invalid request body', code: 'PARSE_ERROR' } },
+      { status: 400 }
+    );
+  }
+}
+
+export async function GET() {
+  return NextResponse.json({ data: { status: 'analyze service ready' } });
 }
 `,
       }];
