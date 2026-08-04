@@ -87,7 +87,7 @@ export class CustomEndpointProvider implements LLMProvider {
       config.config?.baseUrls?.custom ?? config.config?.baseUrls?.nvidia ?? 'https://integrate.api.nvidia.com/v1';
     this.apiKeyEnvVar = config.providerId === 'nvidia' ? 'NVIDIA_API_KEY' : 'CUSTOM_LLM_API_KEY';
     this.maxRetries = config.config?.maxRetries ?? 0;
-    this.timeoutMs = config.config?.timeoutMs ?? 30000;
+    this.timeoutMs = config.config?.timeoutMs ?? 15000;
     this.models =
       config.providerId === 'nvidia'
         ? DEFAULT_MODELS
