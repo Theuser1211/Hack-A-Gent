@@ -13,6 +13,12 @@ Build exactly what the STRATEGY block describes — do NOT override it with gene
 
 GOAL: A working demo that solves the SPECIFIC hackathon challenge. Judges should immediately see how your project addresses the problem, uses sponsor APIs, and aligns with judging criteria.
 
+THE #1 RULE — ONE COMPLETE WORKFLOW, NOT A TEMPLATE:
+- Build exactly ONE end-to-end workflow that solves the hackathon problem.
+- Do NOT generate a generic landing page (hero + features + CTA). Those are failures.
+- Do NOT generate a SaaS dashboard (sidebar + cards + tables). Those are failures.
+- Every file you generate must serve the single workflow. If a file is not part of the workflow, delete it from your plan.
+
 CRITICAL — NEVER generate these anti-patterns:
 - Generic SaaS dashboards with sidebar + cards + tables
 - CRUD apps with "Create/Read/Update/Delete" as features
@@ -25,10 +31,22 @@ CRITICAL — NEVER generate these anti-patterns:
 VERTICAL SLICE FIRST — one complete workflow, nothing else:
 - Pick THE single end-to-end workflow this product exists for (from the STRATEGY block: MVP scope, Key screens, API surfaces, wow moment). Shape it as 3-5 explicit steps, e.g. input → process → result → action.
 - Implement that one workflow COMPLETELY before touching any secondary feature. Every step must work and be reachable from the UI: no dead buttons, no empty states in the walkthrough, no "coming soon".
+- The workflow must reach an explicit SUCCESS STATE: after the final step the user sees a clear, satisfying confirmation (result + what it means + what to do next), not just raw JSON.
 - Render the workflow as a visible stepper/progress bar on the main page so a judge can walk it top to bottom in one pass.
 - Every screen/page you generate must map to (a) a screen from the STRATEGY block's "Key screens" AND (b) one step of this workflow. A screen that belongs to no workflow step is scope creep — drop it.
 - Every heading, button, label and mock data item must use THIS competition's domain vocabulary (health, fintech, climate, gaming, dev-tools, AI, ...). Generic SaaS words — "Dashboard", "Welcome", "Get Started", "User Profile", "Admin Panel", "Sign in to access your dashboard" — are FAILURES unless the STRATEGY block explicitly asks for them.
 - At least one sponsor/API call must be wired INTO the workflow and its result rendered in the UI — not buried in a config file.
+
+CONNECTED ARCHITECTURE — one coherent application, not disconnected files:
+- The frontend, backend, database and API must form ONE coherent system. Every page/component you generate must call an API route you also generate; every API route must read/write the data model you also define.
+- Generate every file you import. NEVER reference a component, module, or alias that you did not generate — no dangling imports, no orphan files.
+- The UI labels and the API response must agree: if the UI says "Assess risk", the API must return a risk assessment; if the UI says "Categorize spend", the API must return spend categories. Frontend expectations and backend responses must match exactly.
+- Reuse one shared design system across every screen — one palette, one component style, one type scale. Do not invent a new look per page.
+
+DEMO QUALITY — presentation-ready, judge-friendly:
+- Polish the ONE workflow to demo-grade before anything else: consistent spacing rhythm (8px scale), clear type hierarchy, one accent color used deliberately, proper empty/loading/error states on every interaction.
+- Make it responsive: the workflow must be fully usable on mobile (stacked), tablet, and desktop — no horizontal overflow, tap-friendly targets.
+- Prefer a small number of refined screens over many rough ones. One polished, complete workflow beats five half-finished screens.
 
 MANDATORY — Vary your output based on the STRATEGY block:
 - Architecture: Use the architecture described in the STRATEGY block
@@ -73,10 +91,10 @@ OUTPUT: Return ONLY valid JSON (no markdown, no fences, no code blocks):
 { "files": [{ "path": "...", "content": "..." }] }
 
 PRIORITIES:
-1. Build the application defined by the STRATEGY block — not a generic template
-2. Working demo — judges can interact with it
+1. One polished, complete, connected workflow — built exactly from the STRATEGY block, with a success state, matching frontend/backend, and no generic SaaS
+2. Competition-specific content in every heading, label, and data item
 3. Visible sponsor API integration matching the STRATEGY block's sponsor APIs
-4. Domain-appropriate UI that reflects the STRATEGY block's UI direction
+4. Domain-appropriate, presentation-ready UI (consistent design system, responsive, polished)
 5. README that explains what you built, why it wins, and how to run it
 
 One fully working page beats 5 half-finished ones.
@@ -92,16 +110,25 @@ BUILD THE APPLICATION DEFINED BY THE STRATEGY BLOCK — not a generic landing pa
 The STRATEGY block contains: Key screens, Feature priority, MVP scope, API surfaces, and UI direction.
 Use the STRATEGY block as your primary source for what to build.
 
+MANDATORY WORKFLOW ARCHITECTURE:
+- Define ONE named workflow from the STRATEGY block's "Key screens" and "MVP scope" (e.g. "Detect → Analyze → Act" for an AI safety tool, or "Scan → Score → Reward" for a loyalty app).
+- src/app/page.tsx MUST render that workflow as a visible 3-5 step stepper with every step wired to real state and real API calls. Every step must have input → action → result. No empty states.
+- Every API surface listed in the STRATEGY block MUST have a matching route file in src/app/api/. The frontend MUST call these routes on user action and render the response.
+- Every page/component MUST import only files that exist in this batch — no dangling imports.
+
+FORBIDDEN:
+- Generic SaaS dashboard layout (sidebar + cards + tables + "Dashboard" header). If you generate this, you have failed.
+- Landing-page hero + features + CTA as the main page.tsx. The main page.tsx IS the workflow.
+- Generic labels: "Dashboard", "Welcome", "Get Started", "Learn More", "User Profile", "Sign in to access your dashboard", "Home". Use domain-specific labels from the STRATEGY block.
+- Placeholder content: "Lorem ipsum", "TODO", "...", "Coming soon", "Example data".
+- Dead buttons or links that do nothing.
+
 page.tsx REQUIREMENTS:
-- Build the screens listed in "Key screens" from the STRATEGY block — these ARE your application
-- Each screen should be a tab, step, or section that the user navigates through
-- Render THE single end-to-end workflow as a 3-5 step stepper (input → process → result), every step functional and reachable — no dead buttons, no empty states in the walkthrough
-- Label every workflow step with domain-specific terms from THIS hackathon (e.g. "Patient scenario → Risk assessment → Care plan"), never "Step 1 / Step 2" or generic SaaS labels
-- Show realistic mock data that demonstrates the use case (not placeholder text)
-- Wire up interactive elements: buttons that do something, forms that submit, toggles that switch views
-- If API surfaces are listed, show them in action — fetch from /api/* endpoints and display results
-- No "Welcome" headers, no "Get Started" buttons, no "Learn More" CTAs — the page IS the product
-- Use the color palette below, adapted to the hackathon domain
+- page.tsx is the WORKFLOW PAGE, not a marketing landing page.
+- Render the single named workflow as a stepper with domain-specific step names from the STRATEGY block.
+- Each step must have interactive input (form, button, toggle) and render a real result.
+- Wire every step to a /api/* route you also generate. Fetch and render the API response in the UI.
+- Show sponsor API activity visibly: "Powered by [Sponsor]" badge, API response snippet, or integration callout.
 
 COLOR PALETTE (adapt to domain from STRATEGY block):
 - AI/ML: Deep purples (#7c3aed) + electric blue (#3b82f6) on dark (#0f172a)
@@ -112,10 +139,11 @@ COLOR PALETTE (adapt to domain from STRATEGY block):
 - Developer: Monochrome (#1e293b) + terminal green (#22c55e) on black
 - Social: Warm orange (#f97316) + coral (#f43f5e) on white`,
   frontend: `Generate frontend code for: {specificTask}. ONE file per component. Use Tailwind CSS classes. Merge into existing files when possible. Requirements:
-- Component must have typed props and handle loading/error/empty states
-- The component implements ONE step of the hackathon's single end-to-end workflow end-to-end (state → action → result) — not a standalone screen
-- Use realistic mock data, not placeholder text
-- Add interactive elements (onClick handlers, state changes, form submissions)
+- This component is ONE step of the SINGLE workflow defined in the STRATEGY block. Do NOT generate generic dashboard cards or marketing sections.
+- Every interactive element must call an API route you also generate and render the response. No dead buttons.
+- Use domain-specific labels from the STRATEGY block (not "Dashboard", "Welcome", "Get Started", "Submit").
+- Include loading/error/result states for every API call.
+- Import every referenced component/path using @/ alias and ensure the target file exists in your output batch.
 - Include proper ARIA labels for accessibility
 - Vary the component structure — do not generate the same pattern every time`,
   backend: `Generate API route for: {specificTask}. ONE file per route. Use Next.js App Router API routes. Requirements:
