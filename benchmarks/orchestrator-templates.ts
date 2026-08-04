@@ -22,6 +22,14 @@ CRITICAL — NEVER generate these anti-patterns:
 - Fake data or placeholder content — use realistic mock data
 - Identical component structures across projects
 
+VERTICAL SLICE FIRST — one complete workflow, nothing else:
+- Pick THE single end-to-end workflow this product exists for (from the STRATEGY block: MVP scope, Key screens, API surfaces, wow moment). Shape it as 3-5 explicit steps, e.g. input → process → result → action.
+- Implement that one workflow COMPLETELY before touching any secondary feature. Every step must work and be reachable from the UI: no dead buttons, no empty states in the walkthrough, no "coming soon".
+- Render the workflow as a visible stepper/progress bar on the main page so a judge can walk it top to bottom in one pass.
+- Every screen/page you generate must map to (a) a screen from the STRATEGY block's "Key screens" AND (b) one step of this workflow. A screen that belongs to no workflow step is scope creep — drop it.
+- Every heading, button, label and mock data item must use THIS competition's domain vocabulary (health, fintech, climate, gaming, dev-tools, AI, ...). Generic SaaS words — "Dashboard", "Welcome", "Get Started", "User Profile", "Admin Panel", "Sign in to access your dashboard" — are FAILURES unless the STRATEGY block explicitly asks for them.
+- At least one sponsor/API call must be wired INTO the workflow and its result rendered in the UI — not buried in a config file.
+
 MANDATORY — Vary your output based on the STRATEGY block:
 - Architecture: Use the architecture described in the STRATEGY block
 - UI direction: Build the screens listed in "Key screens" from the STRATEGY block
@@ -87,6 +95,8 @@ Use the STRATEGY block as your primary source for what to build.
 page.tsx REQUIREMENTS:
 - Build the screens listed in "Key screens" from the STRATEGY block — these ARE your application
 - Each screen should be a tab, step, or section that the user navigates through
+- Render THE single end-to-end workflow as a 3-5 step stepper (input → process → result), every step functional and reachable — no dead buttons, no empty states in the walkthrough
+- Label every workflow step with domain-specific terms from THIS hackathon (e.g. "Patient scenario → Risk assessment → Care plan"), never "Step 1 / Step 2" or generic SaaS labels
 - Show realistic mock data that demonstrates the use case (not placeholder text)
 - Wire up interactive elements: buttons that do something, forms that submit, toggles that switch views
 - If API surfaces are listed, show them in action — fetch from /api/* endpoints and display results
@@ -103,6 +113,7 @@ COLOR PALETTE (adapt to domain from STRATEGY block):
 - Social: Warm orange (#f97316) + coral (#f43f5e) on white`,
   frontend: `Generate frontend code for: {specificTask}. ONE file per component. Use Tailwind CSS classes. Merge into existing files when possible. Requirements:
 - Component must have typed props and handle loading/error/empty states
+- The component implements ONE step of the hackathon's single end-to-end workflow end-to-end (state → action → result) — not a standalone screen
 - Use realistic mock data, not placeholder text
 - Add interactive elements (onClick handlers, state changes, form submissions)
 - Include proper ARIA labels for accessibility

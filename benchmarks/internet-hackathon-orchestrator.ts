@@ -1241,7 +1241,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       : theme === 'climate' ? 'Replace 50 delivery vans with electric vehicles across a regional logistics fleet, including charging infrastructure.'
       : theme === 'dev' ? 'TypeError: Cannot read properties of undefined (reading "map") in Dashboard.tsx at line 42, after the recent API response shape change.'
       : 'A customer support ticket complaining about slow checkout on mobile devices, with intermittent payment failures.';
-    const appData = { name: jsTitle, tagline, problem, features, criteria, sponsors, screens, theme, primaryFeature, inputLabel, analyzeVerb, sample };
+    // Vertical-slice step labels — domain-derived, never generic SaaS terms. The
+    // demo page renders the ONE end-to-end workflow as a stepper, so judges can
+    // walk input → process → outcome in a single pass.
+    const stepLabels: Record<string, string[]> = {
+      ai: ['Describe the task', 'Run the analysis', 'Review the outcome'],
+      gaming: ['Describe the game', 'Generate the concept', 'Review & playtest'],
+      health: ['Patient scenario', 'Assess risk', 'Care plan'],
+      fintech: ['Transaction detail', 'Categorize spend', 'Insight & budget'],
+      climate: ['Initiative detail', 'Estimate impact', 'Action plan'],
+      dev: ['Paste the code', 'Diagnose the issue', 'Apply the fix'],
+      default: ['Describe the input', 'Run the workflow', 'Review the result'],
+    };
+    const workflowSteps = stepLabels[theme] ?? stepLabels.default!;
+    const appData = { name: jsTitle, tagline, problem, features, criteria, sponsors, screens, theme, primaryFeature, inputLabel, analyzeVerb, sample, workflowSteps };
 
     return `'use client';
 
@@ -1276,6 +1289,7 @@ const THEMES: Record<string, Theme> = {
 export default function Home() {
   const t: Theme = THEMES[APP.theme] ?? THEMES.default;
   const [view, setView] = useState(0);
+  const [step, setStep] = useState(0);
   const [inputText, setInputText] = useState(APP.sample);
   const [analyzeState, setAnalyzeState] = useState('idle');
   const [analyzeBody, setAnalyzeBody] = useState('');
@@ -1296,6 +1310,13 @@ export default function Home() {
     } catch {
       setAnalyzeState('error');
     }
+  };
+
+  const restartWorkflow = () => {
+    setInputText(APP.sample);
+    setAnalyzeBody('');
+    setAnalyzeState('idle');
+    setStep(0);
   };
 
   return (
@@ -1376,38 +1397,115 @@ export default function Home() {
         {view === 0 && (
           <div className={'p-6 rounded-xl border ' + t.card}>
             <h2 className="text-lg font-semibold mb-1">{APP.primaryFeature}</h2>
-            <p className={'text-sm mb-6 ' + t.sub}>{APP.analyzeVerb} your input — the frontend calls the backend, the backend runs the logic, the result renders below. This is the full demo loop, end to end.</p>
-            <div className="flex flex-col gap-3">
-              <label className={'text-xs uppercase tracking-wider ' + t.sub}>{APP.inputLabel}</label>
-              <textarea
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                rows={4}
-                placeholder={APP.inputLabel + '...'}
-                className={'w-full p-3 rounded-lg border font-mono text-sm ' + t.card + ' ' + t.text}
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={runAnalyze}
-                  disabled={analyzeState === 'loading' || inputText.trim().length === 0}
-                  className={'px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 ' + t.accent + ' ' + t.accentText}
-                >
-                  {analyzeState === 'loading' ? 'Running...' : APP.analyzeVerb}
-                </button>
-                <button
-                  onClick={() => { setInputText(APP.sample); }}
-                  className={'px-5 py-3 rounded-lg border font-medium transition-colors ' + t.border + ' hover:opacity-80'}
-                >
-                  Try sample
-                </button>
+            <p className={'text-sm mb-6 ' + t.sub}>
+              One end-to-end workflow, live: {APP.workflowSteps.join(' → ')}. Every step below works — the frontend calls the backend, the backend runs the logic, the result renders. No dead ends.
+            </p>
+
+            <ol className={'flex flex-wrap items-center gap-2 mb-6 pb-4 border-b ' + t.border}>
+              {APP.workflowSteps.map((label, i) => (
+                <li key={label} className="flex items-center gap-2">
+                  <button
+                    onClick={() => setStep(i)}
+                    className={'px-3 py-1.5 rounded-full border text-sm font-medium transition-colors ' + (step === i ? 'bg-slate-800 text-white border-slate-700' : t.chip + ' ' + t.chipText + ' hover:opacity-80')}
+                  >
+                    <span className={'mr-1.5 inline-flex w-5 h-5 items-center justify-center rounded-full text-xs font-bold ' + (step > i ? t.accent + ' ' + t.accentText : 'bg-slate-700 text-white')}>
+                      {step > i ? '\u2713' : i + 1}
+                    </span>
+                    {label}
+                  </button>
+                  {i < APP.workflowSteps.length - 1 && <span className={'text-xs ' + t.sub}>&#8594;</span>}
+                </li>
+              ))}
+            </ol>
+
+            {step === 0 && (
+              <div className="flex flex-col gap-3">
+                <label className={'text-xs uppercase tracking-wider ' + t.sub}>{APP.inputLabel}</label>
+                <textarea
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  rows={4}
+                  placeholder={APP.inputLabel + '...'}
+                  className={'w-full p-3 rounded-lg border font-mono text-sm ' + t.card + ' ' + t.text}
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setInputText(APP.sample); }}
+                    className={'px-5 py-3 rounded-lg border font-medium transition-colors ' + t.border + ' hover:opacity-80'}
+                  >
+                    Try sample
+                  </button>
+                  <button
+                    onClick={() => setStep(1)}
+                    disabled={inputText.trim().length === 0}
+                    className={'px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 ' + t.accent + ' ' + t.accentText}
+                  >
+                    Continue to {APP.workflowSteps[1] ?? 'next step'}
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className={'mt-5 p-4 rounded-lg border font-mono text-xs overflow-x-auto ' + t.card}>
-              {analyzeState === 'idle' && <span className={t.sub}>Result will appear here.</span>}
-              {analyzeState === 'loading' && <span className={t.sub}>Calling /api/analyze...</span>}
-              {analyzeState === 'error' && <span className="text-red-400">API unreachable — start the dev server.</span>}
-              {analyzeState === 'ok' && <pre className="whitespace-pre-wrap">{analyzeBody}</pre>}
-            </div>
+            )}
+
+            {step === 1 && (
+              <div className="flex flex-col gap-3">
+                <p className={'text-sm ' + t.sub}>
+                  Step 2 of {APP.workflowSteps.length}: {APP.analyzeVerb} the input above. This calls the backend endpoint and renders the structured result below.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={runAnalyze}
+                    disabled={analyzeState === 'loading' || inputText.trim().length === 0}
+                    className={'px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 ' + t.accent + ' ' + t.accentText}
+                  >
+                    {analyzeState === 'loading' ? 'Running...' : APP.analyzeVerb}
+                  </button>
+                  <button
+                    onClick={() => { setInputText(APP.sample); }}
+                    className={'px-5 py-3 rounded-lg border font-medium transition-colors ' + t.border + ' hover:opacity-80'}
+                  >
+                    Try sample
+                  </button>
+                  {analyzeState === 'ok' && (
+                    <button
+                      onClick={() => setStep(2)}
+                      className={'px-5 py-3 rounded-lg font-medium border transition-colors ' + t.border + ' hover:opacity-80'}
+                    >
+                      See result &#8594;
+                    </button>
+                  )}
+                </div>
+                <div className={'mt-1 p-4 rounded-lg border font-mono text-xs overflow-x-auto ' + t.card}>
+                  {analyzeState === 'idle' && <span className={t.sub}>Result will appear here.</span>}
+                  {analyzeState === 'loading' && <span className={t.sub}>Calling /api/analyze...</span>}
+                  {analyzeState === 'error' && <span className="text-red-400">API unreachable — start the dev server.</span>}
+                  {analyzeState === 'ok' && <pre className="whitespace-pre-wrap">{analyzeBody}</pre>}
+                </div>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="flex flex-col gap-4">
+                <h3 className="text-base font-semibold">{APP.workflowSteps[2] ?? 'Outcome'}</h3>
+                <p className={'text-sm ' + t.sub}>
+                  {analyzeState === 'ok'
+                    ? 'The workflow completed end to end: the input was processed by the backend and the result is ready. This outcome directly supports the top judging criterion (' + (APP.criteria[0]?.name ?? 'Innovation') + ').'
+                    : 'Run step 2 first to produce the outcome.'}
+                </p>
+                {analyzeState === 'ok' && (
+                  <div className={'p-4 rounded-lg border font-mono text-xs overflow-x-auto ' + t.card}>
+                    <pre className="whitespace-pre-wrap">{analyzeBody}</pre>
+                  </div>
+                )}
+                <div>
+                  <button
+                    onClick={restartWorkflow}
+                    className={'px-6 py-3 rounded-lg font-semibold transition-colors ' + t.accent + ' ' + t.accentText}
+                  >
+                    Run another scenario
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
