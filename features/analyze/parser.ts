@@ -12,6 +12,8 @@
  */
 
 import { getSeededRandom } from '../../benchmarks/determinism-kernel.js';
+import { assertSafeHackathonUrl } from '../../cli/validation/ssrf-guard.js';
+
 import type { ParsedDevpost, SponsorAPI } from './types.js';
 
 const ALLOWED_HOSTS = ['devpost.com', 'www.devpost.com'];
@@ -69,9 +71,9 @@ export function assertSafeDevpostUrl(url: string): URL {
   return parsed;
 }
 
-/** Fetch Devpost HTML with a hard timeout. Throws on network/SSRF failure. */
+/** Fetch a hackathon page HTML with a hard timeout. Throws on network/SSRF failure. */
 export async function fetchDevpostHtml(url: string, timeoutMs = 15000): Promise<string> {
-  const parsed = assertSafeDevpostUrl(url);
+  const parsed = assertSafeHackathonUrl(url);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -295,7 +297,7 @@ export function normalizeWeights(
     return criteria.map((c) => ({ ...c, weight: w }));
   }
   // Scale to 100 and fix rounding on the largest.
-  let scaled = criteria.map((c) => ({ ...c, weight: Math.max(0, Math.round((c.weight / sum) * 100)) }));
+  const scaled = criteria.map((c) => ({ ...c, weight: Math.max(0, Math.round((c.weight / sum) * 100)) }));
   const newSum = scaled.reduce((s, c) => s + c.weight, 0);
   const diff = 100 - newSum;
   if (diff !== 0 && scaled.length > 0) {

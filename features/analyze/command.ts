@@ -26,11 +26,12 @@ import {
   color,
 } from '../../cli/output.js';
 import type { CLIContext, CLIArgs, CLIResult } from '../../cli/types.js';
+import { assertSafeHackathonUrl } from '../../cli/validation/ssrf-guard.js';
 
-import { fetchDevpostHtml, extractDevpostData } from './parser.js';
 import { analyzeDevpost, type AnalyzerContext } from './analyzer.js';
 import { formatAnalysisHuman, formatAnalysisJson } from './formatter.js';
-import { assertSafeDevpostUrl } from './parser.js';
+import { fetchDevpostHtml, extractDevpostData } from './parser.js';
+
 
 export interface AnalyzeCommandDeps {
   /** Optional deterministic LLM hook for enrichment. */
@@ -61,7 +62,7 @@ export async function analyzeCommand(
 
   // ── Resolve source HTML (URL fetch OR local file) ──────────────
   let html: string;
-  let sourceUrl = url ?? 'local-file';
+  const sourceUrl = url ?? 'local-file';
 
   try {
     if (htmlFlag) {
@@ -73,7 +74,7 @@ export async function analyzeCommand(
       info('Loaded HTML from local file (offline mode)');
     } else if (url) {
       // Validate host up-front (clear error before any network call).
-      assertSafeDevpostUrl(url);
+      assertSafeHackathonUrl(url);
       log(`Fetching ${color(url, 'cyan')} ...`);
       html = await fetchDevpostHtml(url);
     } else {

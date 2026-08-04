@@ -1,5 +1,7 @@
+import { confirmed, unknownField } from '../confidence.js';
+import { assertSafeHackathonUrl } from '../validation/ssrf-guard.js';
+
 import type { DevpostParseResult } from './types.js';
-import { confirmed, inferred, unknownField, type ExtractedField } from '../confidence.js';
 
 export function normalizeUrl(input: string): string {
   const trimmed = input.trim();
@@ -23,14 +25,7 @@ export async function parseDevpostUrl(url: string): Promise<DevpostParseResult> 
   if (!normalized) {
     throw new Error('No URL provided. Expected a Devpost URL like:\n  https://example.devpost.com');
   }
-  const parsed = new URL(normalized);
-  const hostname = parsed.hostname;
-  if (hostname !== 'devpost.com' && !hostname.endsWith('.devpost.com')) {
-    throw new Error(`URL must be a Devpost URL (devpost.com). Got: ${hostname}`);
-  }
-  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-    throw new Error(`URL must use http or https protocol. Got: ${parsed.protocol}`);
-  }
+  assertSafeHackathonUrl(normalized);
 
   const response = await fetch(normalized, {
     headers: { 'User-Agent': 'Hack-A-Gent/1.0 (devpost parser)' },

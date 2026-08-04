@@ -21,14 +21,15 @@
  */
 
 import { getSeededRandom, createDeterministicUuid } from '../../benchmarks/determinism-kernel.js';
+import { assertSafeHackathonUrl } from '../../cli/validation/ssrf-guard.js';
+import { analyzeDevpost, type AnalyzerContext } from '../analyze/analyzer.js';
 import {
   fetchDevpostHtml,
   extractDevpostData,
-  assertSafeDevpostUrl,
   normalizeWeights,
 } from '../analyze/parser.js';
-import { analyzeDevpost, type AnalyzerContext } from '../analyze/analyzer.js';
 import type { DevpostAnalysis, JudgingCriterion, SponsorAPI, ParsedDevpost, Milestone } from '../analyze/types.js';
+
 import type {
   IntelligenceEngineOutput,
   IntelligenceInput,
@@ -42,13 +43,6 @@ import type {
   ExplainedRecommendation,
 } from './types.js';
 
-const ALLOWED_HOSTS = ['devpost.com', 'www.devpost.com'];
-
-function isAllowedHost(hostname: string): boolean {
-  const h = hostname.toLowerCase().replace(/\.$/, '');
-  return ALLOWED_HOSTS.includes(h) || h.endsWith('.devpost.com');
-}
-
 /** Resolve the input into HTML (network, local file, or inline text). */
 async function resolveHtml(input: IntelligenceInput): Promise<{ html: string; source: string }> {
   if (input.htmlOverride !== undefined) {
@@ -56,7 +50,7 @@ async function resolveHtml(input: IntelligenceInput): Promise<{ html: string; so
   }
   const src = input.source.trim();
   if (src.startsWith('http://') || src.startsWith('https://')) {
-    assertSafeDevpostUrl(src); // SSRF guard (throws on non-Devpost host)
+    assertSafeHackathonUrl(src); // SSRF guard (denylist — throws on unsafe hosts)
     const html = await fetchDevpostHtml(src);
     return { html, source: src };
   }
