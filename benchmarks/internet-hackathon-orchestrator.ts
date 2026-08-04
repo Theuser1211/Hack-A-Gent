@@ -170,6 +170,7 @@ function detectTheme(text: string): string {
   if (/(fintech|finance|financ|bank|payment|payments|crypto|invest|budget|loan)/.test(t)) return 'fintech';
   if (/(climat|green|sustain|envir|planet|eco|carbon)/.test(t)) return 'climate';
   if (/(developer|developer-tool|api|sdk|terminal|cli|devops|infra)/.test(t)) return 'dev';
+  if (/(planning agent|plan your|roadmap|stress-test|strategy|strategic|prioritiz|milestone|sprint|productivity|project plan|risk assessment)/.test(t)) return 'planning';
   return 'ai';
 }
 
@@ -1204,10 +1205,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     const problem = this.devpostData?.problemStatement ?? '';
 
     const gi = this.generationInput;
+    const pi = this.codeGenContext?.productIntelligence;
     const features =
-      gi?.featurePriority && gi.featurePriority.length > 0
-        ? gi.featurePriority
-        : (this.codeGenContext?.taskOrder ?? []).map((f) => f.feature).filter(Boolean);
+      pi && pi.mvpScope.length > 0
+        ? pi.mvpScope
+        : gi?.featurePriority && gi.featurePriority.length > 0
+          ? gi.featurePriority
+          : (this.codeGenContext?.taskOrder ?? []).map((f) => f.feature).filter(Boolean);
     const criteria =
       this.codeGenContext?.judgingCriteria && this.codeGenContext.judgingCriteria.length > 0
         ? this.codeGenContext.judgingCriteria.map((c) => ({ name: c.name ?? '', weight: c.weight ?? 0 }))
@@ -1228,18 +1232,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       : theme === 'fintech' ? 'Paste a transaction description'
       : theme === 'climate' ? 'Describe your sustainability initiative'
       : theme === 'dev' ? 'Paste code or describe the bug'
+      : theme === 'planning' ? 'Paste your roadmap or plan'
       : 'Describe what you want to analyze';
     const analyzeVerb = theme === 'gaming' ? 'Generate concept'
       : theme === 'health' ? 'Assess risk'
       : theme === 'fintech' ? 'Categorize spend'
       : theme === 'climate' ? 'Estimate impact'
       : theme === 'dev' ? 'Diagnose'
+      : theme === 'planning' ? 'Stress-test'
       : 'Analyze';
     const sample = theme === 'gaming' ? 'A puzzle-platformer where the player manipulates gravity by tilting the world. Levels include floating islands and time-based obstacles.'
       : theme === 'health' ? 'A 62-year-old patient with chest pain, shortness of breath, and a history of hypertension. Symptoms started 2 hours ago.'
       : theme === 'fintech' ? 'Subscription to a streaming service, $14.99 monthly, paid via credit card on the 3rd of each month.'
       : theme === 'climate' ? 'Replace 50 delivery vans with electric vehicles across a regional logistics fleet, including charging infrastructure.'
       : theme === 'dev' ? 'TypeError: Cannot read properties of undefined (reading "map") in Dashboard.tsx at line 42, after the recent API response shape change.'
+      : theme === 'planning' ? 'Launch a mobile app in 8 weeks. Milestones: MVP build (week 3, on track), payment integration (week 6, blocked - vendor approval not started), beta launch (week 8). Team of 4, one external dependency.'
       : 'A customer support ticket complaining about slow checkout on mobile devices, with intermittent payment failures.';
     // Vertical-slice step labels — domain-derived, never generic SaaS terms. The
     // demo page renders the ONE end-to-end workflow as a stepper, so judges can
@@ -1251,6 +1258,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       fintech: ['Transaction detail', 'Categorize spend', 'Insight & budget'],
       climate: ['Initiative detail', 'Estimate impact', 'Action plan'],
       dev: ['Paste the code', 'Diagnose the issue', 'Apply the fix'],
+      planning: ['Paste your roadmap', 'Stress-test the plan', 'Review the top risk'],
       default: ['Describe the input', 'Run the workflow', 'Review the result'],
     };
     const workflowSteps = stepLabels[theme] ?? stepLabels.default!;
@@ -1260,7 +1268,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 import { useState } from 'react';
 
-const APP = ${jsonLiteral(appData)};
+type Criterion = { name: string; weight: number };
+
+type AppData = {
+  name: string;
+  tagline: string;
+  problem: string;
+  features: string[];
+  criteria: Criterion[];
+  sponsors: string[];
+  screens: string[];
+  theme: string;
+  primaryFeature: string;
+  inputLabel: string;
+  analyzeVerb: string;
+  sample: string;
+  workflowSteps: string[];
+};
+
+const APP: AppData = ${jsonLiteral(appData)};
 
 type Theme = {
   bg: string;
@@ -1283,6 +1309,7 @@ const THEMES: Record<string, Theme> = {
   fintech: { bg: 'bg-slate-950', text: 'text-white', sub: 'text-slate-400', border: 'border-slate-800', card: 'bg-slate-900/50 border-slate-800', accent: 'bg-amber-500 hover:bg-amber-400', accentText: 'text-black', chip: 'bg-amber-500/10 border-amber-500/30', chipText: 'text-amber-300', bar: 'bg-amber-400', badge: 'bg-amber-500/10 border-amber-500/30 text-amber-200' },
   climate: { bg: 'bg-emerald-50', text: 'text-emerald-950', sub: 'text-emerald-700', border: 'border-emerald-200', card: 'bg-white border-emerald-200', accent: 'bg-emerald-600 hover:bg-emerald-500', accentText: 'text-white', chip: 'bg-emerald-500/10 border-emerald-500/30', chipText: 'text-emerald-700', bar: 'bg-emerald-600', badge: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700' },
   dev: { bg: 'bg-black', text: 'text-lime-300', sub: 'text-slate-500', border: 'border-slate-800', card: 'bg-zinc-950 border-slate-800', accent: 'bg-lime-500 hover:bg-lime-400', accentText: 'text-black', chip: 'bg-lime-500/10 border-lime-500/30', chipText: 'text-lime-300', bar: 'bg-lime-400', badge: 'bg-lime-500/10 border-lime-500/30 text-lime-300' },
+  planning: { bg: 'bg-slate-950', text: 'text-white', sub: 'text-slate-400', border: 'border-slate-800', card: 'bg-slate-900/50 border-slate-800', accent: 'bg-indigo-600 hover:bg-indigo-500', accentText: 'text-white', chip: 'bg-indigo-500/10 border-indigo-500/30', chipText: 'text-indigo-300', bar: 'bg-indigo-500', badge: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-200' },
   default: { bg: 'bg-slate-950', text: 'text-white', sub: 'text-slate-400', border: 'border-slate-800', card: 'bg-slate-900/50 border-slate-800', accent: 'bg-violet-600 hover:bg-violet-500', accentText: 'text-white', chip: 'bg-violet-500/10 border-violet-500/30', chipText: 'text-violet-300', bar: 'bg-violet-500', badge: 'bg-violet-500/20 border-violet-500/30 text-violet-200' },
 };
 
