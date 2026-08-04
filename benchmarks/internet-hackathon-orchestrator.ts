@@ -2729,7 +2729,16 @@ export async function POST(req: Request) {
       const hasHero = /<h1[^>]*>/.test(content) && content.includes('Hero');
       const hasCTA = /href="#get-started"/.test(content) || /Start Building/.test(content) || /Get Started/.test(content);
       const hasFeatures = /Features/.test(content) || /Key Features/.test(content);
-      if (!hasHero && !hasCTA && !hasFeatures) {
+      // A working product page is not a blank template even though it
+      // deliberately avoids hero/CTA/features landing-page patterns: it ships a
+      // real heading, interactive state, and a live backend call (the vertical
+      // slice the generation contract mandates).
+      const hasWorkingProduct =
+        /<h1[^>]*>/.test(content) &&
+        /onClick=\{/.test(content) &&
+        /fetch\(/.test(content) &&
+        /useState\(/.test(content);
+      if (!hasHero && !hasCTA && !hasFeatures && !hasWorkingProduct) {
         const msg = 'Quality gate: page.tsx lacks hero section, CTA, and features — looks like a blank template';
         result.errors.push(msg);
         result.checks.push({ name: 'Quality gate', passed: false, error: msg });
