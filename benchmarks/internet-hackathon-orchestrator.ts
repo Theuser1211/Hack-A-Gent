@@ -1233,6 +1233,18 @@ module.exports = {
           '',
           '::selection { background-color: rgba(139, 92, 246, 0.3); }',
           '',
+          '/* Focus visible styles for accessibility */',
+          ':focus-visible {',
+          '  outline: 2px solid #8b5cf6;',
+          '  outline-offset: 2px;',
+          '  border-radius: 4px;',
+          '}',
+          '',
+          '/* Remove default focus for mouse users */',
+          ':focus:not(:focus-visible) {',
+          '  outline: none;',
+          '}',
+          '',
         ].join('\n'),
       },
       {
@@ -1246,6 +1258,12 @@ module.exports = {
           "  title: '" + escapeJsStringLiteral(jsTitle) + "',",
           "  description: '" + escapeJsStringLiteral(tagline) + "',",
           "  openGraph: { title: '" + escapeJsStringLiteral(jsTitle) + "', description: '" + escapeJsStringLiteral(tagline) + "' },",
+          '};',
+          '',
+          'export const viewport = {',
+          "  themeColor: '#8b5cf6',",
+          '  width: "device-width",',
+          '  initialScale: 1,',
           '};',
           '',
           'export default function RootLayout({ children }: { children: React.ReactNode }) {',
@@ -1502,12 +1520,12 @@ export { Footer } from './footer';
         content: `export default function Loading() {
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-4 animate-fade-in">
         <div className="relative w-12 h-12">
-          <div className="absolute inset-0 rounded-full border-4 border-slate-800" />
+          <div className="absolute inset-0 rounded-full border-4 border-zinc-800" />
           <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-violet-500 animate-spin" />
         </div>
-        <p className="text-slate-500 text-sm font-medium">Loading...</p>
+        <p className="text-zinc-500 text-sm font-medium">Loading...</p>
       </div>
     </div>
   );
@@ -1516,57 +1534,82 @@ export { Footer } from './footer';
       },
       {
         path: 'src/app/error.tsx',
-        content: `'use client';
-
-export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  return (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="text-center max-w-md mx-auto px-4">
-        <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-6">
-          <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-          </svg>
-        </div>
-        <h2 className="text-2xl font-bold text-white mb-3">Something went wrong</h2>
-        <p className="text-slate-400 mb-8 leading-relaxed">
-          {error.message || 'An unexpected error occurred. Please try again.'}
-        </p>
-        <button
-          onClick={reset}
-          className="inline-flex items-center rounded-lg bg-white text-slate-900 px-6 py-3 font-semibold hover:bg-slate-100 transition-colors"
-        >
-          Try Again
-        </button>
-      </div>
-    </div>
-  );
-}
-`,
+        content: [
+          "'use client';",
+          '',
+          'export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {',
+          '  return (',
+          '    <div className="min-h-[60vh] flex items-center justify-center animate-fade-in">',
+          '      <div className="text-center max-w-md mx-auto px-4">',
+          '        <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-6">',
+          '          <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">',
+          '            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />',
+          '          </svg>',
+          '        </div>',
+          '        <h1 className="text-2xl font-bold text-zinc-100 mb-3">Something went wrong</h1>',
+          '        <p className="text-zinc-400 mb-4 leading-relaxed">',
+          "          {error.message || 'An unexpected error occurred. Please try again.'}",
+          '        </p>',
+          '        <p className="text-zinc-500 text-xs mb-8 font-mono">',
+          "          {error.digest ? `Error ID: ${error.digest}` : ''}",
+          '        </p>',
+          '        <div className="flex flex-col sm:flex-row gap-3 justify-center">',
+          '          <button',
+          '            onClick={reset}',
+          '            className="inline-flex items-center justify-center rounded-lg bg-violet-600 hover:bg-violet-500 text-white px-6 py-3 font-semibold transition-all duration-200 active:scale-[0.98]"',
+          '          >',
+          '            Try Again',
+          '          </button>',
+          '          <a',
+          '            href="/"',
+          '            className="inline-flex items-center justify-center rounded-lg border border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/50 text-zinc-200 px-6 py-3 font-semibold transition-all duration-200 active:scale-[0.98]"',
+          '          >',
+          '            Go home',
+          '          </a>',
+          '        </div>',
+          '      </div>',
+          '    </div>',
+          '  );',
+          '}',
+          '',
+        ].join('\n'),
       },
       {
         path: 'src/app/not-found.tsx',
-        content: `export default function NotFound() {
-  return (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="text-center max-w-md mx-auto px-4">
-        <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto mb-6">
-          <span className="text-2xl font-bold text-slate-400">404</span>
-        </div>
-        <h2 className="text-2xl font-bold text-white mb-3">Page not found</h2>
-        <p className="text-slate-400 mb-8 leading-relaxed">
-          The page you are looking for does not exist or has been moved.
-        </p>
-        <a
-          href="/"
-          className="inline-flex items-center rounded-lg bg-white text-slate-900 px-6 py-3 font-semibold hover:bg-slate-100 transition-colors"
-        >
-          Go home
-        </a>
-      </div>
-    </div>
-  );
-}
-`,
+        content: [
+          "import Link from 'next/link';",
+          '',
+          'export default function NotFound() {',
+          '  return (',
+          '    <div className="min-h-[60vh] flex items-center justify-center animate-fade-in">',
+          '      <div className="text-center max-w-md mx-auto px-4">',
+          '        <div className="w-20 h-20 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center mx-auto mb-6">',
+          '          <span className="text-3xl font-bold text-zinc-400">404</span>',
+          '        </div>',
+          '        <h1 className="text-2xl font-bold text-zinc-100 mb-3">Page not found</h1>',
+          '        <p className="text-zinc-400 mb-8 leading-relaxed">',
+          '          The page you are looking for does not exist or has been moved.',
+          '        </p>',
+          '        <div className="flex flex-col sm:flex-row gap-3 justify-center">',
+          '          <Link',
+          '            href="/"',
+          '            className="inline-flex items-center justify-center rounded-lg bg-violet-600 hover:bg-violet-500 text-white px-6 py-3 font-semibold transition-all duration-200 active:scale-[0.98]"',
+          '          >',
+          '            Go home',
+          '          </Link>',
+          '          <Link',
+          '            href="/dashboard"',
+          '            className="inline-flex items-center justify-center rounded-lg border border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/50 text-zinc-200 px-6 py-3 font-semibold transition-all duration-200 active:scale-[0.98]"',
+          '          >',
+          '            Dashboard',
+          '          </Link>',
+          '        </div>',
+          '      </div>',
+          '    </div>',
+          '  );',
+          '}',
+          '',
+        ].join('\n'),
       },
       {
         path: 'src/app/dashboard/page.tsx',
@@ -1748,6 +1791,151 @@ export async function POST(req: Request) {
 
 export async function GET() {
   return NextResponse.json({ data: { status: 'analyze service ready' } });
+}
+`,
+      },
+      {
+        path: 'robots.txt',
+        content: ['User-agent: *', 'Allow: /', '', `Sitemap: ${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://example.com'}/sitemap.xml`, ''].join('\n'),
+      },
+      {
+        path: 'sitemap.xml',
+        content: `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://example.com'}/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://example.com'}/dashboard</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>
+`,
+      },
+      {
+        path: 'src/app/manifest.ts',
+        content: `import type { MetadataRoute } from 'next';
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: '${escapeJsStringLiteral(jsTitle)}',
+    short_name: '${escapeJsStringLiteral(jsTitle)}',
+    description: '${escapeJsStringLiteral(tagline)}',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#0a0a0f',
+    theme_color: '#8b5cf6',
+    icons: [
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+  };
+}
+`,
+      },
+      {
+        path: 'src/app/apple-icon.tsx',
+        content: `import { ImageResponse } from 'next/og';
+
+export const size = { width: 180, height: 180 };
+export const contentType = 'image/png';
+
+export default function AppleIcon() {
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#8b5cf6',
+          borderRadius: '20%',
+          fontSize: '96px',
+          fontWeight: 'bold',
+          color: 'white',
+        }}
+      >
+        ${jsTitle.charAt(0)}
+      </div>
+    ),
+    { ...size }
+  );
+}
+`,
+      },
+      {
+        path: 'src/app/opengraph-image.tsx',
+        content: `import { ImageResponse } from 'next/og';
+
+export const size = { width: 1200, height: 630 };
+export const contentType = 'image/png';
+
+export default function OpenGraphImage() {
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%)',
+          color: 'white',
+          padding: '60px',
+        }}
+      >
+        <div style={{ fontSize: '80px', fontWeight: 'bold', marginBottom: '20px' }}>
+          ${jsTitle.charAt(0)}
+        </div>
+        <div style={{ fontSize: '48px', fontWeight: 'bold', textAlign: 'center' }}>
+          ${jsTitle}
+        </div>
+        <div style={{ fontSize: '24px', color: '#a1a1aa', marginTop: '16px', textAlign: 'center', maxWidth: '800px' }}>
+          ${tagline.slice(0, 100)}
+        </div>
+      </div>
+    ),
+    { ...size }
+  );
+}
+`,
+      },
+      {
+        path: 'src/app/icon.tsx',
+        content: `import { ImageResponse } from 'next/og';
+
+export const size = { width: 32, height: 32 };
+export const contentType = 'image/png';
+
+export default function Icon() {
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#8b5cf6',
+          borderRadius: '20%',
+          fontSize: '20px',
+          fontWeight: 'bold',
+          color: 'white',
+        }}
+      >
+        ${jsTitle.charAt(0)}
+      </div>
+    ),
+    { ...size }
+  );
 }
 `,
       },
