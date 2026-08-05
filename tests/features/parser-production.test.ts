@@ -212,9 +212,9 @@ describe('Parser Learning', () => {
 
     const records = getRecentRecords(1);
     expect(records.length).toBe(1);
-    expect(records[0].url).toContain('devpost.com');
-    expect(records[0].confidence).toBeGreaterThan(0);
-    expect(Array.isArray(records[0].extractedFields)).toBe(true);
+    expect(records[0]!.url).toContain('devpost.com');
+    expect(records[0]!.confidence).toBeGreaterThan(0);
+    expect(Array.isArray(records[0]!.extractedFields)).toBe(true);
   });
 
   it('records failures', () => {

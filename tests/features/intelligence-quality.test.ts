@@ -175,10 +175,10 @@ describe('Intelligence: Judging Intelligence', () => {
     const result = analyzeJudgingIntelligence(spec, sections);
 
     expect(result.likelyWinningStrategies.length).toBeGreaterThan(0);
-    expect(result.likelyWinningStrategies[0].name).toBeTruthy();
-    expect(result.likelyWinningStrategies[0].rationale).toBeTruthy();
-    expect(result.likelyWinningStrategies[0].difficulty).toBeGreaterThanOrEqual(1);
-    expect(result.likelyWinningStrategies[0].difficulty).toBeLessThanOrEqual(10);
+    expect(result.likelyWinningStrategies[0]!.name).toBeTruthy();
+    expect(result.likelyWinningStrategies[0]!.rationale).toBeTruthy();
+    expect(result.likelyWinningStrategies[0]!.difficulty).toBeGreaterThanOrEqual(1);
+    expect(result.likelyWinningStrategies[0]!.difficulty).toBeLessThanOrEqual(10);
   });
 
   it('scores technical depth from content signals', () => {
@@ -229,8 +229,8 @@ describe('Intelligence: Sponsor Intelligence', () => {
 
     expect(result.sponsorsByValue.length).toBe(3);
     // OpenAI should be highest (AI category = 9)
-    expect(result.sponsorsByValue[0].sponsorName).toBe('OpenAI');
-    expect(result.sponsorsByValue[0].strategicValue).toBeGreaterThanOrEqual(result.sponsorsByValue[1].strategicValue);
+    expect(result.sponsorsByValue[0]!.sponsorName).toBe('OpenAI');
+    expect(result.sponsorsByValue[0]!.strategicValue).toBeGreaterThanOrEqual(result.sponsorsByValue[1]!.strategicValue);
   });
 
   it('identifies required sponsors', () => {
@@ -254,8 +254,8 @@ describe('Intelligence: Sponsor Intelligence', () => {
 
     // AI + Hosting synergy (OpenAI + AWS)
     expect(result.synergyOpportunities.length).toBeGreaterThan(0);
-    expect(result.synergyOpportunities[0].sponsors.length).toBe(2);
-    expect(result.synergyOpportunities[0].combinedValue).toBeGreaterThan(0);
+    expect(result.synergyOpportunities[0]!.sponsors.length).toBe(2);
+    expect(result.synergyOpportunities[0]!.combinedValue).toBeGreaterThan(0);
   });
 
   it('generates overall sponsor strategy', () => {
@@ -306,9 +306,9 @@ describe('Intelligence: Opportunity Analysis', () => {
     const result = analyzeOpportunity(spec, sections);
 
     expect(result.riskyDirections.length).toBeGreaterThan(0);
-    expect(result.riskyDirections[0].riskLevel).toBeGreaterThanOrEqual(1);
-    expect(result.riskyDirections[0].riskLevel).toBeLessThanOrEqual(10);
-    expect(result.riskyDirections[0].failureModes.length).toBeGreaterThan(0);
+    expect(result.riskyDirections[0]!.riskLevel).toBeGreaterThanOrEqual(1);
+    expect(result.riskyDirections[0]!.riskLevel).toBeLessThanOrEqual(10);
+    expect(result.riskyDirections[0]!.failureModes.length).toBeGreaterThan(0);
   });
 
   it('finds strongest direction aligned with themes', () => {
