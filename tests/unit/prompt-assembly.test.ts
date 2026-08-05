@@ -227,7 +227,7 @@ describe('assembleGenerationPrompt — fallback path (no strategy block)', () =>
     expect(p).toContain('REQUIRED TECHNOLOGIES');
     expect(p).toContain('Task: Generate the landing page');
     expect(p).toContain('Focus on: Build the dashboard');
-    expect(p).toContain('You are shipping a production-quality MVP.');
+    expect(p).toContain('Write like a human, not a marketing bot.');
     // Differentiators stay out of Constraints, theme duplication stays out.
     const constraintsLine = a.sections.find(s => s.id === 'constraints')!.content;
     expect(constraintsLine).not.toContain('Differentiator');
@@ -268,7 +268,7 @@ describe('assembleGenerationPrompt — determinism and snapshot', () => {
       'For package.json use these exact versions: next@^14.2.0, react@^18.3.1',
       'Task: Generate the landing page',
       'Focus on: Hero section',
-      'You are shipping a production-quality MVP. Think about the entire repository before writing files. Every component must be reusable, typed, responsive, and accessible. Generate complete implementations — not placeholders. One polished workflow with production code beats five half-finished screens.',
+      'Write like a human, not a marketing bot. No "AI-powered", "cutting-edge", "modern and scalable", "seamless", "robust", "innovative", or "hackathon project". Name variables and components by what they DO (fetchDiagnoses, IssueCard, isLoading) not what they ARE (data, result, Component). README must sound like a real project — first line explains what the app does, Quick Start has exact commands.',
     ].join('\n'));
   });
 

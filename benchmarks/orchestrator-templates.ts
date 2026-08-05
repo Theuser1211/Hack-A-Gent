@@ -61,6 +61,35 @@ NEVER generate these anti-patterns:
 - Identical component structures across projects
 
 ═══════════════════════════════════════════════════════════════════
+LANGUAGE & NAMING — WRITE LIKE A HUMAN, NOT A MARKETING BOT
+═══════════════════════════════════════════════════════════════════
+
+BANNED PHRASES — never use these in code, comments, UI labels, or README:
+- "AI-powered", "cutting-edge", "next-generation", "game-changing"
+- "modern and scalable", "seamless integration", "robust solution"
+- "leveraging", "utilizing", "harnessing", "empowering"
+- "innovative", "revolutionary", "transformative", "state-of-the-art"
+- "Lorem ipsum", "placeholder", "TODO", "coming soon"
+- "Built for hackathon", "hackathon project", "hackathon submission"
+- "Welcome", "Get Started", "Learn More", "Dashboard" (as page titles)
+- "Beautiful", "powerful", "intuitive", "user-friendly" (as self-descriptions)
+
+VARIABLE & COMPONENT NAMES must describe WHAT they do, not WHAT they are:
+- Bad: \`data\`, \`result\`, \`item\`, \`component\`, \`wrapper\`, \`helper\`
+- Good: \`diagnosedIssues\`, \`uploadProgress\`, \`FilterPanel\`, \`IssueCard\`, \`formatFileSize\`
+- Component names: PascalCase, noun-based (\`IssueCard\`, \`FilterBar\`, \`AnalysisResult\`)
+- Functions: verb-based (\`fetchDiagnoses\`, \`validateUpload\`, \`formatTimestamp\`)
+- Boolean variables: prefix with \`is\`, \`has\`, \`should\` (\`isLoading\`, \`hasError\`, \`shouldRetry\`)
+
+README must sound like a real project README, not a marketing page:
+- First line: what the app does in one sentence (no buzzwords)
+- "Quick Start" section with exact commands: \`npm install\`, \`npm run dev\`, open browser
+- "How it works" section describing the 3-5 step workflow with specific domain vocabulary
+- "Tech stack" section listing the actual frameworks and libraries used
+- No "About Us", no "Team", no "Built with ❤️" sections
+- No self-congratulatory language ("best", "amazing", "incredible")
+
+═══════════════════════════════════════════════════════════════════
 PRODUCTION QUALITY REQUIREMENTS
 ═══════════════════════════════════════════════════════════════════
 
@@ -231,7 +260,7 @@ One fully working page with production-quality code beats 5 half-finished ones.
 // At module scope that identifier is unavailable, so the placeholder `{specificTask}`
 // is used here and substituted at the (single) call site, preserving exact runtime output.
 export const LLM_TASK_DESCRIPTIONS: Record<string, string> = {
-  scaffold: `Generate the full hackathon project. Include: package.json, tsconfig.json, tailwind.config.js, postcss.config.js, .gitignore, src/app/globals.css, src/app/layout.tsx, src/app/page.tsx, src/app/loading.tsx, src/app/error.tsx, src/lib/types.ts, src/config.ts, README.md.
+  scaffold: `Generate the complete project scaffold. Include: package.json, tsconfig.json, tailwind.config.js, postcss.config.js, .gitignore, src/app/globals.css, src/app/layout.tsx, src/app/page.tsx, src/app/loading.tsx, src/app/error.tsx, src/lib/types.ts, src/config.ts, README.md.
 
 BUILD THE APPLICATION DEFINED BY THE STRATEGY BLOCK — not a generic landing page.
 The STRATEGY block contains: Key screens, Feature priority, MVP scope, API surfaces, and UI direction.
@@ -245,6 +274,14 @@ MANDATORY WORKFLOW ARCHITECTURE:
 - src/lib/types.ts MUST define all shared TypeScript interfaces (API responses, component props, data models).
 - src/config.ts MUST define app configuration (name, description, theme) — NOT secrets.
 
+NAMING RULES:
+- Components: PascalCase nouns describing WHAT they show (\`IssueCard\`, \`FilterBar\`, \`AnalysisResult\`)
+- Functions: verb-based describing WHAT they do (\`fetchDiagnoses\`, \`validateUpload\`, \`formatTimestamp\`)
+- Variables: descriptive names, not generic (\`diagnosedIssues\` not \`data\`, \`uploadProgress\` not \`result\`)
+- Booleans: prefix with is/has/should (\`isLoading\`, \`hasError\`, \`shouldRetry\`)
+- File names: PascalCase for components (\`IssueCard.tsx\`), camelCase for utils (\`formatTimestamp.ts\`)
+- Every name must tell the reader what the code does without reading the implementation
+
 FORBIDDEN:
 - Generic SaaS dashboard layout (sidebar + cards + tables + "Dashboard" header). If you generate this, you have failed.
 - Landing-page hero + features + CTA as the main page.tsx. The main page.tsx IS the workflow.
@@ -253,6 +290,7 @@ FORBIDDEN:
 - Dead buttons or links that do nothing.
 - Inline styles — use Tailwind CSS utility classes only.
 - Components larger than 150 lines — extract sub-components.
+- Banned phrases: "AI-powered", "cutting-edge", "modern and scalable", "seamless", "robust", "innovative", "leveraging", "utilizing", "hackathon project"
 
 page.tsx REQUIREMENTS:
 - page.tsx is the WORKFLOW PAGE, not a marketing landing page.
@@ -268,6 +306,14 @@ COMPONENT REQUIREMENTS:
 - Use discriminated unions for state: { status: 'idle' } | { status: 'loading' } | { status: 'error'; error: string } | { status: 'success'; data: T }.
 - Every interactive element must have an aria-label.
 - Use semantic HTML: <nav>, <main>, <section>, <article>.
+
+README REQUIREMENTS:
+- First line: what the app does in one sentence (no buzzwords).
+- "Quick Start" section with exact commands: npm install, npm run dev, open browser.
+- "How it works" section describing the workflow steps with domain-specific vocabulary.
+- "Tech stack" section listing actual frameworks and libraries.
+- NO "About Us", "Team", "Built with ❤️", or self-congratulatory language.
+- Sound like a real project README, not a marketing page.
 
 COLOR PALETTE (adapt to domain from STRATEGY block):
 - AI/ML: Deep purples (#7c3aed) + electric blue (#3b82f6) on dark (#0f172a)
@@ -288,7 +334,10 @@ COLOR PALETTE (adapt to domain from STRATEGY block):
 - Responsive: mobile-first with sm:/md: breakpoints. No horizontal overflow.
 - Vary the component structure — do not generate the same pattern every time.
 - Extract sub-components if the file exceeds 150 lines.
-- Define TypeScript interfaces for all props — no inline prop types.`,
+- Define TypeScript interfaces for all props — no inline prop types.
+- Name components by WHAT they show (IssueCard, FilterBar) not WHAT they are (Card, Wrapper).
+- Name functions by WHAT they do (fetchDiagnoses, validateUpload) not generic (getData, handleAction).
+- Never use: "AI-powered", "cutting-edge", "modern", "seamless", "robust", "innovative", "leveraging".`,
   backend: `Generate API route for: {specificTask}. ONE file per route. Use Next.js App Router API routes. Requirements:
 - Validate input at the boundary (check required fields, types, ranges).
 - Return structured JSON responses with consistent shape: { data?: T, error?: { message: string, code: string } }.

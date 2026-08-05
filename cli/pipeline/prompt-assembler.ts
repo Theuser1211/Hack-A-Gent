@@ -98,7 +98,7 @@ export const GENERATION_CONTEXT_WINDOW = 32_000;
 export const GENERATION_INPUT_BUDGET_RATIO = 0.6;
 
 export const GENERATION_CALLOUT =
-  'You are shipping a production-quality MVP. Think about the entire repository before writing files. Every component must be reusable, typed, responsive, and accessible. Generate complete implementations — not placeholders. One polished workflow with production code beats five half-finished screens.';
+  'Write like a human, not a marketing bot. No "AI-powered", "cutting-edge", "modern and scalable", "seamless", "robust", "innovative", or "hackathon project". Name variables and components by what they DO (fetchDiagnoses, IssueCard, isLoading) not what they ARE (data, result, Component). README must sound like a real project — first line explains what the app does, Quick Start has exact commands.';
 
 /** Standard heuristic (~4 chars per token). Used for diagnostics only. */
 export function estimateTokens(text: string): number {
