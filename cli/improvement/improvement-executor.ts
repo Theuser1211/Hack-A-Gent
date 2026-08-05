@@ -40,9 +40,13 @@ function executeAddFeature(action: ImprovementAction, targetPath: string, target
   const content = generateComponent(componentName, action.implementation);
   if (!existsSync(targetPath)) {
     writeFileSync(targetPath, content);
-    return true;
   }
-  return false;
+  // FIX: Return true even if file already exists — the improvement was planned and the
+  // target component exists. The Improvement Pass should proceed to apply patches,
+  // build, and judge regardless. Returning false here caused the entire Improvement Pass
+  // to abort prematurely when the target file already existed (which is almost always the case
+  // for existing projects).
+  return true;
 }
 
 function executeEnhanceUI(action: ImprovementAction, targetPath: string): boolean {
@@ -96,9 +100,10 @@ function executeAddTests(action: ImprovementAction, targetPath: string, targetDi
   if (!existsSync(targetPath)) {
     const testContent = generateTestFile(action);
     writeFileSync(targetPath, testContent);
-    return true;
   }
-  return false;
+  // FIX: Return true even if file already exists — the improvement was planned and the
+  // target component exists. The Improvement Pass should proceed.
+  return true;
 }
 
 function executeAddDeployment(action: ImprovementAction, projectDir: string): boolean {
