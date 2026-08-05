@@ -17,7 +17,8 @@ import type { CompetitionAnalysis } from '../../cli/pipeline/types.js';
 import { criterionFocus } from '../../cli/product-intelligence/judging.js';
 import { runProductIntelligence } from '../../cli/product-intelligence/orchestrator.js';
 
-function h(over: Partial<CompetitionAnalysis>): CompetitionAnalysis {
+function h(over: Omit<Partial<CompetitionAnalysis>, 'challenge'> & { challenge?: Partial<CompetitionAnalysis['challenge']> }): CompetitionAnalysis {
+  const { challenge: overChallenge, ...rest } = over;
   return {
     analysisId: 'regression',
     challenge: {
@@ -27,6 +28,7 @@ function h(over: Partial<CompetitionAnalysis>): CompetitionAnalysis {
       difficulty: 'intermediate',
       estimatedParticipants: 200,
       organizer: 'RegressionOrg',
+      ...overChallenge,
     },
     judgingCriteria: [
       { name: 'Innovation', weight: 40, weightRaw: '40%', description: 'Originality', priority: 'critical' },
@@ -37,7 +39,7 @@ function h(over: Partial<CompetitionAnalysis>): CompetitionAnalysis {
     deliverables: [],
     restrictions: [],
     deadlines: [],
-    ...over,
+    ...rest,
   };
 }
 

@@ -180,7 +180,7 @@ function detectSponsors(html: string): SponsorAPI[] {
       seen.add(name.toLowerCase());
       found.push({
         name,
-        category: 'custom',
+        category: 'other',
         mustUse: false,
         strategicValue: 1,
         notes: '',

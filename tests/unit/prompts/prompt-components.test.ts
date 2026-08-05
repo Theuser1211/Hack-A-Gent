@@ -123,6 +123,7 @@ function makeCodeGenCtx(): CodeGenContext {
       { phase: 'Scaffold', tasks: ['Init'], estimatedMinutes: 15 },
     ],
     sponsorApis: ['OpenAI', 'Vercel'],
+    differentiators: makeStrategy().differentiators,
     judgingCriteria: [
       { name: 'Innovation', weight: 40 },
       { name: 'Technical Depth', weight: 30 },
