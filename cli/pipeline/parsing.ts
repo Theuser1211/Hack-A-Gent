@@ -36,7 +36,7 @@ export async function parseDevpostUrl(url: string): Promise<DevpostParseResult> 
     throw new Error(`Failed to fetch Devpost URL: ${response.status} ${response.statusText}`);
   }
 
-  const html = await response.text();
+  const html = stripNoise(await response.text());
 
   // --- Extract title (confirmed if found in meta tags) ---
   const rawTitle =
@@ -298,4 +298,44 @@ function stripHtml(text: string): string {
     .replace(/&#x27;/g, "'")
     .replace(/&#39;/g, "'")
     .replace(/&nbsp;/g, ' ');
+}
+
+/**
+ * Strip website noise from HTML before challenge extraction.
+ * Removes navigation, login forms, footer, cookie banners, accessibility
+ * skip links, and generic site chrome that should never become challenge
+ * goals, demo talking points, strategy, or project descriptions.
+ */
+function stripNoise(html: string): string {
+  let clean = html;
+
+  // 1. Remove structural noise elements (nav, footer, header site chrome)
+  clean = clean.replace(/<nav\b[^>]*>[\s\S]*?<\/nav>/gi, '');
+  clean = clean.replace(/<footer\b[^>]*>[\s\S]*?<\/footer>/gi, '');
+  clean = clean.replace(/<header\b[^>]*>[\s\S]*?<\/header>/gi, '');
+
+  // 2. Remove cookie consent banners (common patterns)
+  clean = clean.replace(/<div\b[^>]*class=["'][^"']*cookie[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '');
+  clean = clean.replace(/<div\b[^>]*id=["'][^"']*cookie[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '');
+  clean = clean.replace(/<div\b[^>]*class=["'][^"']*consent[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '');
+
+  // 3. Remove login/sign-in/register elements
+  clean = clean.replace(/<a\b[^>]*href=["'][^"']*sign[\s-]*in[^"']*["'][^>]*>[\s\S]*?<\/a>/gi, '');
+  clean = clean.replace(/<a\b[^>]*href=["'][^"']*login[^"']*["'][^>]*>[\s\S]*?<\/a>/gi, '');
+  clean = clean.replace(/<a\b[^>]*href=["'][^"']*register[^"']*["'][^>]*>[\s\S]*?<\/a>/gi, '');
+  clean = clean.replace(/<button\b[^>]*>[\s\S]*(?:sign[\s-]*in|log[\s-]*in|register)[\s\S]*?<\/button>/gi, '');
+
+  // 4. Remove accessibility skip links
+  clean = clean.replace(/<a\b[^>]*class=["'][^"']*skip[^"']*["'][^>]*>[\s\S]*?<\/a>/gi, '');
+  clean = clean.replace(/<a\b[^>]*href=["'][^"']*#main[^"']*["'][^>]*>[\s\S]*?<\/a>/gi, '');
+
+  // 5. Remove sidebar navigation / breadcrumbs
+  clean = clean.replace(/<div\b[^>]*class=["'][^"']*sidebar[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '');
+  clean = clean.replace(/<ol\b[^>]*class=["'][^"']*breadcrumb[^"']*["'][^>]*>[\s\S]*?<\/ol>/gi, '');
+
+  // 6. Remove Devpost-specific noise (hackathon listing navigation, filter bars)
+  clean = clean.replace(/<div\b[^>]*class=["'][^"']*filter[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '');
+  clean = clean.replace(/<div\b[^>]*class=["'][^"']*toolbar[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, '');
+
+  return clean;
 }

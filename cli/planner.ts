@@ -284,31 +284,57 @@ export class HackathonPlanner {
   private buildTimeline(): string[] {
     const { ctx } = this;
     const h = ctx.hoursRemaining;
+    const solo = ctx.teamSize <= 1;
     const t: string[] = [];
 
+    const fmt = (mins: number): string => {
+      const hr = Math.floor(mins / 60);
+      const mn = mins % 60;
+      return hr > 0 ? `${hr}h${mn > 0 ? ` ${mn}m` : ''}` : `${mn}m`;
+    };
+
     if (h <= 1) {
-      t.push('0:00-0:05: Scaffold + deploy skeleton. Get a URL working immediately.');
-      t.push('0:05-0:35: Build one core feature. No tests, no polish, just working.');
-      t.push('0:35-0:50: Polish the demo. Ensure the flow is clear and the URL works.');
-      t.push('0:50-1:00: Submit. README, screenshots, submission form.');
+      const totalMins = Math.round(h * 60);
+      const setup = 5;
+      const build = Math.round(totalMins * 0.55);
+      const polish = Math.round(totalMins * 0.2);
+      const submit = totalMins - setup - build - polish;
+      t.push(`0m–${fmt(setup)}: Scaffold + deploy skeleton. Get a URL working immediately.`);
+      t.push(`${fmt(setup)}–${fmt(setup + build)}: Build one core feature. No tests, no polish, just working.`);
+      t.push(`${fmt(setup + build)}–${fmt(setup + build + polish)}: Polish the demo. Ensure the flow is clear.`);
+      t.push(`${fmt(setup + build + polish)}–${fmt(totalMins)}: Submit. README, screenshots, submission form.`);
     } else if (h <= 3) {
-      t.push('0:00-0:15: Scaffold + deploy skeleton + configure sponsor APIs.');
-      t.push('0:15-1:30: Build core feature. Resist adding a second feature until the first works end-to-end.');
-      t.push('1:30-2:00: Deploy, test flow, fix critical bugs.');
-      t.push('2:00-2:30: README, demo prep, sponsor verification.');
-      t.push('2:30-3:00: Final verification, screenshots, submit.');
+      const totalMins = Math.round(h * 60);
+      const setup = Math.round(totalMins * 0.08);
+      const build = Math.round(totalMins * 0.45);
+      const deploy = Math.round(totalMins * 0.17);
+      const submit = totalMins - setup - build - deploy;
+      t.push(`0m–${fmt(setup)}: Scaffold + deploy skeleton + configure sponsor APIs.`);
+      t.push(`${fmt(setup)}–${fmt(setup + build)}: Build core feature. Resist adding a second until the first works.`);
+      t.push(`${fmt(setup + build)}–${fmt(setup + build + deploy)}: Deploy, test flow, fix critical bugs.`);
+      t.push(`${fmt(setup + build + deploy)}–${fmt(totalMins)}: README, demo prep, sponsor verification, submit.`);
     } else if (h <= 8) {
-      t.push('0:00-0:30: Project setup, architecture choice, deploy skeleton.');
-      t.push('0:30-3:00: Build core features. Feature freeze at 5h mark (no new features after this).');
-      t.push('3:00-4:00: Sponsor API integration.');
-      t.push('4:00-5:30: UI polish, responsive design, demo flow.');
-      t.push('5:30-6:30: Deploy, browser test, fix deploy bugs.');
-      t.push('6:30-7:30: README, demo video/screenshots, submission form prep.');
-      t.push('7:30-8:00: Buffer for unexpected issues. Final submission.');
+      const totalMins = Math.round(h * 60);
+      const setup = Math.round(totalMins * 0.06);
+      const build = Math.round(totalMins * 0.4);
+      const sponsor = Math.round(totalMins * 0.14);
+      const polish = Math.round(totalMins * 0.14);
+      const deploy = Math.round(totalMins * 0.14);
+      const submit = totalMins - setup - build - sponsor - polish - deploy;
+      t.push(`0m–${fmt(setup)}: Project setup, architecture, deploy skeleton.`);
+      t.push(`${fmt(setup)}–${fmt(setup + build)}: Build core features. Feature freeze at 70% of total time.`);
+      t.push(`${fmt(setup + build)}–${fmt(setup + build + sponsor)}: Sponsor API integration.`);
+      t.push(`${fmt(setup + build + sponsor)}–${fmt(setup + build + sponsor + polish)}: UI polish, responsive design, demo flow.`);
+      t.push(`${fmt(setup + build + sponsor + polish)}–${fmt(setup + build + sponsor + polish + deploy)}: Deploy, browser test, fix deploy bugs.`);
+      t.push(`${fmt(setup + build + sponsor + polish + deploy)}–${fmt(totalMins)}: README, demo, submission prep. Final submission.`);
     } else {
-      t.push('Phase 1 (0-4h): Core MVP + deploy. Everything else depends on this existing.');
-      t.push('Phase 2 (4-8h): Feature expansion + sponsor APIs. Hard feature cutoff at 70% of total time.');
-      t.push('Phase 3 (8+): Polish, testing, demo prep, README. No new features.');
+      const p1 = Math.round(h * 0.33);
+      const p2 = Math.round(h * 0.33);
+      const p3 = h - p1 - p2;
+      const featureCount = solo ? 2 : 4;
+      t.push(`Phase 1 (0–${fmt(p1)}): Core MVP + deploy. ${solo ? 'Work sequentially.' : 'Split: frontend + backend in parallel.'}`);
+      t.push(`Phase 2 (${fmt(p1)}–${fmt(p1 + p2)}): Feature expansion (up to ${featureCount} features) + sponsor APIs. Hard cutoff at 70% of total time.`);
+      t.push(`Phase 3 (${fmt(p1 + p2)}–${fmt(h)}): Polish, testing, demo prep, README. No new features.`);
     }
 
     return t;

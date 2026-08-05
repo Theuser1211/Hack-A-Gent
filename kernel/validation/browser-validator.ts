@@ -221,6 +221,7 @@ export async function validateWithBrowser(
               result.success = result.http200 && result.hasContent && result.errors.length === 0;
 
               clearTimeout(timer);
+              req.destroy();
               killProcessTree(server);
               result.duration = Date.now() - startTime;
               resolve(result);
@@ -228,6 +229,7 @@ export async function validateWithBrowser(
           } else {
             result.errors.push(`HTTP ${res.statusCode}`);
             clearTimeout(timer);
+            req.destroy();
             killProcessTree(server);
             result.duration = Date.now() - startTime;
             resolve(result);

@@ -47,6 +47,7 @@ export function initializeProviders(config?: LLMConfig): ProviderInitializationR
   const rateLimitTracker = ProviderFactory.createRateLimitTracker();
   const tokenUsageTracker = ProviderFactory.createTokenUsageTracker();
 
+  const configuredProvider = llmConfig.provider;
   const providers: LLMProvider[] = [];
   const providerErrors: string[] = [];
   const registeredIds = new Set<string>();
@@ -59,7 +60,12 @@ export function initializeProviders(config?: LLMConfig): ProviderInitializationR
         apiKeyManager,
         rateLimitTracker,
         tokenUsageTracker,
-        llmConfig.baseUrl && providerId === 'nvidia' ? { baseUrls: { [providerId]: llmConfig.baseUrl } } : undefined,
+        // The configured provider owns the user's endpoint (NVIDIA NIMs, custom
+        // OpenAI-compatible servers, local models, etc.). Fallback providers keep
+        // their built-in defaults.
+        llmConfig.baseUrl && providerId === configuredProvider
+          ? { baseUrls: { [providerId]: llmConfig.baseUrl } }
+          : undefined,
       );
       providers.push(provider);
       registeredIds.add(providerId);
@@ -68,7 +74,13 @@ export function initializeProviders(config?: LLMConfig): ProviderInitializationR
     }
   };
 
-  for (const providerId of ['nvidia', 'openrouter']) tryRegister(providerId);
+  // The CONFIGURED provider is always registered first and drives routing — the
+  // RouterEngine never overrides it. The only automatic fallback is OpenRouter
+  // (a universal OpenAI-compatible aggregator). NVIDIA is registered ONLY when
+  // the user explicitly configured it, so generation can never silently fall
+  // back to NVIDIA behind the user's back.
+  tryRegister(configuredProvider);
+  if (configuredProvider !== 'openrouter') tryRegister('openrouter');
   // TODO(provider-routing): integrate Ollama after a dedicated provider adapter exists.
 
   if (providers.length === 0) {
@@ -77,7 +89,8 @@ export function initializeProviders(config?: LLMConfig): ProviderInitializationR
 
   const perfTracker = new ModelPerformanceTracker();
   const router = new RouterEngine(providers, {
-    configuredProvider: 'nvidia',
+    configuredProvider,
+    configuredModel: llmConfig.model,
     perfTracker,
   });
 

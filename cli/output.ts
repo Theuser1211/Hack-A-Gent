@@ -137,13 +137,15 @@ export function aiUnavailable(params: {
   help: string[];
 }): void {
   logRaw('');
-  warn('AI generation unavailable');
-  log(`  Reason: ${params.reason}`);
-  log(`  Fallback: ${params.fallback}`);
+  warn('AI provider unavailable. Switching to production template generation.');
+  debug(`  Reason: ${params.reason}`);
+  debug(`  Fallback: ${params.fallback}`);
   log('');
-  log('  Need help?');
-  for (const h of params.help) {
-    log(`    ${color(h, 'cyan')}`);
+  if (verboseMode) {
+    log('  Need help?');
+    for (const h of params.help) {
+      log(`    ${color(h, 'cyan')}`);
+    }
   }
   logRaw('');
 }

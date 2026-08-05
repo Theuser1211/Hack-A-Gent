@@ -193,8 +193,8 @@ function inferTechStack(text: string): string[] {
 export function determineMissingInfo(ctx: HackathonContext): Array<{ key: string; question: string; defaultAnswer?: string }> {
   const questions: Array<{ key: string; question: string; defaultAnswer?: string }> = [];
 
-  // Preferred stack? (only if no stack detected)
-  if (!ctx.stackDetected) {
+  // Preferred stack? (only if no stack detected AND no preferred stack already known)
+  if (!ctx.stackDetected && ctx.preferredStack.length === 0) {
     questions.push({ key: 'preferredStack', question: 'Preferred stack (optional): ' });
   }
 

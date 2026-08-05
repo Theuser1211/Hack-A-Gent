@@ -10,8 +10,15 @@ const SPONSOR_CONFIDENCE_THRESHOLD: import('../confidence.js').ConfidenceLevel =
 export function generateQuestions(analysis: CompetitionAnalysis): InterviewQuestion[] {
   const questions: InterviewQuestion[] = [];
 
-  questions.push(createTeamSizeQuestion(analysis));
-  questions.push(createHoursRemainingQuestion(analysis));
+  const teamSizeQuestion = createTeamSizeQuestion(analysis);
+  if (teamSizeQuestion) {
+    questions.push(teamSizeQuestion);
+  }
+
+  const hoursQuestion = createHoursRemainingQuestion(analysis);
+  if (hoursQuestion) {
+    questions.push(hoursQuestion);
+  }
 
   const sponsorQuestion = createSponsorQuestion(analysis);
   if (sponsorQuestion) {
@@ -53,8 +60,13 @@ function createSponsorQuestion(analysis: CompetitionAnalysis): InterviewQuestion
   };
 }
 
-function createTeamSizeQuestion(analysis: CompetitionAnalysis): InterviewQuestion {
+function createTeamSizeQuestion(analysis: CompetitionAnalysis): InterviewQuestion | null {
   const inferredTeamSize = inferTeamSize(analysis);
+  const text = analysis.challenge.problemStatement || '';
+  const hasInferred = /\d+\s*(?:person|member|people)\s*(?:team|group)/i.test(text);
+  if (hasInferred) {
+    return null;
+  }
 
   return {
     id: 'q_team_size',
@@ -69,8 +81,13 @@ function createTeamSizeQuestion(analysis: CompetitionAnalysis): InterviewQuestio
   };
 }
 
-function createHoursRemainingQuestion(analysis: CompetitionAnalysis): InterviewQuestion {
+function createHoursRemainingQuestion(analysis: CompetitionAnalysis): InterviewQuestion | null {
   const inferredHours = inferHoursRemaining(analysis);
+  const hasDeadline = analysis.deadlines && analysis.deadlines.length > 0 &&
+    analysis.deadlines.some(d => d.type === 'submission');
+  if (hasDeadline) {
+    return null;
+  }
 
   return {
     id: 'q_hours_remaining',

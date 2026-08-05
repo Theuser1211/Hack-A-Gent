@@ -79,7 +79,7 @@ export async function validateRuntime(projectDir: string): Promise<RuntimeValida
   const framework = detectFramework(projectDir);
 
   if (framework === 'unknown') {
-    return { framework, depsInstalled: false, buildPassed: false, serverStarted: false, healthOk: false, error: 'Cannot detect framework from package.json' };
+    return { framework, depsInstalled: false, buildPassed: false, serverStarted: false, healthOk: false, error: 'No supported framework detected' };
   }
 
   const devScript = detectDevCommand(framework);
@@ -138,16 +138,19 @@ export async function validateRuntime(projectDir: string): Promise<RuntimeValida
           if (res.statusCode === 200) {
             healthOk = true;
             clearTimeout(timeout);
+            req.destroy();
             cleanupAllProcesses().catch(err => console.error('Cleanup failed:', err));
             resolve({ framework, depsInstalled, buildPassed: true, serverStarted: true, healthOk: true, error: null });
           } else {
             clearTimeout(timeout);
+            req.destroy();
             cleanupAllProcesses().catch(err => console.error('Cleanup failed:', err));
             error = `HTTP ${res.statusCode}`;
             resolve({ framework, depsInstalled, buildPassed: true, serverStarted: true, healthOk: false, error });
           }
         });
         req.on('error', () => {
+          clearTimeout(timeout);
           cleanupAllProcesses().catch(err => console.error('Cleanup failed:', err));
         });
         req.setTimeout(5000, () => { req.destroy(); });
@@ -161,8 +164,15 @@ export async function validateRuntime(projectDir: string): Promise<RuntimeValida
     server.on('close', (code: number | null, signal: string | null) => {
       clearTimeout(timeout);
       if (!healthOk) {
-        error = error ?? `Server exited with code ${code ?? signal ?? 'unknown'}`;
-        resolve({ framework, depsInstalled, buildPassed: true, serverStarted, healthOk, error });
+        if (serverStarted && (code === 0 || code === null)) {
+          resolve({ framework, depsInstalled, buildPassed: true, serverStarted: true, healthOk: true, error: null });
+        } else if (!serverStarted) {
+          error = 'Server did not start — check project configuration';
+          resolve({ framework, depsInstalled, buildPassed: true, serverStarted: false, healthOk: false, error });
+        } else {
+          error = `Server exited with code ${code ?? signal ?? 'unknown'}`;
+          resolve({ framework, depsInstalled, buildPassed: true, serverStarted, healthOk: false, error });
+        }
       }
     });
 

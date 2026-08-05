@@ -193,5 +193,6 @@ export class ModelPerformanceTracker {
       saveStore(this.store);
       this.saveTimer = null;
     }, SAVE_DEBOUNCE_MS);
+    this.saveTimer.unref();
   }
 }

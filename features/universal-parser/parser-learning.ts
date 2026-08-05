@@ -175,7 +175,7 @@ function saveToDisk(): void {
   if (diskSaveQueued || !persistenceEnabled) return;
   diskSaveQueued = true;
   // Debounce saves to avoid excessive I/O
-  setTimeout(() => {
+  const timer = setTimeout(() => {
     try {
       ensureDataDir();
       const data = {
@@ -189,6 +189,7 @@ function saveToDisk(): void {
     }
     diskSaveQueued = false;
   }, 100);
+  timer.unref();
 }
 
 // ─── Recording Functions ───────────────────────────────────────────

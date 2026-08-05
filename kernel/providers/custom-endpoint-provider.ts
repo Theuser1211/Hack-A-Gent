@@ -109,6 +109,15 @@ export class CustomEndpointProvider implements LLMProvider {
     return this.models;
   }
 
+  /**
+   * Ensure model discovery has completed before the router selects a model.
+   * The RouterEngine awaits this before issuing any request, so a custom
+   * endpoint's real models are used instead of the bundled defaults.
+   */
+  async prepare(): Promise<void> {
+    await this.discoverModels();
+  }
+
   private async discoverModels(): Promise<void> {
     if (this.modelsDiscovered) return;
     try {
@@ -128,7 +137,7 @@ export class CustomEndpointProvider implements LLMProvider {
               ({
                 model_id: m.id,
                 provider: this.providerId as 'nvidia' | 'custom',
-                capabilities: ['code_generation', 'reasoning'] as string[],
+                capabilities: ['code_generation', 'reasoning', 'json_output', 'streaming'] as string[],
                 context_window: 128000,
                 supports_json_mode: true,
                 supports_tool_calling: false,
