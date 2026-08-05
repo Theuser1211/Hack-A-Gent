@@ -6,6 +6,8 @@
  * All downstream consumers (pipeline, generation, evaluation) depend on this.
  */
 
+import type { RouterEngine } from '../../kernel/llm/router-engine.js';
+
 export interface HackathonSpec {
   /** Unique identifier for this parse */
   parseId: string;
@@ -253,6 +255,8 @@ export interface Prize {
   tier: 'grand' | 'first' | 'second' | 'third' | 'track' | 'special' | 'non-cash' | 'unknown';
   /** Sponsor name if associated */
   sponsor?: string;
+  /** Track name if the prize is track-specific */
+  track?: string;
   /** Raw text for debugging */
   rawText: string;
 }
@@ -570,7 +574,7 @@ export interface ExtractionMeta {
 /** Options for the universal parser */
 export interface UniversalParserOptions {
   /** Optional RouterEngine for AI normalization */
-  router?: { execute: (taskType: string, request: unknown) => Promise<unknown> };
+  router?: RouterEngine;
   /** Seed for deterministic behavior */
   seed?: number;
   /** Force platform detection (skip auto-detect) */

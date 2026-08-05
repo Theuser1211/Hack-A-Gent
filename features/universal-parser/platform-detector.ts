@@ -168,6 +168,8 @@ export interface DetectionResult {
   contentSignals: SignalMatch[];
   negativeSignals: SignalMatch[];
   warnings: string[];
+  /** Human-readable explanation of why this page was/wasn't classified as a hackathon. */
+  reasoning: string;
 }
 
 interface SignalMatch {
@@ -318,6 +320,9 @@ export function detectHackathon(html: string, url: string, minConfidence = 0.35)
     contentSignals: contentResult.signals.filter(s => s.weight > 0),
     negativeSignals: contentResult.signals.filter(s => s.weight < 0 && s.matched),
     warnings,
+    reasoning: warnings.join('; ') || (isHackathon
+      ? `Detected hackathon signals (combined confidence ${combinedConfidence.toFixed(2)})`
+      : 'Content does not match hackathon patterns'),
   };
 }
 

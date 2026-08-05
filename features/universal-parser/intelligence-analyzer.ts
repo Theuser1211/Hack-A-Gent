@@ -603,10 +603,10 @@ function detectSynergies(sponsors: SponsorAPI[]): SponsorSynergy[] {
 
   if (aiSponsors.length > 0 && hostingSponsors.length > 0) {
     synergies.push({
-      sponsors: [aiSponsors[0].name, hostingSponsors[0].name],
-      description: `Use ${aiSponsors[0].name} for AI capabilities and deploy on ${hostingSponsors[0].name} for a complete AI-powered solution`,
+      sponsors: [aiSponsors[0]!.name, hostingSponsors[0]!.name],
+      description: `Use ${aiSponsors[0]!.name} for AI capabilities and deploy on ${hostingSponsors[0]!.name} for a complete AI-powered solution`,
       combinedValue: 8,
-      exampleIdea: `Build an AI app powered by ${aiSponsors[0].name}, deployed and scalable on ${hostingSponsors[0].name}`,
+      exampleIdea: `Build an AI app powered by ${aiSponsors[0]!.name}, deployed and scalable on ${hostingSponsors[0]!.name}`,
     });
   }
 
@@ -614,10 +614,10 @@ function detectSynergies(sponsors: SponsorAPI[]): SponsorSynergy[] {
   const dataSponsors = sponsors.filter(s => s.category === 'data');
   if (dataSponsors.length > 0 && aiSponsors.length > 0) {
     synergies.push({
-      sponsors: [dataSponsors[0].name, aiSponsors[0].name],
-      description: `Use ${dataSponsors[0].name} datasets with ${aiSponsors[0].name} AI to build data-driven insights`,
+      sponsors: [dataSponsors[0]!.name, aiSponsors[0]!.name],
+      description: `Use ${dataSponsors[0]!.name} datasets with ${aiSponsors[0]!.name} AI to build data-driven insights`,
       combinedValue: 7,
-      exampleIdea: `Analyze ${dataSponsors[0].name} data using ${aiSponsors[0].name} to generate actionable insights`,
+      exampleIdea: `Analyze ${dataSponsors[0]!.name} data using ${aiSponsors[0]!.name} to generate actionable insights`,
     });
   }
 
@@ -626,10 +626,10 @@ function detectSynergies(sponsors: SponsorAPI[]): SponsorSynergy[] {
   const authSponsors = sponsors.filter(s => s.category === 'auth');
   if (commsSponsors.length > 0 && authSponsors.length > 0) {
     synergies.push({
-      sponsors: [commsSponsors[0].name, authSponsors[0].name],
-      description: `Use ${authSponsors[0].name} for authentication and ${commsSponsors[0].name} for real-time features`,
+      sponsors: [commsSponsors[0]!.name, authSponsors[0]!.name],
+      description: `Use ${authSponsors[0]!.name} for authentication and ${commsSponsors[0]!.name} for real-time features`,
       combinedValue: 6,
-      exampleIdea: `Build a collaborative tool with secure auth via ${authSponsors[0].name} and real-time sync via ${commsSponsors[0].name}`,
+      exampleIdea: `Build a collaborative tool with secure auth via ${authSponsors[0]!.name} and real-time sync via ${commsSponsors[0]!.name}`,
     });
   }
 
@@ -648,7 +648,7 @@ function generateSponsorStrategy(
   }
 
   if (rankings.length > 0) {
-    const topSponsor = rankings[0];
+    const topSponsor = rankings[0]!;
     parts.push(`Top strategic sponsor: ${topSponsor.sponsorName} (value ${topSponsor.strategicValue}/10)`);
   }
 
@@ -825,7 +825,7 @@ function determineEasiestPath(spec: HackathonSpec, themes: string[]): string {
     return 'Build a simple, working demo that demonstrates a clear idea';
   }
 
-  const top = sorted[0];
+  const top = sorted[0]!;
   if (top.name.toLowerCase().includes('innovation')) {
     return `Focus on a creative, novel approach to ${themes[0] || 'the problem'} — innovation is the top criterion`;
   }
@@ -855,15 +855,15 @@ function determineHighestRoiTrack(
     t.toLowerCase().includes('student') ||
     t.toLowerCase().includes('first-time')
   );
-  if (nicheTracks.length > 0) return nicheTracks[0];
+  if (nicheTracks.length > 0) return nicheTracks[0]!;
 
   // Prefer tracks aligned with themes
   const alignedTracks = tracks.filter(t =>
     themes.some(theme => t.toLowerCase().includes(theme.toLowerCase()))
   );
-  if (alignedTracks.length > 0) return alignedTracks[0];
+  if (alignedTracks.length > 0) return alignedTracks[0]!;
 
-  return tracks[0];
+  return tracks[0]!;
 }
 
 function computeOpportunityConfidence(
@@ -890,7 +890,7 @@ function inferCoreProblem(spec: HackathonSpec, allText: string): string {
   // Try to extract from description
   const sentences = spec.description.split(/[.!?]+/).filter(s => s.trim().length > 10);
   if (sentences.length > 0) {
-    return sentences[0].trim() + '.';
+    return sentences[0]!.trim() + '.';
   }
 
   // Fallback to tagline
@@ -1054,7 +1054,7 @@ function selectEasiestPath(
   }
 
   if (judging.likelyWinningStrategies.length > 0) {
-    const easiest = [...judging.likelyWinningStrategies].sort((a, b) => a.difficulty - b.difficulty)[0];
+    const easiest = [...judging.likelyWinningStrategies].sort((a, b) => a.difficulty - b.difficulty)[0]!;
     parts.push(`Consider the "${easiest.name}" strategy (difficulty ${easiest.difficulty}/10, estimated +${easiest.scoreBoost} points)`);
   }
 
@@ -1074,10 +1074,10 @@ function selectHighestRoiTrack(
   // Prefer niche tracks with sponsor prizes
   const trackPrizes = spec.prizes.filter(p => p.track);
   if (trackPrizes.length > 0) {
-    return trackPrizes[0].track || spec.tracks[0];
+    return trackPrizes[0]!.track || spec.tracks[0]!;
   }
 
-  return spec.tracks[0];
+  return spec.tracks[0]!;
 }
 
 function recommendTechStack(

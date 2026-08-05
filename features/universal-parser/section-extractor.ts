@@ -445,7 +445,7 @@ export function extractJsonLd(html: string): Record<string, unknown> | null {
 
   while ((match = jsonLdRegex.exec(html)) !== null) {
     try {
-      const raw = stripHtml(match[1].replace(/<script[^>]*>/, '').replace(/<\/script>/, ''));
+      const raw = stripHtml(match[1]!.replace(/<script[^>]*>/, '').replace(/<\/script>/, ''));
       const data = JSON.parse(raw) as Record<string, unknown>;
 
       if (data['@type'] === 'Event' || data['@type'] === 'Hackathon') {
@@ -523,7 +523,7 @@ export function extractFromNoscript(html: string): string {
   let match: RegExpExecArray | null;
 
   while ((match = noscriptRegex.exec(html)) !== null) {
-    const content = stripHtml(match[1]);
+    const content = stripHtml(match[1]!);
     if (content.length > 50) { // Only meaningful content
       parts.push(content);
     }

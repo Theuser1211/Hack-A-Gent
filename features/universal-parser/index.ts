@@ -36,7 +36,6 @@ import {
   analyzeChallengeUnderstanding,
   generateWinningStrategyReport,
 } from './intelligence-analyzer.js';
-import type { WinningStrategyReport } from './intelligence-analyzer.js';
 
 const PARSER_VERSION = '1.1.0';
 
@@ -190,7 +189,7 @@ export async function parseHackathon(
         ctx.warnings.push(...(ctx.aiResult.extractionMeta?.warnings || []));
 
         // Track AI retries based on retry logic
-        if (ctx.aiResult.extractionMeta?.warnings?.length > 0) {
+        if ((ctx.aiResult.extractionMeta?.warnings?.length ?? 0) > 0) {
           aiRetryCount++;
         }
 
@@ -250,11 +249,11 @@ export async function parseHackathon(
     ctx.finalSpec.qualityMetrics.success = true;
 
     // Set diagnostics
-    ctx.finalSpec.diagnostics.extractedFields = Object.keys(ctx.finalSpec.fieldConfidence).filter(k => ctx.finalSpec.fieldConfidence[k].source === 'extracted');
+    ctx.finalSpec.diagnostics.extractedFields = Object.keys(ctx.finalSpec.fieldConfidence).filter(k => ctx.finalSpec.fieldConfidence[k]?.source === 'extracted');
     ctx.finalSpec.diagnostics.aiGeneratedFields = ['judgingIntelligence', 'sponsorIntelligence', 'opportunityAnalysis', 'challengeUnderstanding'].filter(f => ctx.finalSpec.fieldConfidence[f]?.source === 'ai_interpreted');
-    ctx.finalSpec.diagnostics.missingFields = Object.keys(ctx.finalSpec.fieldConfidence).filter(k => ctx.finalSpec.fieldConfidence[k].confidence === 'low');
+    ctx.finalSpec.diagnostics.missingFields = Object.keys(ctx.finalSpec.fieldConfidence).filter(k => ctx.finalSpec.fieldConfidence[k]?.confidence === 'low');
     ctx.finalSpec.diagnostics.repairActions = ctx.inferredFields;
-    ctx.finalSpec.diagnostics.fallbacksUsed = ctx.warnings.filter(w => w.includes('fallback')).map(w => w.split(':')[0]);
+    ctx.finalSpec.diagnostics.fallbacksUsed = ctx.warnings.filter(w => w.includes('fallback')).map(w => w.split(':')[0]!);
     ctx.finalSpec.diagnostics.strategiesAttempted = ctx.strategyResults.map(r => r.strategy);
     ctx.finalSpec.diagnostics.bestStrategy = ctx.bestStrategy;
     ctx.finalSpec.diagnostics.performance = {
@@ -308,7 +307,7 @@ function createFailureResult(
   ctx: ParserContext,
   error: string,
   confidence: number,
-  detectionSignals?: DetectionResult
+  detectionSignals?: Partial<DetectionResult>
 ): UniversalParseResult {
   const spec = createDefaultSpec(ctx.url, ctx.html.length);
   spec.confidence = confidence;
@@ -373,15 +372,18 @@ function deduplicate<T>(arr: T[]): T[] {
   return [...new Set(arr)];
 }
 
-function deduplicateObjects<T extends Record<string, unknown>>(base: T[], ai: T[], key: string): T[] {
+function deduplicateObjects<T>(base: T[], ai: T[], key: keyof T): T[] {
   const seen = new Set<string>();
   const result: T[] = [];
 
   for (const item of [...base, ...ai]) {
     const val = item[key];
-    if (val && !seen.has(val)) {
-      seen.add(val);
-      result.push(item);
+    if (val !== undefined && val !== null) {
+      const str = String(val);
+      if (!seen.has(str)) {
+        seen.add(str);
+        result.push(item);
+      }
     }
   }
   return result;
