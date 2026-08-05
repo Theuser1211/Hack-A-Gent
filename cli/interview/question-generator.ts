@@ -1,8 +1,17 @@
 import type { CompetitionAnalysis } from '../pipeline/types.js';
 import type { InterviewQuestion, OptimizationBudget } from './types.js';
 
+const MIN_TEAM_SIZE = 1;
+const MAX_TEAM_SIZE = 10;
+const MIN_HOURS = 1;
+const MAX_HOURS = 168;
+const SPONSOR_CONFIDENCE_THRESHOLD: import('../confidence.js').ConfidenceLevel = 'confirmed';
+
 export function generateQuestions(analysis: CompetitionAnalysis): InterviewQuestion[] {
   const questions: InterviewQuestion[] = [];
+
+  questions.push(createTeamSizeQuestion(analysis));
+  questions.push(createHoursRemainingQuestion(analysis));
 
   const sponsorQuestion = createSponsorQuestion(analysis);
   if (sponsorQuestion) {
@@ -17,6 +26,11 @@ export function generateQuestions(analysis: CompetitionAnalysis): InterviewQuest
 
 function createSponsorQuestion(analysis: CompetitionAnalysis): InterviewQuestion | null {
   if (!analysis.sponsorAPIs || analysis.sponsorAPIs.length === 0) {
+    return null;
+  }
+
+  const confidence = analysis.extractionConfidence?.sponsorAPIs?.confidence;
+  if (confidence !== SPONSOR_CONFIDENCE_THRESHOLD) {
     return null;
   }
 
@@ -37,6 +51,62 @@ function createSponsorQuestion(analysis: CompetitionAnalysis): InterviewQuestion
     dependsOn: [],
     skipLabel: 'S. Skip sponsor APIs',
   };
+}
+
+function createTeamSizeQuestion(analysis: CompetitionAnalysis): InterviewQuestion {
+  const inferredTeamSize = inferTeamSize(analysis);
+
+  return {
+    id: 'q_team_size',
+    text: `What is your team size? (1-${MAX_TEAM_SIZE}, default ${inferredTeamSize}):`,
+    category: 'team_size',
+    options: [],
+    required: true,
+    dependsOn: [],
+    minValue: MIN_TEAM_SIZE,
+    maxValue: MAX_TEAM_SIZE,
+    defaultAnswer: String(inferredTeamSize),
+  };
+}
+
+function createHoursRemainingQuestion(analysis: CompetitionAnalysis): InterviewQuestion {
+  const inferredHours = inferHoursRemaining(analysis);
+
+  return {
+    id: 'q_hours_remaining',
+    text: `Hours remaining until deadline? (1-${MAX_HOURS}, default ${inferredHours}):`,
+    category: 'hours_remaining',
+    options: [],
+    required: true,
+    dependsOn: [],
+    minValue: MIN_HOURS,
+    maxValue: MAX_HOURS,
+    defaultAnswer: String(inferredHours),
+  };
+}
+
+function inferTeamSize(analysis: CompetitionAnalysis): number {
+  const text = analysis.challenge.problemStatement || '';
+  const match = text.match(/(\d+)\s*(?:person|member|people)\s*(?:team|group)/i);
+  if (match) {
+    const size = parseInt(match[1]!, 10);
+    return Math.max(1, Math.min(10, size));
+  }
+  return 1;
+}
+
+function inferHoursRemaining(analysis: CompetitionAnalysis): number {
+  if (analysis.deadlines && analysis.deadlines.length > 0) {
+    const submissionDeadline = analysis.deadlines.find(d => d.type === 'submission');
+    if (submissionDeadline) {
+      const parsed = new Date(submissionDeadline.date);
+      if (!isNaN(parsed.getTime())) {
+        const hours = Math.max(1, Math.round((parsed.getTime() - Date.now()) / 3600000));
+        return Math.min(168, hours);
+      }
+    }
+  }
+  return 5;
 }
 
 function createBudgetQuestion(): InterviewQuestion {

@@ -1,7 +1,7 @@
 import type { IdeationResult } from '../ideation/types.js';
 import type { ProductIntelligenceResult } from '../product-intelligence/types.js';
 
-export type QuestionCategory = 'prize_selection' | 'sponsor_selection' | 'optimization' | 'project_idea';
+export type QuestionCategory = 'prize_selection' | 'sponsor_selection' | 'optimization' | 'project_idea' | 'team_size' | 'hours_remaining';
 
 export type OptimizationBudget = 'minimal' | 'balanced' | 'aggressive';
 
