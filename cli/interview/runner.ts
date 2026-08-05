@@ -93,58 +93,50 @@ async function askNumericQuestion(
   const max = question.maxValue ?? 168;
   const defaultAnswer = question.defaultAnswer ?? String(min);
 
-  let attempts = 0;
-  const maxAttempts = 3;
+  const prompt = formatNumericQuestion(question, defaultAnswer, false);
+  const raw = await askFn(prompt);
 
-  while (attempts < maxAttempts) {
-    const prompt = formatNumericQuestion(question, defaultAnswer, attempts > 0);
-    const raw = await askFn(prompt);
+  if (raw === null) return null;
 
-    if (raw === null) return null;
+  const trimmed = raw.trim();
+  if (trimmed.toLowerCase() === 's') return null;
 
-    const trimmed = raw.trim();
-    if (trimmed.toLowerCase() === 's') return null;
+  if (trimmed === '') {
+    return defaultAnswer;
+  }
 
-    if (trimmed === '') {
-      return defaultAnswer;
-    }
-
-    const num = parseFloat(trimmed);
-    if (isNaN(num)) {
-      attempts++;
-      if (attempts >= maxAttempts) return null;
-      continue;
-    }
-
-    if (num < min || num > max) {
-      attempts++;
-      if (attempts >= maxAttempts) return null;
-      continue;
-    }
-
+  const num = parseFloat(trimmed);
+  if (!isNaN(num) && num >= min && num <= max) {
     return String(Math.round(num));
   }
 
-  return null;
+  let lastNum = num;
+  while (true) {
+    const reason = isNaN(lastNum)
+      ? 'Please enter a number.'
+      : `Please enter a value between ${min} and ${max}.`;
+    const retry = await askFn(`  ❌ ${reason}\n  > `);
+    if (retry === null) return null;
+    const retryTrimmed = retry.trim();
+    if (retryTrimmed.toLowerCase() === 's') return null;
+    if (retryTrimmed === '') return defaultAnswer;
+    const retryNum = parseFloat(retryTrimmed);
+    if (!isNaN(retryNum) && retryNum >= min && retryNum <= max) {
+      return String(Math.round(retryNum));
+    }
+    lastNum = retryNum;
+  }
 }
 
 function formatNumericQuestion(
   question: InterviewQuestion,
   defaultAnswer: string,
-  showError: boolean,
+  _showError: boolean,
 ): string {
   let buf = `\n  ${question.text}\n`;
-
-  if (showError) {
-    const min = question.minValue ?? 1;
-    const max = question.maxValue ?? 168;
-    buf += `  ${min}-${max} range required. Try again or press Enter for default (${defaultAnswer}).\n`;
-  }
-
   buf += `  ${defaultAnswer} (default)\n`;
   buf += `  S. ${question.skipLabel ?? 'Skip'}\n`;
-  buf += '  Your choice: ';
-
+  buf += '  > ';
   return buf;
 }
 

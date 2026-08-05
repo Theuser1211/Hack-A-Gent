@@ -187,23 +187,18 @@ function inferTechStack(text: string): string[] {
     .map(([name]) => name);
 }
 
-/** Determine what questions to ask based on what's already known */
+/** Determine what questions to ask based on what's already known.
+ *
+ * Note: Team size and hours remaining are NOT asked here — the new
+ * interview system (cli/interview/) is the single source of truth for
+ * those values and validates them with proper numeric bounds.
+ */
 export function determineMissingInfo(ctx: HackathonContext): Array<{ key: string; question: string; defaultAnswer?: string }> {
   const questions: Array<{ key: string; question: string; defaultAnswer?: string }> = [];
-
-  // Solo or team? (only if team size wasn't fixed by competition)
-  if (!ctx.teamSizeFixed) {
-    questions.push({ key: 'teamSize', question: 'Solo or team? (optional, default 1): ', defaultAnswer: '1' });
-  }
 
   // Preferred stack? (only if no stack detected)
   if (!ctx.stackDetected) {
     questions.push({ key: 'preferredStack', question: 'Preferred stack (optional): ' });
-  }
-
-  // Hours remaining? (only if no deadline found)
-  if (!ctx.hoursRemainingKnown) {
-    questions.push({ key: 'hoursRemaining', question: 'Hours remaining (optional, default 5): ', defaultAnswer: '5' });
   }
 
   // Primary goal? (always useful to know intent)

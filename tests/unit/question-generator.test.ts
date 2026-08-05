@@ -25,10 +25,12 @@ function mockAnalysis(overrides?: Partial<CompetitionAnalysis>): CompetitionAnal
     deadlines: [],
     extractionConfidence: {
       title: { value: 'Test Hackathon', confidence: 'confirmed' },
+      theme: { value: 'AI', confidence: 'confirmed' },
+      difficulty: { value: 'intermediate', confidence: 'confirmed' },
+      organizer: { value: 'TestOrg', confidence: 'confirmed' },
+      participants: { value: 100, confidence: 'confirmed' },
       judgingCriteria: { value: [], confidence: 'confirmed' },
       sponsorAPIs: { value: [], confidence: 'unknown' },
-      organizer: { value: 'TestOrg', confidence: 'confirmed' },
-      techStack: { value: [], confidence: 'unknown' },
       restrictions: { value: [], confidence: 'unknown' },
       deadlines: { value: [], confidence: 'unknown' },
     },
@@ -37,10 +39,11 @@ function mockAnalysis(overrides?: Partial<CompetitionAnalysis>): CompetitionAnal
 }
 
 function mockAnalysisWithConfirmedSponsors(overrides?: Partial<CompetitionAnalysis>): CompetitionAnalysis {
+  const base = mockAnalysis(overrides);
   return {
-    ...mockAnalysis(overrides),
+    ...base,
     extractionConfidence: {
-      ...mockAnalysis(overrides).extractionConfidence,
+      ...base.extractionConfidence!,
       sponsorAPIs: { value: ['OpenAI', 'Twilio'], confidence: 'confirmed' },
     },
     sponsorAPIs: [
@@ -107,14 +110,15 @@ describe('generateQuestions', () => {
   });
 
   it('does not generate sponsor question when sponsors detected but confidence is not confirmed', () => {
+    const baseExtraction = mockAnalysis().extractionConfidence;
     const analysis = mockAnalysis({
       sponsorAPIs: [
         { name: 'OpenAI', provider: 'OpenAI', description: 'GPT models', strategicValue: 'must_use' },
         { name: 'Twilio', provider: 'Twilio', description: 'SMS APIs', strategicValue: 'should_use' },
       ],
-      extractionConfidence: {
-        sponsorAPIs: { value: ['OpenAI', 'Twilio'], confidence: 'inferred' }, // Not confirmed
-      },
+      extractionConfidence: baseExtraction
+        ? { ...baseExtraction, sponsorAPIs: { value: ['OpenAI', 'Twilio'], confidence: 'inferred' } }
+        : undefined,
     });
     const questions = generateQuestions(analysis);
 
