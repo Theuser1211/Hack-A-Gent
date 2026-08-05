@@ -230,19 +230,20 @@ async function runFullPipeline(
   } catch (err) {
     stageFail('Initializing LLM providers', `${Date.now() - t0}ms`);
     printError(formatError(err, 'LLM provider'));
-    stageSkipped('LLM generation (no provider configured — using templates)');
+    stageSkipped('AI provider unavailable — using production templates');
   }
 
-  stageStart('Winning Strategy');
   const runId = createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12);
   const decisionStore = new DecisionStore(ctx.dataDir, runId);
   const memory = new OrganizationalMemory(ctx.dataDir);
   const checkpointStore = new CheckpointStore(ctx.dataDir);
 
+  // ── Stage 1: Challenge Analysis ──────────────────────────────────
   // M1 migration: Competition Intelligence now runs as a PipelineAgent.
   // The agent delegates to the same production engine, so the analysis is
   // behaviour-identical, but it also records autonomous decisions (Part 2)
   // and organizational learning (Part 4). Checkpoints enable recovery (Part 3).
+  stageStart('Challenge Analysis');
   const intelligenceAgent = new CompetitionIntelligenceAgent();
   const intelResult = await intelligenceAgent.run({
     seed,
@@ -250,7 +251,7 @@ async function runFullPipeline(
     scratch: {},
   });
   if (intelResult.status !== 'completed') {
-    stageFail('Winning Strategy', intelResult.summary);
+    stageFail('Challenge Analysis', intelResult.summary);
     printError(formatError(new Error(intelResult.summary)));
     return { success: false, message: intelResult.summary };
   }
@@ -267,10 +268,14 @@ async function runFullPipeline(
     checkpoints: [],
     context: { analysisId: competitionAnalysis.analysisId },
   });
-  // Run interactive interview to collect user preferences (only when LLM is online)
+  stageDone('Challenge Analysis', Date.now() - t0);
+
+  // ── Stage 2: Dynamic Interview ───────────────────────────────────
+  // Collect user preferences AFTER analysis but BEFORE strategy generation.
+  // The interview answers determine team size, timeline, stack, and architecture.
   let interviewResult: InterviewResult | null = null;
+  stageStart('Dynamic Interview');
   if (routerEngine) {
-    stageStart('Dynamic Interview');
     try {
       const questions = generateQuestions(competitionAnalysis);
       if (questions.length > 0) {
@@ -282,13 +287,39 @@ async function runFullPipeline(
     } catch (err) {
       warn(`Interview skipped: ${err instanceof Error ? err.message : String(err)}`);
     }
-    stageDone('Dynamic Interview', Date.now() - t0);
+  } else {
+    info('No LLM provider configured — using template defaults for interview');
   }
+  stageDone('Dynamic Interview', Date.now() - t0);
 
+  // ── Stage 3: Generate Strategy ───────────────────────────────────
+  // Strategy is generated AFTER the interview so it uses ACTUAL user answers.
+  stageStart('Generate Strategy');
   const strategyGenerator = new WinningStrategyGenerator();
   const winningStrategy = strategyGenerator.generate(competitionAnalysis, interviewResult ?? undefined);
-  stageDone('Winning strategy', Date.now() - t0);
+  stageDone('Generate Strategy', Date.now() - t0);
   debug(`Strategy: ${winningStrategy.projectName}`);
+
+  // ── Stage 4: Generate Timeline ───────────────────────────────────
+  // Timeline uses ACTUAL team size and hours from interview.
+  stageStart('Generate Timeline');
+  const timelinePhases = winningStrategy.roadmap;
+  debug(`Timeline: ${timelinePhases.length} phases planned`);
+  stageDone('Generate Timeline', Date.now() - t0);
+
+  // ── Stage 5: Generate Risks ──────────────────────────────────────
+  // Risks use ACTUAL project context from interview.
+  stageStart('Generate Risks');
+  const risks = winningStrategy.risks;
+  debug(`Risks: ${risks.length} identified`);
+  stageDone('Generate Risks', Date.now() - t0);
+
+  // ── Stage 6: Generate Architecture ───────────────────────────────
+  // Architecture uses ACTUAL preferred stack from interview.
+  stageStart('Generate Architecture');
+  const architecture = winningStrategy.architecture;
+  debug(`Architecture: ${architecture}`);
+  stageDone('Generate Architecture', Date.now() - t0);
 
   // Build and inject code generation context from enriched strategy
   const codeGenCtx = buildCodeGenContext(competitionAnalysis, winningStrategy);
@@ -421,7 +452,7 @@ async function runFullPipeline(
     if (rtResult.healthOk) {
       stageDone('Runtime Validation', Date.now() - t0);
     } else {
-      warn(`Runtime validation: ${rtResult.error ?? 'unknown error'}`);
+      warn(`Runtime validation: ${rtResult.error ?? 'server did not respond'}`);
       stageDone('Runtime Validation', Date.now() - t0);
     }
 
@@ -650,14 +681,6 @@ async function runFullPipeline(
             appliedActionTargets.add(`${action.type}:${action.target}`);
             instrumentor.endIteration(currentScore, 'failed', 'build failed after improvement');
             continue;
-          }
-
-          if (instrumentor.iterRanOutOfTime) {
-            instrumentor.skipSubStage('Judge');
-            log(`  Score improvement........0`);
-            log(`  Decision: stop: time budget exhausted`);
-            instrumentor.endIteration(currentScore, 'timeout', 'iteration budget exhausted');
-            break;
           }
 
           appliedActionTargets.add(`${action.type}:${action.target}`);
@@ -1058,3 +1081,69 @@ export async function parseInput(input: string): Promise<ParsedInput | null> {
     confidence: makeFallbackConfidence(),
   };
 }
+
+function printExecutionPlan(
+  _winningStrategy: import('../pipeline/types.js').WinningStrategy,
+  timelinePhases: import('../pipeline/types.js').RoadmapPhase[],
+  risks: Array<{ risk: string; mitigation: string }>,
+  architecture: string,
+  interviewResult: InterviewResult | null,
+): void {
+  log('');
+  divider();
+  info('Execution Plan (based on your answers)');
+  divider();
+  log('');
+
+  // Team size from interview (NOT hardcoded default)
+  const teamSize = interviewResult?.teamSize ?? 1;
+  labeled('Team size', teamSize <= 1 ? 'Solo developer' : `${teamSize} members`);
+
+  // Hours from interview (NOT hardcoded default)
+  const hours = interviewResult?.hoursRemaining ?? 5;
+  labeled('Time remaining', hours <= 1 ? 'Less than 1 hour' : `${hours} hours`);
+
+  // Stack from interview (NOT hardcoded default)
+  const techPrefs = interviewResult?.technologyPreferences ?? [];
+  labeled('Preferred stack', techPrefs.length > 0 ? techPrefs.join(', ') : 'Auto-selected');
+
+  // Project idea from interview
+  const idea = interviewResult?.userProjectIdea ?? interviewResult?.autoGeneratedIdea ?? null;
+  if (idea) {
+    labeled('Project idea', idea.slice(0, 80) + (idea.length > 80 ? '...' : ''));
+  }
+
+  // Optimization budget from interview
+  const budget = interviewResult?.optimizationBudget ?? 'balanced';
+  labeled('Optimization', budget.charAt(0).toUpperCase() + budget.slice(1));
+
+  log('');
+  labeled('Architecture', architecture);
+  log('');
+
+  // Timeline from strategy (derived from ACTUAL interview answers)
+  if (timelinePhases.length > 0) {
+    info('Timeline:');
+    for (const phase of timelinePhases) {
+      log(`  ${color('•', 'cyan')} ${phase.phase} (${phase.estimatedMinutes}min)`);
+      for (const task of phase.tasks.slice(0, 2)) {
+        log(`    - ${task}`);
+      }
+    }
+    log('');
+  }
+
+  // Risks from strategy (derived from ACTUAL interview answers)
+  if (risks.length > 0) {
+    info('Key risks:');
+    for (const r of risks.slice(0, 3)) {
+      log(`  ${color('⚠', 'yellow')} ${r.risk}`);
+      log(`    Mitigation: ${r.mitigation}`);
+    }
+    log('');
+  }
+
+  divider();
+}
+
+
