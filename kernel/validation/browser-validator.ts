@@ -9,6 +9,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as http from 'node:http';
 import * as path from 'node:path';
+import { trackChildProcess, cleanupAllProcesses } from '../../cli/signals.js';
 
 /** Kill entire process tree. On Windows, `server.kill()` only kills the
  * immediate shell child — grandchildren survive and keep the event loop
@@ -169,6 +170,7 @@ export async function validateWithBrowser(
     shell: true,
     env: { ...process.env, PORT: String(port) },
   });
+  trackChildProcess(server);
 
   return new Promise<BrowserValidationResult>((resolve) => {
     const timer = setTimeout(() => {

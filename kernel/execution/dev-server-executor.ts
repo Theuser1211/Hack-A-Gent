@@ -1,9 +1,26 @@
-import { spawn, execSync, type ChildProcess } from 'node:child_process';
+import { spawn, execSync, type ChildProcess, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as http from 'node:http';
 import * as path from 'node:path';
 
 import type { RunningApplication } from './execution-types.js';
+import { trackChildProcess } from '../../cli/signals.js';
+
+/** Kill entire process tree. On Windows, `server.kill()` only kills the
+ * immediate shell child — grandchildren survive and keep the event loop
+ * alive via inherited pipe handles. */
+function killProcessTree(child: ChildProcess): void {
+  if (child.pid === undefined) return;
+  try { child.kill('SIGTERM'); } catch { /* already dead */ }
+  if (process.platform === 'win32') {
+    try {
+      const killer = spawn('taskkill', ['/F', '/T', '/PID', String(child.pid)], { stdio: 'ignore', windowsHide: true });
+      killer.unref();
+    } catch { /* taskkill not available */ }
+  } else {
+    try { process.kill(-child.pid, 'SIGTERM'); } catch { try { child.kill('SIGTERM'); } catch { /* already dead */ } }
+  }
+}
 
 export interface DevServerExecutor {
   start(projectPath: string, port?: number, timeoutMs?: number): Promise<RunningApplication>;
@@ -18,7 +35,7 @@ export class DefaultDevServerExecutor implements DevServerExecutor {
   private getPythonCmd(): string {
     if (this._pythonCmd) return this._pythonCmd;
     try {
-      execSync('python3 --version', { stdio: 'ignore' });
+      execSync('python3 --version', { stdio: 'ignore', timeout: 5000, windowsHide: true });
       this._pythonCmd = 'python3';
     } catch {
       this._pythonCmd = 'python';
@@ -44,6 +61,7 @@ export class DefaultDevServerExecutor implements DevServerExecutor {
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
     });
+    trackChildProcess(child);
 
     const pid = child.pid;
     if (pid != null) {
@@ -76,11 +94,11 @@ export class DefaultDevServerExecutor implements DevServerExecutor {
     if (app.pid != null && this.processes.has(app.pid)) {
       const child = this.processes.get(app.pid);
       if (child && !child.killed) {
-        child.kill('SIGTERM');
+        killProcessTree(child);
         await new Promise<void>((resolve) => {
           const timeout = setTimeout(() => {
             if (child && !child.killed) {
-              child.kill('SIGKILL');
+              try { child.kill('SIGKILL'); } catch { /* already dead */ }
             }
             resolve();
           }, 5000);

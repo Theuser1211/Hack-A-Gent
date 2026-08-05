@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { getConfig } from './config-manager.js';
 import { createContext } from './context.js';
 import { formatError, printError } from './errors.js';
-import { success as logSuccess, error as logError, info, dim, showVersion, setVerbose } from './output.js';
+import { success as logSuccess, error as logError, info, warn, dim, showVersion, setVerbose, isTTY } from './output.js';
 import { exitCodeForResult, type CLIArgs, type CLIContext, type CLIResult, type CommandName } from './types.js';
 import { handleTerminationSignal } from './signals.js';
 
@@ -255,6 +255,13 @@ async function ensureConfig(command: CommandName): Promise<boolean> {
   if (command === 'run') {
     console.log();
     info('No AI provider configured.');
+    console.log('  Running with template fallback (no LLM generation). Run `hag setup` to configure a provider.\n');
+    return true;
+  }
+
+  if (isTTY) {
+    console.log();
+    info('No AI provider configured.');
     console.log('  Setting up now...\n');
     const { setupCommand } = await import('./commands/setup.js');
     const result = await setupCommand(createContext(42), {
@@ -271,6 +278,8 @@ async function ensureConfig(command: CommandName): Promise<boolean> {
     return true;
   }
 
+  console.log();
+  warn('No AI provider configured. Run `hag setup` to configure one.');
   return true;
 }
 
@@ -311,6 +320,7 @@ async function main(): Promise<void> {
 
   if (!(await ensureConfig(args.command))) {
     process.exitCode = 1;
+    setTimeout(() => process.exit(process.exitCode), 5000).unref();
     return;
   }
 
@@ -477,17 +487,12 @@ async function main(): Promise<void> {
 
   process.exitCode = exitCodeForResult(result);
 
-  // Force process exit after all pipeline work is done to prevent child
-  // processes (npm run dev, next dev, Playwright, etc.) from keeping the
-  // event loop alive indefinitely.
-  //
-  // We schedule an immediate exit after yielding to the event loop once so
-  // that any pending microtasks (checkpoint writes, trace files, telemetry
-  // flushes) get a chance to complete before the process is torn down.
-  //
-  // A safety-net exit fires after 5s in case the first exit is blocked by
-  // a lingering I/O handle that cannot be closed synchronously.
-  setImmediate(() => process.exit(process.exitCode));
+  // Safety-net exit fires after 5s if the event loop hasn't drained naturally.
+  // Using process.exitCode (not process.exit) avoids the Node.js libuv
+  // assertion crash on Windows when active async handles (child process
+  // pipes, HTTP sockets) are present. The 5s timeout.unref() only fires
+  // if something is keeping the event loop alive; otherwise the process
+  // exits naturally with the correct exit code.
   setTimeout(() => process.exit(process.exitCode), 5000).unref();
 }
 
@@ -503,4 +508,6 @@ main().catch((err) => {
     printError(suggestion);
   }
   process.exitCode = 1;
+  // Safety-net exit prevents hang on fatal error path
+  setTimeout(() => process.exit(process.exitCode), 5000).unref();
 });

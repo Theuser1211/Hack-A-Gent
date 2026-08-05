@@ -20,7 +20,7 @@ export class DefaultBuildExecutor implements BuildExecutor {
   private getPythonCmd(): string {
     if (this._pythonCmd) return this._pythonCmd;
     try {
-      execSync('python3 --version', { stdio: 'ignore' });
+      execSync('python3 --version', { stdio: 'ignore', timeout: 5000, windowsHide: true });
       this._pythonCmd = 'python3';
     } catch {
       this._pythonCmd = 'python';

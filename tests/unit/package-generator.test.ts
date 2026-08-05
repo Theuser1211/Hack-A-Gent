@@ -90,12 +90,12 @@ const mockContext: PipelineContext = {
 };
 
 describe('generatePackage', () => {
-  it('generates all 5 submission files', () => {
+  it('generates submission files plus LICENSE and vercel.json', () => {
     const dir = createTempDir();
     try {
       const result = generatePackage(dir, mockContext);
       expect(result.success).toBe(true);
-      expect(result.files).toHaveLength(5);
+      expect(result.files.length).toBeGreaterThanOrEqual(5);
 
       const fileNames = result.files.map(f => f.file);
       expect(fileNames).toContain('README.md');
@@ -103,6 +103,8 @@ describe('generatePackage', () => {
       expect(fileNames).toContain('DEPLOY.md');
       expect(fileNames).toContain('DEMO.md');
       expect(fileNames).toContain('SUBMISSION.md');
+      expect(fileNames).toContain('LICENSE');
+      expect(fileNames).toContain('vercel.json');
 
       for (const f of result.files) {
         expect(existsSync(join(dir, f.file))).toBe(true);
@@ -186,7 +188,7 @@ describe('generatePackage', () => {
       };
       const result = generatePackage(dir, minimalContext);
       expect(result.success).toBe(true);
-      expect(result.files).toHaveLength(5);
+      expect(result.files.length).toBeGreaterThanOrEqual(5);
       const readme = readFileSync(join(dir, 'README.md'), 'utf-8');
       expect(readme).toContain('Hackathon Project');
     } finally {

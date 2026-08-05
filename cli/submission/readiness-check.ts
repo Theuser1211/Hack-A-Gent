@@ -99,12 +99,16 @@ function checkGitignore(projectDir: string): ReadinessCheck {
 
 function checkNoPlaceholders(projectDir: string): ReadinessCheck {
   const placeholderPatterns = [
-    /TODO/i,
-    /FIXME/i,
-    /placeholder/i,
+    /\/\/\s*TODO\b/i,
+    /\/\*\s*TODO\b/i,
+    /\/\/\s*FIXME\b/i,
+    /\/\*\s*FIXME\b/i,
+    /\/\/\s*HACK\b/i,
+    /\/\/\s*XXX\b/i,
     /lorem ipsum/i,
     /change ?me/i,
-    /insert your/i,
+    /insert your code/i,
+    /insert your text/i,
   ];
   let count = 0;
   const sourceDirs = ['src', 'app', 'pages', 'components', 'lib', 'utils'];

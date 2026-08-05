@@ -1,7 +1,7 @@
 import * as readline from 'node:readline';
 import { formatDuration } from './context.js';
 
-const isTTY = process.stdout.isTTY && !process.env.CI;
+export const isTTY = process.stdout.isTTY && !process.env.CI;
 
 // Verbose mode reveals internal details (provider routing, retry logic,
 // fallback chains, HTTP payloads, model names, timings, stack traces).
