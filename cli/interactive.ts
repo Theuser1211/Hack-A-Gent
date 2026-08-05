@@ -196,7 +196,6 @@ export async function runInteractiveEntry(ctx: CLIContext): Promise<CLIResult> {
     preferredStack: repoAnalysis?.framework.confidence !== 'unknown'
       ? repoAnalysis!.framework.value
       : (answers.preferredStack || stackFromMemory || null),
-    primaryGoal: answers.primaryGoal || null,
     hasExistingRepo: hasExistingRepo ? 'yes' : (answers.hasExistingRepo || null),
   });
 
@@ -218,7 +217,6 @@ export async function runInteractiveEntry(ctx: CLIContext): Promise<CLIResult> {
       seed,
       ...(context.projectName ? { name: context.projectName } : {}),
       ...(context.preferredStack.length > 0 ? { stack: context.preferredStack[0] } : {}),
-      ...(context.primaryGoal ? { goal: context.primaryGoal } : {}),
     },
   };
 

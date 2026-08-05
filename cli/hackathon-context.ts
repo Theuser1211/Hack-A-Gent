@@ -19,7 +19,6 @@ export interface HackathonContext {
   judgingCriteria: JudgingCriterion[];
   requiredAPIs: string[];
   restrictions: string[];
-  primaryGoal: 'win' | 'sponsor_prize' | 'complete' | 'learn';
   hasExistingRepo: boolean;
   source: string;
 }
@@ -62,7 +61,6 @@ export function buildContext(
     preferredStack?: string | null;
     teamSize?: string | null;
     hoursRemaining?: string | null;
-    primaryGoal?: string | null;
     hasExistingRepo?: string | null;
   },
 ): HackathonContext {
@@ -135,7 +133,6 @@ export function buildContext(
     judgingCriteria,
     requiredAPIs,
     restrictions,
-    primaryGoal: (answers.primaryGoal as HackathonContext['primaryGoal']) || 'win',
     hasExistingRepo: answers.hasExistingRepo === 'yes',
     source: answers.url,
   };
@@ -200,13 +197,6 @@ export function determineMissingInfo(ctx: HackathonContext): Array<{ key: string
   if (!ctx.stackDetected) {
     questions.push({ key: 'preferredStack', question: 'Preferred stack (optional): ' });
   }
-
-  // Primary goal? (always useful to know intent)
-  questions.push({
-    key: 'primaryGoal',
-    question: 'Primary goal? (win / sponsor prize / complete / learn, optional): ',
-    defaultAnswer: 'win',
-  });
 
   // Existing repository?
   if (!ctx.hasExistingRepo) {

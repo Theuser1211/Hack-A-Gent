@@ -59,8 +59,8 @@ export class HackathonPlanner {
       s.push('Split: one builds features, the other handles deployment, sponsor APIs, and the demo script.');
     }
 
-    // Goal-driven
-    if (ctx.primaryGoal === 'sponsor_prize' && ctx.sponsorPrizes.length > 0) {
+    // Sponsor prize — always consider when sponsor APIs are detected
+    if (ctx.sponsorPrizes.length > 0) {
       s.push(`Target ${ctx.sponsorPrizes[0]!.sponsor} prize explicitly. Build the demo around their API, not the other way around.`);
     }
 
@@ -316,7 +316,7 @@ export class HackathonPlanner {
 
   private determineTargetPrize(): string {
     const { ctx } = this;
-    if (ctx.primaryGoal === 'sponsor_prize' && ctx.sponsorPrizes.length > 0) {
+    if (ctx.sponsorPrizes.length > 0) {
       const best = [...ctx.sponsorPrizes].sort((a, b) => b.requirements.length - a.requirements.length)[0]!;
       return `${best.sponsor} Prize`;
     }
