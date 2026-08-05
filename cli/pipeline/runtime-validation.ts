@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import * as path from 'node:path';
 import { execSync, spawn } from 'node:child_process';
 import * as http from 'node:http';
+import { trackChildProcess, cleanupAllProcesses } from '../signals.js';
 
 export interface RuntimeValidationResult {
   framework: string;
@@ -61,19 +62,16 @@ function freePort(port: number): void {
   }
 }
 
-function killProcessTree(server: ReturnType<typeof spawn>): void {
+function stopDevServer(server: ReturnType<typeof spawn>): void {
+  if (server.pid === undefined) return;
   try {
-    if (server.pid === undefined) return;
     server.kill('SIGTERM');
-    if (process.platform === 'win32') {
-      try {
-        execSync(`taskkill /T /F /PID ${server.pid}`, { stdio: 'ignore', timeout: 2000, windowsHide: true });
-      } catch { /* may have already exited */ }
-    } else {
-      try { process.kill(-server.pid, 'SIGTERM'); } catch { /* group kill fallback */ }
+  } catch (err) {
+    // Process may have already died, continue with cleanup
+    const error = err as NodeJS.ErrnoException;
+    if (error.code !== 'ESRCH') {
+      console.error('Error stopping dev server:', error);
     }
-  } catch {
-    return;
   }
 }
 
@@ -108,6 +106,7 @@ export async function validateRuntime(projectDir: string): Promise<RuntimeValida
     shell: true,
     env: { ...process.env, PORT: '3099' },
   });
+  trackChildProcess(server);
 
   let output = '';
   let serverStarted = false;
@@ -116,7 +115,6 @@ export async function validateRuntime(projectDir: string): Promise<RuntimeValida
 
   return new Promise<RuntimeValidationResult>((resolve) => {
     const timeout = setTimeout(() => {
-      killProcessTree(server);
       resolve({
         framework,
         depsInstalled,
@@ -125,6 +123,7 @@ export async function validateRuntime(projectDir: string): Promise<RuntimeValida
         healthOk,
         error: serverStarted ? 'Timeout waiting for HTTP 200' : 'Server did not start within 60s',
       });
+      cleanupAllProcesses().catch(err => console.error('Cleanup failed:', err));
     }, 60000);
 
     server.stdout?.on('data', (data: Buffer) => {
@@ -139,17 +138,17 @@ export async function validateRuntime(projectDir: string): Promise<RuntimeValida
           if (res.statusCode === 200) {
             healthOk = true;
             clearTimeout(timeout);
-            killProcessTree(server);
+            cleanupAllProcesses().catch(err => console.error('Cleanup failed:', err));
             resolve({ framework, depsInstalled, buildPassed: true, serverStarted: true, healthOk: true, error: null });
           } else {
             clearTimeout(timeout);
-            killProcessTree(server);
+            cleanupAllProcesses().catch(err => console.error('Cleanup failed:', err));
             error = `HTTP ${res.statusCode}`;
             resolve({ framework, depsInstalled, buildPassed: true, serverStarted: true, healthOk: false, error });
           }
         });
         req.on('error', () => {
-          killProcessTree(server);
+          cleanupAllProcesses().catch(err => console.error('Cleanup failed:', err));
         });
         req.setTimeout(5000, () => { req.destroy(); });
       }
@@ -169,6 +168,7 @@ export async function validateRuntime(projectDir: string): Promise<RuntimeValida
 
     server.on('error', (err: Error) => {
       clearTimeout(timeout);
+      cleanupAllProcesses().catch(err => console.error('Cleanup failed:', err));
       resolve({ framework, depsInstalled, buildPassed: true, serverStarted: false, healthOk: false, error: err.message });
     });
   });

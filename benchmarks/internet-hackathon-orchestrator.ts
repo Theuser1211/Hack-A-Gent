@@ -4,6 +4,7 @@ import * as http from 'node:http';
 import * as path from 'node:path';
 
 import { warn, debug, aiUnavailable } from '../cli/output.js';
+import { trackChildProcess } from '../cli/signals.js';
 import { CapabilityRegistry, type CapabilityDefinition } from './capability-registry.js';
 import { DeploymentRepairController, type DeploymentCycle } from './deployment-repair-controller.js';
 import { createDeterministicUuid, deterministicNow } from './determinism-kernel.js';
@@ -1137,17 +1138,43 @@ module.exports = {
         content: `@tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html { scroll-behavior: smooth; }
+body { @apply antialiased bg-slate-950 text-white; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; }
+
+h1 { @apply text-4xl md:text-5xl font-bold tracking-tight; }
+h2 { @apply text-2xl md:text-3xl font-bold tracking-tight; }
+h3 { @apply text-xl md:text-2xl font-semibold; }
+
+@layer components {
+  .container-page { @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8; }
+  .section-gap { @apply py-12 md:py-16 lg:py-20; }
+  .card-base { @apply rounded-xl border p-6 transition-colors; }
+  .btn-primary { @apply px-6 py-3 rounded-lg font-semibold transition-all duration-200 active:scale-[0.98]; }
+  .btn-secondary { @apply px-6 py-3 rounded-lg font-semibold border transition-all duration-200 active:scale-[0.98]; }
+}
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #0f172a; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+::selection { background-color: rgba(139, 92, 246, 0.3); }
 `,
       },
       {
         path: 'src/app/layout.tsx',
         content: `import './globals.css';
 
-export const metadata = { title: '${escapeJsStringLiteral(jsTitle)}', description: '${escapeJsStringLiteral(tagline)}' };
+export const metadata = {
+  title: '${escapeJsStringLiteral(jsTitle)}',
+  description: '${escapeJsStringLiteral(tagline)}',
+  openGraph: { title: '${escapeJsStringLiteral(jsTitle)}', description: '${escapeJsStringLiteral(tagline)}' },
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="scroll-smooth">
       <body className="antialiased">{children}</body>
     </html>
   );
@@ -1160,19 +1187,215 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       },
       {
         path: 'src/app/loading.tsx',
-        content: 'export default function Loading() {\n  return (\n    <div className="min-h-[60vh] flex items-center justify-center">\n      <div className="flex flex-col items-center gap-4">\n        <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />\n        <p className="text-slate-500 text-sm font-medium">Loading...</p>\n      </div>\n    </div>\n  );\n}\n',
+        content: `export default function Loading() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="relative w-12 h-12">
+          <div className="absolute inset-0 rounded-full border-4 border-slate-800" />
+          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-violet-500 animate-spin" />
+        </div>
+        <p className="text-slate-500 text-sm font-medium">Loading...</p>
+      </div>
+    </div>
+  );
+}
+`,
       },
       {
         path: 'src/app/error.tsx',
-        content: "'use client';\n\nexport default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {\n  return (\n    <div className=\"min-h-[60vh] flex items-center justify-center\">\n      <div className=\"text-center max-w-md mx-auto px-4\">\n        <div className=\"w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-6\">\n          <span className=\"text-3xl\">⚠️</span>\n        </div>\n        <h2 className=\"text-2xl font-bold text-slate-900 mb-3\">Something went wrong</h2>\n        <p className=\"text-slate-600 mb-8 leading-relaxed\">\n          {error.message || 'An unexpected error occurred. Please try again.'}\n        </p>\n        <button\n          onClick={reset}\n          className=\"inline-flex items-center rounded-lg bg-slate-900 text-white px-6 py-3 font-semibold hover:bg-slate-800 transition-colors\"\n        >\n          Try Again\n        </button>\n      </div>\n    </div>\n  );\n}\n",
+        content: `'use client';
+
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="text-center max-w-md mx-auto px-4">
+        <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-6">
+          <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-3">Something went wrong</h2>
+        <p className="text-slate-400 mb-8 leading-relaxed">
+          {error.message || 'An unexpected error occurred. Please try again.'}
+        </p>
+        <button
+          onClick={reset}
+          className="inline-flex items-center rounded-lg bg-white text-slate-900 px-6 py-3 font-semibold hover:bg-slate-100 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    </div>
+  );
+}
+`,
+      },
+      {
+        path: 'src/app/not-found.tsx',
+        content: `export default function NotFound() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="text-center max-w-md mx-auto px-4">
+        <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto mb-6">
+          <span className="text-2xl font-bold text-slate-400">404</span>
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-3">Page not found</h2>
+        <p className="text-slate-400 mb-8 leading-relaxed">
+          The page you are looking for does not exist or has been moved.
+        </p>
+        <a
+          href="/"
+          className="inline-flex items-center rounded-lg bg-white text-slate-900 px-6 py-3 font-semibold hover:bg-slate-100 transition-colors"
+        >
+          Go home
+        </a>
+      </div>
+    </div>
+  );
+}
+`,
       },
       {
         path: 'src/components/index.ts',
         content: 'export {};\n',
       },
       {
+        path: 'LICENSE',
+        content: `MIT License
+
+Copyright (c) ${new Date().getFullYear()} ${projectName} Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+`,
+      },
+      {
+        path: 'vercel.json',
+        content: `{
+  "rewrites": [{ "source": "/api/health", "destination": "/api/health" }],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" }
+      ]
+    }
+  ]
+}
+`,
+      },
+      {
         path: 'README.md',
         content: this.buildReadme(plan),
+      },
+      {
+        path: 'src/app/api/health/route.ts',
+        content: `import { NextResponse } from 'next/server';
+
+export async function GET() {
+  return NextResponse.json({
+    data: {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      version: '0.1.0',
+    },
+  });
+}
+`,
+      },
+      {
+        path: 'src/app/api/analyze/route.ts',
+        content: `import { NextResponse } from 'next/server';
+
+interface AnalyzeRequest {
+  input: string;
+}
+
+interface AnalyzeResult {
+  summary: string;
+  score: number;
+  category: string;
+  signals: Array<{ name: string; value: number }>;
+  recommendation: string;
+}
+
+const KEYWORDS: Record<string, string[]> = {
+  bug: ['error', 'bug', 'broken', 'fails', 'crash', 'exception', 'undefined', 'null', 'throws'],
+  feature: ['feature', 'request', 'want', 'need', 'add', 'support', 'implement'],
+  performance: ['slow', 'latency', 'timeout', 'lag', 'bottleneck', 'memory', 'cpu'],
+  ux: ['ux', 'ui', 'design', 'confusing', 'hard to use', 'unclear'],
+};
+
+function analyzeText(input: string): AnalyzeResult {
+  const text = input.toLowerCase();
+  const wordCount = input.trim().split(/\\s+/).filter(Boolean).length;
+
+  const signals = Object.entries(KEYWORDS).map(([name, kws]) => ({
+    name: name.charAt(0).toUpperCase() + name.slice(1),
+    value: kws.reduce((s, kw) => s + (text.includes(kw) ? 1 : 0), 0),
+  }));
+
+  const top = signals.reduce((a, b) => (a.value >= b.value ? a : b));
+  const category = top.value > 0 ? top.name : 'General';
+
+  const score = Math.min(100, Math.round(40 + wordCount * 1.5 + top.value * 8));
+
+  const sentences = input.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
+  const summary = sentences[0] ? sentences[0].slice(0, 200) : input.slice(0, 200);
+
+  const recMap: Record<string, string> = {
+    Bug: 'Open a focused investigation: reproduce locally, isolate the failing input, and write a regression test before patching.',
+    Feature: 'Validate the request against the roadmap. If aligned, spec the smallest end-to-end slice and ship behind a flag.',
+    Performance: 'Profile the hot path. Measure before optimising — a single metric will tell you where to look.',
+    Ux: 'Watch three users try the flow. Their confusion will localise the redesign.',
+    General: 'Route to the appropriate team and follow up within one business day.',
+  };
+  const recommendation = recMap[category] ?? recMap.General!;
+
+  return { summary, score, category, signals, recommendation };
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = (await req.json()) as AnalyzeRequest;
+    if (!body.input || typeof body.input !== 'string' || body.input.trim().length === 0) {
+      return NextResponse.json(
+        { error: { message: 'Input text is required', code: 'VALIDATION_ERROR' } },
+        { status: 400 }
+      );
+    }
+    const result = analyzeText(body.input);
+    return NextResponse.json({ data: result });
+  } catch {
+    return NextResponse.json(
+      { error: { message: 'Invalid request body', code: 'PARSE_ERROR' } },
+      { status: 400 }
+    );
+  }
+}
+
+export async function GET() {
+  return NextResponse.json({ data: { status: 'analyze service ready' } });
+}
+`,
       },
     ];
   }
@@ -1408,6 +1631,23 @@ export default function Home() {
         </div>
       </section>
 
+      {APP.features.length > 0 && (
+        <section className="max-w-6xl mx-auto px-6 py-12">
+          <h2 className="text-2xl font-bold mb-2">Features</h2>
+          <p className={'text-sm mb-8 ' + t.sub}>What this project delivers, end to end.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {APP.features.slice(0, 6).map((feature, i) => (
+              <div key={i} className={'rounded-xl border p-5 ' + t.card}>
+                <div className={'w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold mb-3 ' + t.accent + ' ' + t.accentText}>
+                  {i + 1}
+                </div>
+                <p className="font-medium text-sm leading-relaxed">{feature}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="max-w-6xl mx-auto px-6 py-12">
         <div className={'flex gap-4 mb-8 border-b pb-4 ' + t.border}>
           {tabs.map((label, i) => (
@@ -1580,9 +1820,22 @@ export default function Home() {
         )}
       </section>
 
-      <footer className={'border-t py-8 ' + t.border}>
-        <div className={'max-w-6xl mx-auto px-6 text-center text-sm ' + t.sub}>
-          <p>{APP.name} — a working demo generated for this challenge.</p>
+      <footer className={'border-t py-12 ' + t.border}>
+        <div className={'max-w-6xl mx-auto px-6'}>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <span className={'w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ' + t.accent + ' ' + t.accentText}>
+                {APP.name.charAt(0)}
+              </span>
+              <span className="font-bold">{APP.name}</span>
+            </div>
+            <div className={'flex flex-wrap items-center gap-6 text-sm ' + t.sub}>
+              <a href="#demo" className="hover:text-white transition-colors">Demo</a>
+              <a href="#features" className="hover:text-white transition-colors">Features</a>
+              <a href="#api" className="hover:text-white transition-colors">API</a>
+            </div>
+            <p className={'text-sm ' + t.sub}>&copy; {new Date().getFullYear()} {APP.name}</p>
+          </div>
         </div>
       </footer>
     </main>
@@ -2653,6 +2906,7 @@ export async function POST(req: Request) {
       shell: true,
       env: { ...process.env, PORT: '3099' },
     });
+    trackChildProcess(server);
 
     let output = '';
     let started = false;
@@ -3024,6 +3278,7 @@ export async function POST(req: Request) {
       shell: true,
       env: { ...process.env, PORT: '3099' },
     });
+    trackChildProcess(server);
 
     let output = '';
     let started = false;

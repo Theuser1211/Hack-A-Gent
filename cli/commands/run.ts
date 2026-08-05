@@ -28,6 +28,7 @@ import { checkReadiness } from '../submission/readiness-check.js';
 import type { PipelineContext } from '../pipeline/types.js';
 import { CompetitionIntelligenceAgent } from '../agents/index.js';
 import { DecisionStore } from '../decisions.js';
+import { cleanupAllProcesses } from '../signals.js';
 import { OrganizationalMemory } from '../learning/organizational-memory.js';
 import { CheckpointStore } from '../orchestration/checkpoint-store.js';
 import { formatError, printError } from '../errors.js';
@@ -501,6 +502,7 @@ async function runFullPipeline(
     const instrumentor = new ImprovementInstrumentor(improveBudgetMs, ITER_BUDGET_MS);
     let lastBuildHash: string | null = null;
     let stopReason = 'completed';
+    const appliedActionTargets = new Set<string>();
 
     if (improveBudgetMs < 30_000) {
       debug(`Skipped Improvement Pass — only ${Math.round(improveBudgetMs / 1000)}s remaining`);
@@ -536,7 +538,7 @@ async function runFullPipeline(
             const pOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
             return (pOrder[a.priority] ?? 99) - (pOrder[b.priority] ?? 99);
           });
-          const action = sorted[0];
+          const action = sorted.find(a => !appliedActionTargets.has(`${a.type}:${a.target}`));
           if (!action) {
             instrumentor.endSubStage('skipped');
             instrumentor.skipSubStage('Generate fixes');
@@ -544,8 +546,8 @@ async function runFullPipeline(
             instrumentor.skipSubStage('Build');
             instrumentor.skipSubStage('Judge');
             log(`  Score improvement........0`);
-            log(`  Decision: stop: no actions`);
-            instrumentor.endIteration(currentScore, 'converged', 'no actions planned');
+            log(`  Decision: stop: no new actions (all already applied)`);
+            instrumentor.endIteration(currentScore, 'converged', 'all actions already applied');
             break;
           }
           instrumentor.endSubStage();
@@ -645,6 +647,7 @@ async function runFullPipeline(
             instrumentor.skipSubStage('Judge');
             log(`  Score improvement........0`);
             log(`  Decision: stop: build failed`);
+            appliedActionTargets.add(`${action.type}:${action.target}`);
             instrumentor.endIteration(currentScore, 'failed', 'build failed after improvement');
             continue;
           }
@@ -656,6 +659,8 @@ async function runFullPipeline(
             instrumentor.endIteration(currentScore, 'timeout', 'iteration budget exhausted');
             break;
           }
+
+          appliedActionTargets.add(`${action.type}:${action.target}`);
 
           instrumentor.startSubStage('Judge');
           const increase = action.expectedScoreIncrease;
@@ -831,6 +836,9 @@ async function runFullPipeline(
       );
     } catch (e) { dim(`Trace save error: ${e instanceof Error ? e.message : String(e)}`); }
 
+    // Ensure all child processes are cleaned up before returning
+    await cleanupAllProcesses().catch(err => console.error('Cleanup error:', err));
+
     return {
       success: validation.valid,
       message: validation.valid
@@ -923,13 +931,17 @@ async function runFullPipeline(
            elapsedMs: elapsed,
          }, null, 2),
        );
-    } catch (e) { dim(`Trace save error: ${e instanceof Error ? e.message : String(e)}`); }
+     } catch (e) { dim(`Trace save error: ${e instanceof Error ? e.message : String(e)}`); }
 
-     showErrorSummary({
+      showErrorSummary({
        phase: 'Pipeline execution',
        reason: msg,
        fix: 'Run `hag doctor` to check provider status, then re-run with `hag run`',
      });
+
+     // Ensure all child processes are cleaned up before returning
+     await cleanupAllProcesses().catch(err => console.error('Cleanup error:', err));
+
      return {
        success: false,
        message: `Pipeline failed: ${msg}`,
@@ -937,7 +949,7 @@ async function runFullPipeline(
        metrics: { durationMs: elapsed },
        traceId: createDeterministicUuid(seed, nextTraceCounter()).slice(0, 12),
      };
-  }
+}
 }
 
 export interface ParsedInput {
