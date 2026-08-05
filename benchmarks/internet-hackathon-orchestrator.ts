@@ -3250,7 +3250,7 @@ export async function POST(req: Request) {
       strategyBlock: strategySection,
       systemPrompt,
       packageVersions: 'For package.json use these exact versions: next@^14.2.0, react@^18.3.1, react-dom@^18.3.1, @types/react@^18.3.3, @types/node@^20.14.0, typescript@^5.5.0',
-      taskDescription: taskDescriptions[fileType],
+      taskDescription: taskDescriptions[fileType]!,
       fileType,
       specificTask: context.specificTask,
       scaffoldIncludeList: fileType === 'scaffold'

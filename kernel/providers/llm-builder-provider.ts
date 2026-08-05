@@ -6,7 +6,7 @@ import type { RouterEngine } from '../llm/router-engine.js';
 import type { ArchitectureBlueprint } from '../planning/architect-types.js';
 import type { PromptEngine } from '../prompts/prompt-engine.js';
 import { extractJSON } from './json-extractor.js';
-import { GeneratedModuleSchema } from './llm-output-schemas.js';
+import { GeneratedModuleSchema } from '../builders/builder-types.js';
 
 export class LLMBuilderProvider implements BuilderProvider {
   private router: RouterEngine;

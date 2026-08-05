@@ -2,6 +2,7 @@ import type { ContextEngine } from '../context/context-engine.js';
 import type { LLMRequest } from '../llm/llm-types.js';
 import type { RouterEngine } from '../llm/router-engine.js';
 import type { ArchitectProvider } from '../planning/architect-provider.js';
+import { RecommendedStackSchema } from '../planning/architect-types.js';
 import type {
   RecommendedStack,
   FolderStructure,
@@ -17,7 +18,6 @@ import type { PlannerOutput } from '../planning/planner-types.js';
 import type { PromptEngine } from '../prompts/prompt-engine.js';
 import { extractJSON } from './json-extractor.js';
 import {
-  RecommendedStackSchema,
   FolderStructureSchema,
   DatabaseSchemaSchema,
   RequestSchemaArraySchema,
