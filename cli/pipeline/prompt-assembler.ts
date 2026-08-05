@@ -98,7 +98,7 @@ export const GENERATION_CONTEXT_WINDOW = 32_000;
 export const GENERATION_INPUT_BUDGET_RATIO = 0.6;
 
 export const GENERATION_CALLOUT =
-  'This is a HACKATHON project. Make it stand out — judges will compare it against other projects. Solve the specific challenge, integrate sponsor APIs visibly, and make the demo work end-to-end.';
+  'You are shipping a production-quality MVP. Think about the entire repository before writing files. Every component must be reusable, typed, responsive, and accessible. Generate complete implementations — not placeholders. One polished workflow with production code beats five half-finished screens.';
 
 /** Standard heuristic (~4 chars per token). Used for diagnostics only. */
 export function estimateTokens(text: string): number {

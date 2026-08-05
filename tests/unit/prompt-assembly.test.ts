@@ -227,7 +227,7 @@ describe('assembleGenerationPrompt — fallback path (no strategy block)', () =>
     expect(p).toContain('REQUIRED TECHNOLOGIES');
     expect(p).toContain('Task: Generate the landing page');
     expect(p).toContain('Focus on: Build the dashboard');
-    expect(p).toContain('This is a HACKATHON project.');
+    expect(p).toContain('You are shipping a production-quality MVP.');
     // Differentiators stay out of Constraints, theme duplication stays out.
     const constraintsLine = a.sections.find(s => s.id === 'constraints')!.content;
     expect(constraintsLine).not.toContain('Differentiator');
@@ -268,7 +268,7 @@ describe('assembleGenerationPrompt — determinism and snapshot', () => {
       'For package.json use these exact versions: next@^14.2.0, react@^18.3.1',
       'Task: Generate the landing page',
       'Focus on: Hero section',
-      'This is a HACKATHON project. Make it stand out — judges will compare it against other projects. Solve the specific challenge, integrate sponsor APIs visibly, and make the demo work end-to-end.',
+      'You are shipping a production-quality MVP. Think about the entire repository before writing files. Every component must be reusable, typed, responsive, and accessible. Generate complete implementations — not placeholders. One polished workflow with production code beats five half-finished screens.',
     ].join('\n'));
   });
 
