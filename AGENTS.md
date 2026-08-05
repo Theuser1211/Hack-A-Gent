@@ -119,6 +119,18 @@ Turn Hack-A-Gent into a production-quality CLI that any developer can install gl
 - **QA process**: Playwright as ground truth — extracted HTML, DOM queries for each field, compared against parser output. 9 new regression tests (62 total).
 - **Status**: AI YES page parser output now matches ground truth for all 9 fields.
 
+### Session: Production Bug Fixes (v1.1.2)
+**P0 — AI Generation UX**: Changed `aiUnavailable()` in `cli/output.ts:134` to say "AI provider unavailable. Switching to production template generation." — details hidden behind `--verbose`
+**P0 — Dynamic Timeline**: Rewrote `buildTimeline()` in `cli/planner.ts` with `fmt()` helper producing `Xm` for <1h, `Xh Ym` for ≥1h. Proportional to `hoursRemaining`, `teamSize`. 4 tiers: ≤1h, ≤3h, ≤8h, >8h. Created `tests/unit/planner-timeline.test.ts` (6 tests)
+**P0 — Parser Cleanup**: Added `stripNoise(html)` in `cli/pipeline/parsing.ts` — strips `<nav>`, `<footer>`, `<header>`, cookie banners, login/register links, accessibility skip links, sidebar, filter/toolbar. Applied before extraction.
+**P0 — Pipeline Ordering**: Fixed `cli/interactive.ts` to run interview BEFORE plan generation (was: plan → interview → regenerate; now: interview → plan). Removed broken `this.printExecutionPlan` call in `run.ts` (standalone function referencing `this`).
+**P1 — Interview Skip**: `createTeamSizeQuestion()` returns null when team size inferred from problem statement. `createHoursRemainingQuestion()` returns null when submission deadline found.
+**P1 — CLI Output**: Changed runtime validation messages to user-friendly wording. Split close handler into 3 branches: success (code 0 + started), not started, unexpected exit (non-zero).
+**P1 — Improvement Pass**: Removed `iterRanOutOfTime` check between build and judge stages so judge always runs after successful build.
+**P1 — Preferred Stack**: Fixed `determineMissingInfo()` in `cli/hackathon-context.ts:196` — now checks `ctx.preferredStack.length === 0` in addition to `!ctx.stackDetected`
+**P0 — CLI Exit**: Added `[exit-diag]` instrumentation in `cli/index.ts`. Root cause: 2 orphan Sockets from keep-alive HTTP connections (Devpost fetch + OpenRouter API). Added `.unref()` on debounce timers in `model-performance-tracker.ts` and `parser-learning.ts`. Added `req.destroy()` in HTTP paths in `runtime-validation.ts` and `browser-validator.ts`. Safety-net `process.exit()` after 5s handles remaining sockets.
+**Verified**: 5 dry-run hackathons (zero orphans), 1 full run (pipeline completes, CLI exits), 31 unit tests pass, build clean.
+
 ### Earlier Work (v1.0.0–v1.0.2)
 - Core stability: CustomEndpointProvider API key fix, `buildExecutionPlan()` replacement, RouterEngine wiring, import path fixes
 - `process.exit()` → `process.exitCode` for Windows compatibility
