@@ -290,9 +290,9 @@ async function runFullPipeline(
   } else {
     info('No LLM provider configured — using template defaults for interview');
   }
-  stageDone('Dynamic Interview', Date.now() - t0);
+stageDone('Dynamic Interview', Date.now() - t0);
 
-  // ── Stage 3: Generate Strategy ───────────────────────────────────
+// ── Stage 3: Generate Strategy ───────────────────────────────────
   // Strategy is generated AFTER the interview so it uses ACTUAL user answers.
   stageStart('Generate Strategy');
   const strategyGenerator = new WinningStrategyGenerator();
@@ -314,14 +314,19 @@ async function runFullPipeline(
   debug(`Risks: ${risks.length} identified`);
   stageDone('Generate Risks', Date.now() - t0);
 
-  // ── Stage 6: Generate Architecture ───────────────────────────────
-  // Architecture uses ACTUAL preferred stack from interview.
-  stageStart('Generate Architecture');
-  const architecture = winningStrategy.architecture;
-  debug(`Architecture: ${architecture}`);
-  stageDone('Generate Architecture', Date.now() - t0);
+// ── Stage 6: Generate Architecture ───────────────────────────────
+// Architecture uses ACTUAL preferred stack from interview.
+stageStart('Generate Architecture');
+const architecture = winningStrategy.architecture;
+debug(`Architecture: ${architecture}`);
+stageDone('Generate Architecture', Date.now() - t0);
 
-  // Build and inject code generation context from enriched strategy
+// Show execution plan (only if interview was actually performed)
+if (interviewResult) {
+  printExecutionPlan(winningStrategy, timelinePhases, risks, architecture, interviewResult);
+}
+
+// Build and inject code generation context from enriched strategy
   const codeGenCtx = buildCodeGenContext(competitionAnalysis, winningStrategy);
 
   if (dryRun) {
