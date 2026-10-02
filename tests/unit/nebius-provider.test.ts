@@ -8,6 +8,10 @@ import { getLLMConfig, PROVIDER_NATIVE_KEYS } from '../../cli/config-manager.js'
 import { ApiKeyManager, RateLimitTracker, TokenUsageTracker } from '../../kernel/providers/provider-types.js';
 import { CustomEndpointProvider, NEBIUS_MODELS } from '../../kernel/providers/custom-endpoint-provider.js';
 import { ProviderFactory } from '../../kernel/providers/provider-factory.js';
+import { AnthropicProvider } from '../../kernel/providers/anthropic-provider.js';
+import { GeminiProvider } from '../../kernel/providers/gemini-provider.js';
+import { OpenAIProvider } from '../../kernel/providers/openai-provider.js';
+import { OpenRouterProvider } from '../../kernel/providers/openrouter-provider.js';
 import { RouterEngine, STATIC_CODING_CHAIN } from '../../kernel/llm/router-engine.js';
 import type { LLMProvider } from '../../kernel/llm/llm-provider.js';
 import type { LLMRequest, LLMResponse, ModelSpec, ProviderHealth } from '../../kernel/llm/llm-types.js';
@@ -37,6 +41,17 @@ describe('Nebius Token Factory model catalog', () => {
     const ids = NEBIUS_MODELS.map((m) => m.model_id);
     for (const modelId of STATIC_CODING_CHAIN) {
       expect(ids).toContain(modelId);
+    }
+  });
+
+  it('uses non-empty, well-formed model ids for every catalog entry', () => {
+    // Generic validity only — the catalog is curated and may evolve,
+    // so no specific model is assumed here.
+    for (const model of NEBIUS_MODELS) {
+      expect(typeof model.model_id).toBe('string');
+      expect(model.model_id.length).toBeGreaterThan(0);
+      expect(model.model_id).toBe(model.model_id.trim());
+      expect(/\s/.test(model.model_id)).toBe(false);
     }
   });
 });
@@ -76,7 +91,7 @@ describe('Nebius provider construction', () => {
     }
   });
 
-  it('is created by the ProviderFactory', () => {
+  it('is created by the ProviderFactory as a CustomEndpointProvider', () => {
     const provider = ProviderFactory.createLLMProvider(
       'nebius',
       new ApiKeyManager({ nebius: NEBIUS_KEY }),
@@ -84,6 +99,62 @@ describe('Nebius provider construction', () => {
       new TokenUsageTracker(),
     );
     expect(provider.providerId).toBe('nebius');
+    // Nebius rides the existing provider abstraction: the factory
+    // instantiates it through CustomEndpointProvider, exactly like
+    // the nvidia and custom:<name> providers.
+    expect(provider).toBeInstanceOf(CustomEndpointProvider);
+  });
+});
+
+// ── Factory regression: existing providers keep working ──────
+
+describe('Provider factory keeps existing providers working', () => {
+  const keys: Record<string, string> = {
+    nebius: NEBIUS_KEY,
+    nvidia: 'test-nvidia-key',
+    gemini: 'test-gemini-key',
+    anthropic: 'test-anthropic-key',
+    openai: 'test-openai-key',
+    openrouter: 'test-openrouter-key',
+  };
+
+  it('instantiates every built-in provider (the Nebius addition displaced none)', () => {
+    const apiKeyManager = new ApiKeyManager(keys);
+    const rateLimitTracker = new RateLimitTracker();
+    const tokenUsageTracker = new TokenUsageTracker();
+
+    // Nebius and nvidia ride the existing CustomEndpointProvider.
+    expect(
+      ProviderFactory.createLLMProvider('nebius', apiKeyManager, rateLimitTracker, tokenUsageTracker),
+    ).toBeInstanceOf(CustomEndpointProvider);
+    expect(
+      ProviderFactory.createLLMProvider('nvidia', apiKeyManager, rateLimitTracker, tokenUsageTracker),
+    ).toBeInstanceOf(CustomEndpointProvider);
+    // The dedicated provider implementations are unchanged.
+    expect(
+      ProviderFactory.createLLMProvider('gemini', apiKeyManager, rateLimitTracker, tokenUsageTracker),
+    ).toBeInstanceOf(GeminiProvider);
+    expect(
+      ProviderFactory.createLLMProvider('anthropic', apiKeyManager, rateLimitTracker, tokenUsageTracker),
+    ).toBeInstanceOf(AnthropicProvider);
+    expect(
+      ProviderFactory.createLLMProvider('openai', apiKeyManager, rateLimitTracker, tokenUsageTracker),
+    ).toBeInstanceOf(OpenAIProvider);
+    expect(
+      ProviderFactory.createLLMProvider('openrouter', apiKeyManager, rateLimitTracker, tokenUsageTracker),
+    ).toBeInstanceOf(OpenRouterProvider);
+  });
+
+  it('still rejects unknown provider ids', () => {
+    const apiKeyManager = new ApiKeyManager(keys);
+    expect(() =>
+      ProviderFactory.createLLMProvider(
+        'not-a-provider',
+        apiKeyManager,
+        new RateLimitTracker(),
+        new TokenUsageTracker(),
+      ),
+    ).toThrow(/Unknown LLM provider/);
   });
 });
 
@@ -130,9 +201,18 @@ describe('Nebius provider request shape', () => {
     expect(init.method).toBe('POST');
     const headers = init.headers as Record<string, string>;
     expect(headers.Authorization).toBe(`Bearer ${NEBIUS_KEY}`);
-    const body = JSON.parse(init.body as string) as { model: string; messages: Array<{ role: string; content: string }> };
+    const body = JSON.parse(init.body as string) as {
+      model: string;
+      messages: Array<{ role: string; content: string }>;
+      max_tokens: number;
+      temperature: number;
+    };
     expect(body.model).toBe(NEBIUS_MODEL);
     expect(body.messages[0]!.content).toBe('Generate code');
+    // Sampling parameters must pass through to the Token Factory
+    // request body unchanged.
+    expect(body.max_tokens).toBe(256);
+    expect(body.temperature).toBe(0);
 
     expect(response.provider).toBe('nebius');
     expect(response.model_id).toBe(NEBIUS_MODEL);
