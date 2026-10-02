@@ -1,0 +1,489 @@
+import type {
+  AiContext,
+  ContextItem,
+  FeedbackRequest,
+  Session,
+  User,
+  UserPrefs,
+  WorkHistoryItem,
+  WorkItem,
+} from './types';
+
+type Where = Record<string, unknown>;
+
+function matchesWhere(row: unknown, where: Where): boolean {
+  const source = row as Record<string, unknown>;
+  return Object.keys(where).every((key) => {
+    const expected = where[key];
+    const actual = source[key];
+    if (expected === undefined) return true;
+    if (expected instanceof Date || actual instanceof Date) {
+      return String(expected) === String(actual);
+    }
+    return actual === expected;
+  });
+}
+
+function filterRows<T>(rows: T[], where?: Where): T[] {
+  return where ? rows.filter((row) => matchesWhere(row, where)) : [...rows];
+}
+
+function findRow<T>(rows: T[], where: Where): T | undefined {
+  return rows.find((row) => matchesWhere(row, where));
+}
+
+function removeRow<T>(rows: T[], where: Where): boolean {
+  const index = rows.findIndex((row) => matchesWhere(row, where));
+  if (index === -1) return false;
+  rows.splice(index, 1);
+  return true;
+}
+
+let sequence = 0;
+
+function nextId(prefix: string): string {
+  sequence += 1;
+  return prefix + '-' + sequence + '-' + Date.now().toString(36);
+}
+
+export const workItems: WorkItem[] = [];
+export const contexts: ContextItem[] = [];
+export const workHistory: WorkHistoryItem[] = [];
+export const users: User[] = [];
+export const sessions: Session[] = [];
+export const feedbacks: FeedbackRequest[] = [];
+export const aiContexts: AiContext[] = [];
+
+interface UserPrefsRow extends UserPrefs {
+  userId: string;
+}
+
+interface RefreshToken {
+  token: string;
+  userId?: string;
+}
+
+const userPrefsRows: UserPrefsRow[] = [];
+const refreshTokens: RefreshToken[] = [];
+
+export function seedDemoData(): void {
+  if (users.length === 0) {
+    users.push(
+      { id: 'user-1', email: 'demo@example.com', name: 'Demo User', password: 'password123', passwordHash: '$2a$10$l0G4NKhnLXTdCkT3y.sR3el2ZlIoh.eYUggwBsCA.0OvHzUgdGRYe', createdAt: Date.now() },
+      { id: 'user-alice', email: 'alice@example.com', name: 'Alice', password: 'password123', passwordHash: '$2a$10$l0G4NKhnLXTdCkT3y.sR3el2ZlIoh.eYUggwBsCA.0OvHzUgdGRYe', createdAt: Date.now() },
+    );
+  }
+  if (workItems.length === 0) {
+    const stamp = Date.now();
+    workItems.push(
+      { id: 'work-1', userId: 'demo-user-1', type: 'search', status: 'completed', outputSnapshot: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', confidenceScore: 0.95, createdAt: stamp - 3600000, updatedAt: stamp - 3600000 },
+      { id: 'work-2', userId: 'demo-user-1', type: 'search', status: 'completed', outputSnapshot: 'https://en.wikipedia.org/wiki/Quantum_mechanics', confidenceScore: 0.87, createdAt: stamp - 7200000, updatedAt: stamp - 7200000 },
+      { id: 'work-3', userId: 'demo-user-1', type: 'search', status: 'completed', outputSnapshot: 'https://open.spotify.com/track/6rqhFgbbKwnb9MLmUQDhG6', confidenceScore: 0.92, createdAt: stamp - 10800000, updatedAt: stamp - 10800000 },
+    );
+  }
+  if (contexts.length === 0) {
+    contexts.push({ id: 'context-1', label: 'Demo context' });
+  }
+  if (workHistory.length === 0) {
+    workHistory.push({
+      id: 'history-1',
+      title: 'Demo history',
+      status: 'completed',
+      createdAt: new Date().toISOString(),
+    });
+  }
+  if (aiContexts.length === 0) {
+    aiContexts.push({
+      id: 'ai-1',
+      label: 'Demo context',
+      type: 'search',
+      data: {},
+      userId: 'user-1',
+      inputs: { description: 'Quantum computing breakthroughs' },
+      timestamp: Date.now(),
+    });
+  }
+  if (findRow(userPrefsRows, { userId: 'user-1' }) === undefined) {
+    userPrefsRows.push({ userId: 'user-1', theme: 'system', maxResults: 10, safeSearch: true, notifications: true });
+  }
+}
+
+seedDemoData();
+
+export function findUserByEmail(email: string): User | undefined {
+  return findRow(users, { email });
+}
+
+export function resetDatabase(): void {
+  workItems.length = 0;
+  contexts.length = 0;
+  workHistory.length = 0;
+  users.length = 0;
+  sessions.length = 0;
+  feedbacks.length = 0;
+  aiContexts.length = 0;
+  userPrefsRows.length = 0;
+  refreshTokens.length = 0;
+  sequence = 0;
+  seedDemoData();
+}
+
+export function validateRefreshToken(token: string): boolean {
+  return findRow(refreshTokens, { token }) !== undefined;
+}
+
+export function addRefreshToken(token: string, userId?: string): void {
+  if (findRow(refreshTokens, { token })) return;
+  refreshTokens.push(userId === undefined ? { token } : { token, userId });
+}
+
+export function removeRefreshToken(token: string): void {
+  removeRow(refreshTokens, { token });
+}
+
+export function issueRefreshToken(userId: string): string {
+  const token = nextId('refresh');
+  refreshTokens.push({ token, userId });
+  return token;
+}
+
+export function findUserByRefreshToken(token: string): User | undefined {
+  const entry = findRow(refreshTokens, { token });
+  return entry && entry.userId ? findRow(users, { id: entry.userId }) : undefined;
+}
+
+export function getWorkItems(userId: string): WorkItem[] {
+  return workItems.filter((row) => row.userId === userId);
+}
+
+export function getWorkItemsByUserId(userId: string): WorkItem[] {
+  return getWorkItems(userId);
+}
+
+export function getWorkItemById(id: string): WorkItem | undefined {
+  return findRow(workItems, { id });
+}
+
+/**
+ * Two call shapes are in circulation: an item alone (the item carries its own
+ * userId) and the older userId-then-item form. Both are accepted; both return
+ * the stored row so a caller can read the id it was given.
+ */
+export function addWorkItem(
+  userIdOrItem: string | Partial<WorkItem>,
+  item?: Partial<WorkItem>,
+): WorkItem {
+  const source = (item === undefined ? userIdOrItem : item) as Partial<WorkItem>;
+  const userId = item === undefined ? undefined : (userIdOrItem as string);
+  const stamp = Date.now();
+  const created = { ...source, id: nextId('work'), createdAt: stamp, updatedAt: stamp } as WorkItem;
+  if (userId !== undefined) created.userId = userId;
+  workItems.push(created);
+  return created;
+}
+
+/**
+ * updateWorkItem(id, updates) and updateWorkItem(userId, id, updates) are
+ * both in circulation; the three-argument form keeps the original
+ * per-user scoping.
+ */
+export function updateWorkItem(
+  userIdOrId: string,
+  idOrUpdates: string | Partial<WorkItem>,
+  updates?: Partial<WorkItem>,
+): WorkItem | null {
+  const scoped = updates !== undefined;
+  const id = scoped ? (idOrUpdates as string) : userIdOrId;
+  const delta = (scoped ? updates : idOrUpdates) as Partial<WorkItem>;
+  const userId = scoped ? userIdOrId : undefined;
+  const index = workItems.findIndex(
+    (row) => row.id === id && (userId === undefined || row.userId === userId),
+  );
+  const existing = workItems[index];
+  if (index === -1 || !existing) return null;
+  const updated: WorkItem = { ...existing, ...delta, updatedAt: Date.now() };
+  workItems[index] = updated;
+  return updated;
+}
+
+export function getAiContexts(userId: string): AiContext[] {
+  return aiContexts.filter((row) => row.userId === userId);
+}
+
+export function addAiContext(userId: string, context: AiContext): void {
+  aiContexts.push({ ...context, userId });
+}
+
+export function getUserPrefs(userId: string): UserPrefs {
+  const existing = findRow(userPrefsRows, { userId });
+  if (existing) return existing;
+  const created: UserPrefsRow = { userId, theme: 'system', maxResults: 10, safeSearch: true, notifications: true };
+  userPrefsRows.push(created);
+  return created;
+}
+
+export function setUserPrefs(prefs: UserPrefs): void {
+  const userId = prefs.userId ?? nextId('prefs');
+  const existing = findRow(userPrefsRows, { userId });
+  const target = existing ?? { userId, theme: 'system', maxResults: 10, safeSearch: true, notifications: true };
+  Object.assign(target, prefs, { userId });
+  if (!existing) userPrefsRows.push(target);
+}
+
+const workItemRepository = {
+  findMany: (where?: Where | string): WorkItem[] =>
+    typeof where === 'string'
+      ? filterRows(workItems, { userId: where })
+      : filterRows(workItems, where),
+  findUnique: (where: Where): WorkItem | undefined => findRow(workItems, where),
+  getAll: (userId?: string): WorkItem[] =>
+    userId === undefined
+      ? [...workItems]
+      : workItems.filter((row) => row.userId === undefined || row.userId === userId),
+  get: (id: string): WorkItem | undefined => findRow(workItems, { id }),
+  getById: (id: string): WorkItem | undefined => findRow(workItems, { id }),
+  findById: (id: string): WorkItem | undefined => findRow(workItems, { id }),
+  create: (data: Omit<WorkItem, 'id' | 'createdAt' | 'updatedAt'>): WorkItem => {
+    const stamp = Date.now();
+    const created: WorkItem = { ...data, id: nextId('work'), createdAt: stamp, updatedAt: stamp };
+    workItems.push(created);
+    return created;
+  },
+  update: (id: string | { id: string }, updates: Partial<WorkItem>): WorkItem | null => {
+    const key = typeof id === 'string' ? id : id.id;
+    const index = workItems.findIndex((row) => row.id === key);
+    const existing = workItems[index];
+    if (index === -1 || !existing) return null;
+    const updated: WorkItem = { ...existing, ...updates, updatedAt: Date.now() };
+    workItems[index] = updated;
+    return updated;
+  },
+  delete: (id: string): boolean => removeRow(workItems, { id }),
+  clear: (): void => {
+    workItems.length = 0;
+  },
+  get size(): number {
+    return workItems.length;
+  },
+};
+
+const userPrefsRepository = {
+  findMany: (where?: Where): UserPrefsRow[] => filterRows(userPrefsRows, where),
+  findUnique: (where: Where): UserPrefsRow | undefined => findRow(userPrefsRows, where),
+  get: (userId: string): UserPrefs | undefined => findRow(userPrefsRows, { userId }),
+  findByUserId: (userId: string): UserPrefs | undefined => findRow(userPrefsRows, { userId }),
+  create: (data: UserPrefsRow): UserPrefsRow => {
+    userPrefsRows.push(data);
+    return data;
+  },
+  update: (userId: string, updates: Partial<UserPrefs>): UserPrefs => {
+    const existing = findRow(userPrefsRows, { userId });
+    if (existing) {
+      Object.assign(existing, updates);
+      return existing;
+    }
+    const created: UserPrefsRow = {
+      userId,
+      theme: 'system',
+      maxResults: 10,
+      safeSearch: true,
+      notifications: true,
+      ...updates,
+    };
+    userPrefsRows.push(created);
+    return created;
+  },
+  delete: (where: Where): boolean => removeRow(userPrefsRows, where),
+  clear: (): void => {
+    userPrefsRows.length = 0;
+  },
+  get size(): number {
+    return userPrefsRows.length;
+  },
+};
+
+const aiContextRepository = {
+  findMany: (where?: Where): AiContext[] => filterRows(aiContexts, where),
+  findUnique: (where: Where): AiContext | undefined => findRow(aiContexts, where),
+  create: (data: AiContext): AiContext => {
+    aiContexts.push(data);
+    return data;
+  },
+  update: (where: Where, updates: Partial<AiContext>): AiContext | null => {
+    const index = aiContexts.findIndex((row) => matchesWhere(row, where));
+    const existing = aiContexts[index];
+    if (index === -1 || !existing) return null;
+    const updated: AiContext = { ...existing, ...updates };
+    aiContexts[index] = updated;
+    return updated;
+  },
+  delete: (where: Where): boolean => removeRow(aiContexts, where),
+  clear: (): void => {
+    aiContexts.length = 0;
+  },
+  get size(): number {
+    return aiContexts.length;
+  },
+};
+
+const userRepository = {
+  findMany: (where?: Where): User[] => filterRows(users, where),
+  findUnique: (where: Where): User | undefined => findRow(users, where),
+  findByEmail: (email: string): User | undefined => findRow(users, { email }),
+  create: (data: Omit<User, 'id' | 'createdAt' | 'password' | 'passwordHash'> & { password?: string; passwordHash?: string }): User => {
+    const created: User = {
+      ...data,
+      id: nextId('user'),
+      createdAt: Date.now(),
+      password: data.password ?? data.passwordHash ?? '',
+      passwordHash: data.passwordHash ?? data.password ?? '',
+    };
+    users.push(created);
+    return created;
+  },
+  update: (where: Where, updates: Partial<User>): User | null => {
+    const index = users.findIndex((row) => matchesWhere(row, where));
+    const existing = users[index];
+    if (index === -1 || !existing) return null;
+    const updated: User = { ...existing, ...updates };
+    users[index] = updated;
+    return updated;
+  },
+  delete: (where: Where): boolean => removeRow(users, where),
+  clear: (): void => {
+    users.length = 0;
+  },
+  get size(): number {
+    return users.length;
+  },
+};
+
+/**
+ * Registration entry point: the caller hashes out-of-band and passes the
+ * stored credential alongside the public fields.
+ */
+export function createUser(
+  data: { email: string; name: string; password?: string; passwordHash?: string },
+  passwordHash?: string,
+): User {
+  return userRepository.create({ ...data, passwordHash: passwordHash ?? data.passwordHash });
+}
+
+const sessionRepository = {
+  findMany: (where?: Where): Session[] => filterRows(sessions, where),
+  findUnique: (where: Where): Session | undefined => findRow(sessions, where),
+  findById: (id: string): Session | undefined => findRow(sessions, { id }),
+  create: (data: { userId: string; expiresAt: Date } | string): Session => {
+    const input = typeof data === 'string'
+      ? { userId: data, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) }
+      : data;
+    const created: Session = { id: nextId('session'), userId: input.userId, expiresAt: input.expiresAt };
+    sessions.push(created);
+    return created;
+  },
+  delete: (where: Where | string): boolean => removeRow(sessions, typeof where === 'string' ? { id: where } : where),
+  deleteById: (id: string): boolean => removeRow(sessions, { id }),
+  clear: (): void => {
+    sessions.length = 0;
+  },
+  get size(): number {
+    return sessions.length;
+  },
+};
+
+const contextRepository = {
+  findMany: (where?: Where): ContextItem[] => filterRows(contexts, where),
+  findUnique: (where: Where): ContextItem | undefined => findRow(contexts, where),
+  create: (data: ContextItem): ContextItem => {
+    contexts.push(data);
+    return data;
+  },
+  delete: (where: Where): boolean => removeRow(contexts, where),
+  clear: (): void => {
+    contexts.length = 0;
+  },
+  get size(): number {
+    return contexts.length;
+  },
+};
+
+const workHistoryRepository = {
+  findMany: (where?: Where): WorkHistoryItem[] => filterRows(workHistory, where),
+  findUnique: (where: Where): WorkHistoryItem | undefined => findRow(workHistory, where),
+  create: (data: WorkHistoryItem): WorkHistoryItem => {
+    workHistory.push(data);
+    return data;
+  },
+  delete: (where: Where): boolean => removeRow(workHistory, where),
+  clear: (): void => {
+    workHistory.length = 0;
+  },
+  get size(): number {
+    return workHistory.length;
+  },
+};
+
+const feedbackRepository = {
+  findMany: (where?: Where): FeedbackRequest[] => filterRows(feedbacks, where),
+  findUnique: (where: Where): FeedbackRequest | undefined => findRow(feedbacks, where),
+  create: (data: FeedbackRequest): FeedbackRequest => {
+    feedbacks.push(data);
+    return data;
+  },
+  delete: (where: Where): boolean => removeRow(feedbacks, where),
+  clear: (): void => {
+    feedbacks.length = 0;
+  },
+  get size(): number {
+    return feedbacks.length;
+  },
+};
+
+interface PreparedStatement {
+  all: () => unknown[];
+}
+
+const TABLES: Record<string, () => unknown[]> = {
+  AiContext: () => aiContexts,
+  Context: () => contexts,
+  ContextItem: () => contexts,
+  Feedback: () => feedbacks,
+  Session: () => sessions,
+  User: () => users,
+  UserPrefs: () => userPrefsRows,
+  WorkHistory: () => workHistory,
+  WorkItem: () => workItems,
+};
+
+function prepare(sql: string): PreparedStatement {
+  const match = /^\s*select\s+\*\s+from\s+([A-Za-z_][A-Za-z0-9_]*)\s*;?\s*$/i.exec(sql);
+  if (!match) throw new Error('Unsupported SQL statement: ' + sql.trim());
+  const table = TABLES[match[1]];
+  if (!table) throw new Error('Unknown table: ' + match[1]);
+  return { all: () => table() };
+}
+
+export const db = {
+  workItem: workItemRepository,
+  workItems: workItemRepository,
+  userPrefs: userPrefsRepository,
+  aiContext: aiContextRepository,
+  user: userRepository,
+  users: userRepository,
+  session: sessionRepository,
+  sessions: sessionRepository,
+  context: contextRepository,
+  contexts: contextRepository,
+  workHistory: workHistoryRepository,
+  feedbacks: feedbackRepository,
+  prepare,
+  findUserByEmail,
+  createUser,
+  validateRefreshToken,
+  addRefreshToken,
+  removeRefreshToken,
+  issueRefreshToken,
+  findUserByRefreshToken,
+  resetDatabase,
+  seedDemoData,
+};

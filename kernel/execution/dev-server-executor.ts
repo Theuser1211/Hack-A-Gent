@@ -1,0 +1,178 @@
+import { spawn, execSync, type ChildProcess, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import * as fs from 'node:fs';
+import * as http from 'node:http';
+import * as path from 'node:path';
+
+import type { RunningApplication } from './execution-types.js';
+import { trackChildProcess } from '../../cli/signals.js';
+
+/** Kill entire process tree. On Windows, `server.kill()` only kills the
+ * immediate shell child — grandchildren survive and keep the event loop
+ * alive via inherited pipe handles. */
+function killProcessTree(child: ChildProcess): void {
+  if (child.pid === undefined) return;
+  try { child.kill('SIGTERM'); } catch { /* already dead */ }
+  if (process.platform === 'win32') {
+    try {
+      const killer = spawn('taskkill', ['/F', '/T', '/PID', String(child.pid)], { stdio: 'ignore', windowsHide: true });
+      killer.unref();
+    } catch { /* taskkill not available */ }
+  } else {
+    try { process.kill(-child.pid, 'SIGTERM'); } catch { try { child.kill('SIGTERM'); } catch { /* already dead */ } }
+  }
+}
+
+export interface DevServerExecutor {
+  start(projectPath: string, port?: number, timeoutMs?: number): Promise<RunningApplication>;
+  stop(app: RunningApplication): Promise<void>;
+  isRunning(app: RunningApplication): Promise<boolean>;
+}
+
+export class DefaultDevServerExecutor implements DevServerExecutor {
+  private readonly processes: Map<number, ChildProcess> = new Map();
+  private _pythonCmd: string | null = null;
+
+  private getPythonCmd(): string {
+    if (this._pythonCmd) return this._pythonCmd;
+    try {
+      execSync('python3 --version', { stdio: 'ignore', timeout: 5000, windowsHide: true });
+      this._pythonCmd = 'python3';
+    } catch {
+      this._pythonCmd = 'python';
+    }
+    return this._pythonCmd;
+  }
+
+  async start(projectPath: string, port = 3000, timeoutMs = 60000): Promise<RunningApplication> {
+    const projectType = this.detectProjectType(projectPath);
+    const py = this.getPythonCmd();
+    const cmd =
+      projectType === 'node'
+        ? this.getNodeStartCommand(projectPath)
+        : projectType === 'python'
+          ? `${py} app.py || ${py} main.py || ${py} -m http.server {port}`
+          : 'echo "No dev server configured"';
+
+    const resolvedCmd = cmd.replace('{port}', String(port));
+
+    const child = spawn(resolvedCmd, {
+      cwd: projectPath,
+      shell: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
+    trackChildProcess(child);
+
+    const pid = child.pid;
+    if (pid != null) {
+      this.processes.set(pid, child);
+    }
+
+    const url = `http://localhost:${port}`;
+    const startedAt = new Date().toISOString();
+
+    child.on('exit', (code) => {
+      if (pid != null) {
+        this.processes.delete(pid);
+      }
+    });
+
+    const ready = await this.waitForReady(url, timeoutMs);
+
+    return {
+      pid: pid ?? null,
+      port,
+      url,
+      ready,
+      process_path: resolvedCmd,
+      started_at: startedAt,
+      project_path: projectPath,
+    };
+  }
+
+  async stop(app: RunningApplication): Promise<void> {
+    if (app.pid != null && this.processes.has(app.pid)) {
+      const child = this.processes.get(app.pid);
+      if (child && !child.killed) {
+        killProcessTree(child);
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => {
+            if (child && !child.killed) {
+              try { child.kill('SIGKILL'); } catch { /* already dead */ }
+            }
+            resolve();
+          }, 5000);
+
+          child.on('exit', () => {
+            clearTimeout(timeout);
+            resolve();
+          });
+        });
+      }
+      this.processes.delete(app.pid);
+    }
+  }
+
+  async isRunning(app: RunningApplication): Promise<boolean> {
+    if (app.pid != null && this.processes.has(app.pid)) {
+      const child = this.processes.get(app.pid);
+      return child != null && !child.killed;
+    }
+    return false;
+  }
+
+  private detectProjectType(projectPath: string): 'node' | 'python' | 'unknown' {
+    if (fs.existsSync(path.join(projectPath, 'package.json'))) return 'node';
+    if (fs.existsSync(path.join(projectPath, 'requirements.txt'))) return 'python';
+    if (fs.existsSync(path.join(projectPath, 'setup.py'))) return 'python';
+    return 'unknown';
+  }
+
+  private getNodeStartCommand(projectPath: string): string {
+    const pkgPath = path.join(projectPath, 'package.json');
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      const scripts = pkg.scripts ?? {};
+      if (scripts.start) return 'npm start';
+      if (scripts.dev) return 'npm run dev';
+      if (scripts.serve) return 'npm run serve';
+      return 'npx serve . -l {port}';
+    } catch {
+      return 'npx serve . -l {port}';
+    }
+  }
+
+  private async waitForReady(url: string, timeoutMs: number): Promise<boolean> {
+    const startTime = Date.now();
+    const checkInterval = 2000;
+
+    while (Date.now() - startTime < timeoutMs) {
+      try {
+        const ready = await this.healthCheck(url);
+        if (ready) return true;
+      } catch {
+        // server not ready yet
+      }
+      await this.delay(checkInterval);
+    }
+
+    return false;
+  }
+
+  private healthCheck(url: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const req = http.get(url, (res) => {
+        resolve(res.statusCode !== undefined);
+      });
+      req.on('error', () => resolve(false));
+      req.setTimeout(3000, () => {
+        req.destroy();
+        resolve(false);
+      });
+    });
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+}

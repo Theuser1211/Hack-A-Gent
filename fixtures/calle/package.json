@@ -1,0 +1,20 @@
+{
+  "name": "echo-intel-calle",
+  "version": "1.0.0",
+  "description": "EchoIntel — a conversation intelligence studio for voice interactions with a live call view, waveform, streaming transcript and a local analysis pipeline behind a typed Call-E integration boundary",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node -e \"import {cpSync} from 'fs'; import {resolve} from 'path'; cpSync(resolve('public'), resolve('dist/public'), {recursive: true}); console.log('Copied public to dist/public')\"",
+    "start": "node dist/index.js",
+    "dev": "node --watch dist/index.js --serve",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.8.2"
+  }
+}

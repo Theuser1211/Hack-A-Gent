@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#08090d" />
+    <title>EchoIntel — Voice Communication Intelligence</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M12 3v3M12 14a4 4 0 0 0 4-4V7a4 4 0 0 0-8 0v3a4 4 0 0 0 4 4Z" />
+              <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+            </svg>
+          </span>
+          <span class="brand-name">EchoIntel</span>
+          <span class="brand-sub">Voice Communication Intelligence</span>
+        </div>
+        <div class="topbar-right">
+          <span class="pill" id="mode-pill">Local pipeline</span>
+        </div>
+      </header>
+
+      <div class="pipeline-strip" id="pipeline">
+        <div class="pipe-step" data-step="0"><span class="pipe-ico">&#9834;</span><span>Audio</span></div>
+        <div class="pipe-arrow">&#8594;</div>
+        <div class="pipe-step" data-step="1"><span class="pipe-ico">&#9697;</span><span>Waveform</span></div>
+        <div class="pipe-arrow">&#8594;</div>
+        <div class="pipe-step" data-step="2"><span class="pipe-ico">&#8803;</span><span>Transcript</span></div>
+        <div class="pipe-arrow">&#8594;</div>
+        <div class="pipe-step" data-step="3"><span class="pipe-ico">&#9678;</span><span>Analysis</span></div>
+      </div>
+
+      <main class="grid">
+        <section class="panel call-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Live Call</h2>
+              <p class="sub" id="call-context">Select a call to begin</p>
+            </div>
+            <select id="call-select" class="select" aria-label="Choose call"></select>
+          </div>
+
+          <div class="call-card">
+            <div class="call-meta">
+              <span class="call-duration" id="call-duration">00:00 / 00:00</span>
+              <span class="call-state" id="call-state">Ready</span>
+            </div>
+            <canvas id="waveform" width="900" height="140"></canvas>
+            <div class="call-controls">
+              <button class="btn btn--primary" id="btn-start" type="button">Start call</button>
+              <button class="btn btn--ghost" id="btn-replay" type="button" disabled>Replay</button>
+              <div class="speed" role="group" aria-label="Playback speed">
+                <button class="speed-btn is-active" data-speed="4" type="button">4x</button>
+                <button class="speed-btn" data-speed="8" type="button">8x</button>
+                <button class="speed-btn" data-speed="1" type="button">1x</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="transcript" id="transcript">
+            <div class="transcript-empty">Press <strong>Start call</strong> to run the live transcript.</div>
+          </div>
+        </section>
+
+        <section class="panel analysis-panel">
+          <div class="panel-head">
+            <h2>Intelligence</h2>
+            <span class="pill pill--dark" id="boundary-pill">Local pipeline</span>
+          </div>
+          <div class="tabs" id="tabs">
+            <button class="tab is-active" data-tab="overview" type="button">Overview</button>
+            <button class="tab" data-tab="sentiment" type="button">Sentiment</button>
+            <button class="tab" data-tab="actions" type="button">Action items</button>
+            <button class="tab" data-tab="transcript" type="button">Full transcript</button>
+          </div>
+          <div class="tab-body" id="tab-body">
+            <div class="placeholder">Run a call to generate the intelligence panel.</div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/js/app.js"></script>
+  </body>
+</html>

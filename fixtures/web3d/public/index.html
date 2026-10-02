@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#04060d" />
+    <title>Orbital — A 3D Web Experience</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <canvas id="world" aria-hidden="true"></canvas>
+
+    <div id="ui">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-dot" aria-hidden="true"></span>
+          <span class="brand-name">ORBITAL</span>
+        </div>
+        <nav class="nav">
+          <a href="#features">Features</a>
+          <a href="#showcase">Showcase</a>
+          <a href="#built">Engine</a>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <div class="hero-kicker reveal">3D Websites Hackathon · web-native rendering</div>
+        <h1 class="hero-title reveal">
+          One hand-rolled<br /><em>3D world</em>, zero libraries.
+        </h1>
+        <p class="hero-sub reveal">
+          A dependency-free canvas 3D engine driving an interactive brand
+          experience. Drag to orbit. Scroll to dive.
+        </p>
+        <div class="hero-cta reveal">
+          <a class="btn btn--primary" href="#showcase">Explore the worlds</a>
+          <span class="hint">drag · scroll · zoom</span>
+        </div>
+      </section>
+
+      <section id="features" class="section">
+        <h2 class="section-title reveal">Built like a real 3D stack</h2>
+        <div class="cards">
+          <div class="card reveal">
+            <span class="card-ico" aria-hidden="true">&#10022;</span>
+            <h3>Renderer</h3>
+            <p>Perspective projection, camera transforms and depth-aware point shading drawn frame by frame.</p>
+          </div>
+          <div class="card reveal">
+            <span class="card-ico" aria-hidden="true">&#10054;</span>
+            <h3>Interaction</h3>
+            <p>Drag to orbit with inertia, wheel to zoom, touch support and an idle auto-orbit that resumes on its own.</p>
+          </div>
+          <div class="card reveal">
+            <span class="card-ico" aria-hidden="true">&#9678;</span>
+            <h3>Determinism</h3>
+            <p>Every particle, ring and star is placed by a seeded generator — the same world renders every single time.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="showcase" class="section">
+        <h2 class="section-title reveal">Worlds in this build</h2>
+        <div class="showcase">
+          <div class="world reveal" data-tilt>
+            <div class="world-orb world-orb--1"></div>
+            <div class="world-body">
+              <h3>Particle Sphere</h3>
+              <p>380 seeded particles on a fibonacci lattice with a geodesic edge mesh.</p>
+            </div>
+          </div>
+          <div class="world reveal" data-tilt>
+            <div class="world-orb world-orb--2"></div>
+            <div class="world-body">
+              <h3>Orbital Rings</h3>
+              <p>Two tilted rings sweeping around the core, split front/back for correct occlusion.</p>
+            </div>
+          </div>
+          <div class="world reveal" data-tilt>
+            <div class="world-orb world-orb--3"></div>
+            <div class="world-body">
+              <h3>Parallax Starfield</h3>
+              <p>A distant star shell that shifts with the camera for real depth.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="built" class="section">
+        <h2 class="section-title reveal">Engine pipeline</h2>
+        <ol class="pipeline reveal">
+          <li><b>Seeded scene</b> — fibonacci sphere, rings and star shell from a single seed.</li>
+          <li><b>Camera</b> — orbit yaw/pitch, zoom distance, eased target motion.</li>
+          <li><b>Transform</b> — spin rotation → camera space → perspective divide.</li>
+          <li><b>Render</b> — depth-shaded particles, edge mesh, core glow, parallax stars.</li>
+        </ol>
+      </section>
+
+      <footer class="footer">
+        <p>Orbital — a 3D web experience rendered locally with zero runtime dependencies.</p>
+        <p class="mono">npm start &rarr; http://127.0.0.1:8806</p>
+      </footer>
+    </div>
+
+    <script type="module" src="/js/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "project": "Kilima",
+  "description": "An on-device intent classifier for low-connectivity environments. Trained locally on the bundled labeled samples; no network is required at inference time.",
+  "labels": ["reminder", "weather", "timer", "alarm", "message", "emergency"],
+  "examples": [
+    { "intent": "reminder", "text": "remind me to buy maize flour at five" },
+    { "intent": "reminder", "text": "remind me to call Mama after work" },
+    { "intent": "reminder", "text": "note that I must pay school fees on monday" },
+    { "intent": "weather", "text": "will it rain in Nakuru this weekend" },
+    { "intent": "weather", "text": "what is the forecast for tomorrow morning" },
+    { "intent": "weather", "text": "is it going to be hot in Kisumu today" },
+    { "intent": "timer", "text": "set a timer for ten minutes" },
+    { "intent": "timer", "text": "start a stopwatch and count down from twenty" },
+    { "intent": "timer", "text": "time a book reading session at fifteen minutes" },
+    { "intent": "alarm", "text": "wake me up at six thirty" },
+    { "intent": "alarm", "text": "set an alarm for seven in the morning" },
+    { "intent": "alarm", "text": "alarm at quarter to eight please" },
+    { "intent": "message", "text": "send a message to Mama that I am coming" },
+    { "intent": "message", "text": "text Kofi that the bus is late" },
+    { "intent": "message", "text": "send an sms to the clinic about my appointment" },
+    { "intent": "emergency", "text": "I need help call for an ambulance" },
+    { "intent": "emergency", "text": "there is a fire at the market help us" },
+    { "intent": "emergency", "text": "emergency please contact the police in Kisumu" }
+  ]
+}

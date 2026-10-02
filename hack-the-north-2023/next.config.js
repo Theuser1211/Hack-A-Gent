@@ -1,0 +1,1 @@
+module.exports = {\n  output: 'standalone',\n  images: {\n    remotePatterns: []\n  }\n};
