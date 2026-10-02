@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { getConfig, getGitHubToken } from '../config-manager.js';
+import { PROVIDER_NATIVE_KEYS, getConfig, getGitHubToken, loadEnvFileIntoProcess } from '../config-manager.js';
 import { ModelPerformanceTracker } from '../../kernel/routing/model-performance-tracker.js';
 import { header, success, error, warn, info, dim, labeled } from '../output.js';
 import { initializeProviders } from '../provider-init.js';
@@ -14,6 +14,22 @@ interface CheckResult {
   name: string;
   status: 'pass' | 'warn' | 'fail';
   message: string;
+}
+
+/**
+ * Whether an API key is actually available for the resolved provider.
+ *
+ * A provider-native key (GEMINI_API_KEY, ANTHROPIC_API_KEY, ...) selects
+ * the provider and deliberately leaves `llm.apiKey` unset, so the config
+ * object alone cannot answer this. `hag setup` may also have written
+ * HACKAGENT_API_KEY without a provider-native variable.
+ */
+function hasUsableApiKey(config: NonNullable<ReturnType<typeof getConfig>>): boolean {
+  if (config.llm.apiKey) return true;
+  if (process.env.HACKAGENT_API_KEY || process.env.LLM_API_KEY) return true;
+  return PROVIDER_NATIVE_KEYS.some(({ envVars }) =>
+    envVars.some((key) => process.env[key])
+  );
 }
 
 export async function doctorCommand(_ctx: CLIContext, args: CLIArgs): Promise<CLIResult> {
@@ -46,8 +62,10 @@ export async function doctorCommand(_ctx: CLIContext, args: CLIArgs): Promise<CL
   }
 
   // Config file
+  loadEnvFileIntoProcess();
   const config = getConfig();
-  if (config?.llm.apiKey) {
+  const apiKeyReady = config !== null && hasUsableApiKey(config);
+  if (apiKeyReady) {
     checks.push({ name: 'Configuration', status: 'pass', message: `provider: ${config.llm.provider}` });
     data.configProvider = config.llm.provider;
   } else if (config) {
@@ -65,7 +83,7 @@ export async function doctorCommand(_ctx: CLIContext, args: CLIArgs): Promise<CL
   }
 
   // Provider connectivity
-  if (config?.llm.apiKey) {
+  if (apiKeyReady) {
     try {
       const { providers } = initializeProviders();
       if (providers.length > 0) {

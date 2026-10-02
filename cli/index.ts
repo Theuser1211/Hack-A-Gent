@@ -487,33 +487,43 @@ async function main(): Promise<void> {
 
   process.exitCode = exitCodeForResult(result);
 
-  // ALWAYS print diagnostic info for now — do not gate on verbose
+  // A lingering socket (an unawaited fetch, a keep-alive pool) can keep the
+  // event loop alive after the command has already produced its result, so the
+  // process would hang instead of exiting with the code we just computed. The
+  // safety net below forces that exit; it only narrates when debugging, so a
+  // normal run stays quiet.
+  const debugExit = args.flags.debug === true || ctx.verbose;
   const proc = process as unknown as Record<string, unknown>;
   const getHandles = proc._getActiveHandles as (() => unknown[]) | undefined;
   const getRequests = proc._getActiveRequests as (() => unknown[]) | undefined;
-  const handles = getHandles?.call(proc) ?? [];
-  const requests = getRequests?.call(proc) ?? [];
-  console.error(`\n  [exit-diag] main() returning. exitCode=${process.exitCode}`);
-  console.error(`  [exit-diag] Active handles: ${handles.length}`);
-  for (const h of handles) {
-    const name = (h as { constructor?: { name?: string } })?.constructor?.name ?? 'unknown';
-    const pid = (h as { pid?: number })?.pid;
-    const destroyed = (h as { destroyed?: boolean })?.destroyed;
-    const readable = (h as { readable?: boolean })?.readable;
-    const writable = (h as { writable?: boolean })?.writable;
-    console.error(`    - ${name}${pid != null ? ` pid=${pid}` : ''}${destroyed != null ? ` destroyed=${destroyed}` : ''}${readable != null ? ` readable=${readable}` : ''}${writable != null ? ` writable=${writable}` : ''}`);
+
+  if (debugExit) {
+    const handles = getHandles?.call(proc) ?? [];
+    const requests = getRequests?.call(proc) ?? [];
+    console.error(`\n  [exit-diag] main() returning. exitCode=${process.exitCode}`);
+    console.error(`  [exit-diag] Active handles: ${handles.length}`);
+    for (const h of handles) {
+      const name = (h as { constructor?: { name?: string } })?.constructor?.name ?? 'unknown';
+      const pid = (h as { pid?: number })?.pid;
+      const destroyed = (h as { destroyed?: boolean })?.destroyed;
+      const readable = (h as { readable?: boolean })?.readable;
+      const writable = (h as { writable?: boolean })?.writable;
+      console.error(`    - ${name}${pid != null ? ` pid=${pid}` : ''}${destroyed != null ? ` destroyed=${destroyed}` : ''}${readable != null ? ` readable=${readable}` : ''}${writable != null ? ` writable=${writable}` : ''}`);
+    }
+    console.error(`  [exit-diag] Active requests: ${requests.length}`);
   }
-  console.error(`  [exit-diag] Active requests: ${requests.length}`);
 
   // Safety-net exit fires after 5s if the event loop hasn't drained naturally.
   setTimeout(() => {
-    console.error(`  [exit-diag] Safety-net firing after 5s. exitCode=${process.exitCode}`);
-    const h2 = getHandles?.call(proc) ?? [];
-    const r2 = getRequests?.call(proc) ?? [];
-    console.error(`  [exit-diag] Still alive — handles: ${h2.length}, requests: ${r2.length}`);
-    for (const h of h2) {
-      const name = (h as { constructor?: { name?: string } })?.constructor?.name ?? 'unknown';
-      console.error(`    - ${name}`);
+    if (debugExit) {
+      const h2 = getHandles?.call(proc) ?? [];
+      const r2 = getRequests?.call(proc) ?? [];
+      console.error(`  [exit-diag] Safety-net firing after 5s. exitCode=${process.exitCode}`);
+      console.error(`  [exit-diag] Still alive - handles: ${h2.length}, requests: ${r2.length}`);
+      for (const h of h2) {
+        const name = (h as { constructor?: { name?: string } })?.constructor?.name ?? 'unknown';
+        console.error(`    - ${name}`);
+      }
     }
     process.exit(process.exitCode);
   }, 5000).unref();
