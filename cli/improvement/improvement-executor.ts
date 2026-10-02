@@ -233,7 +233,7 @@ CMD ["npm", "start"]
 function extractActionableSteps(text: string): string[] {
   return text
     .split(/\d\)/g)
-    .map(s => s.replace(/^[\(\)\s]+/, '').replace(/[\(\)\s]+$/, '').trim())
+    .map(s => s.replace(/^[()\s]+/, '').replace(/[()\s]+$/, '').trim())
     .filter(s => s.length > 10);
 }
 

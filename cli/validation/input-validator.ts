@@ -71,6 +71,9 @@ export function validateInput(input: string): InputValidationResult {
   const urlType = detectUrlType(trimmed);
 
   if (urlType === 'unknown' && !VALID_URL_SCHEME.test(trimmed)) {
+    // The slash escape is required: TypeScript's scanner still needs it
+    // inside a character class, so no-useless-escape does not apply here.
+    // eslint-disable-next-line no-useless-escape
     if (trimmed.split(/\s+/).length <= 2 && !/[\/\\]/.test(trimmed)) {
       return { valid: false, state: 'INVALID_INPUT', urlType, error: `"${trimmed}" is not a valid URL or hackathon specification` };
     }

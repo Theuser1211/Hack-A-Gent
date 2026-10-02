@@ -3294,7 +3294,7 @@ const KEYWORDS: Record<string, string[]> = {
 
 function analyzeText(input: string): AnalyzeResult {
   const text = input.toLowerCase();
-  const wordCount = input.trim().split(/\s+/).filter(Boolean).length;
+  const wordCount = input.trim().split(/\\s+/).filter(Boolean).length;
 
   const signals = Object.entries(KEYWORDS).map(([name, kws]) => ({
     name: name.charAt(0).toUpperCase() + name.slice(1),

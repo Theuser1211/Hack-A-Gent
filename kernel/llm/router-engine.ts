@@ -510,6 +510,9 @@ export class RouterEngine {
                 },
               };
             } catch (err2) {
+              // The retry failure is the one worth reporting: the reads below
+              // (failureNote / isProviderUnavailable) must see it, not the 429.
+              // eslint-disable-next-line no-ex-assign
               err = err2;
               lastError = err2 instanceof Error ? err2 : new Error(String(err2));
             }
@@ -548,6 +551,9 @@ export class RouterEngine {
                   },
                 };
               } catch (err2) {
+                // The retry failure is the one worth reporting: the reads below
+                // (failureNote / isProviderUnavailable) must see it, not the 5xx.
+                // eslint-disable-next-line no-ex-assign
                 err = err2;
                 lastError = err2 instanceof Error ? err2 : new Error(String(err2));
                 // Mark provider unavailable to break out of NVIDIA-only path and return error

@@ -657,7 +657,7 @@ const TABLES: Record<string, () => unknown[]> = {
 };
 
 function prepare(sql: string): PreparedStatement {
-  const match = /^\s*select\s+\*\s+from\s+([A-Za-z_][A-Za-z0-9_]*)\s*;?\s*$/i.exec(sql);
+  const match = /^\\s*select\\s+\\*\\s+from\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*;?\\s*$/i.exec(sql);
   if (!match) throw new Error('Unsupported SQL statement: ' + sql.trim());
   const table = TABLES[match[1]];
   if (!table) throw new Error('Unknown table: ' + match[1]);

@@ -89,7 +89,7 @@ export async function validateRuntime(projectDir: string): Promise<RuntimeValida
   }
 
   const nodeModules = path.join(projectDir, 'node_modules');
-  let depsInstalled = true;
+  const depsInstalled = true;
   // `.bin` is required: npm only links command shims once an install completes,
   // so a partial node_modules left by an interrupted install must be reinstalled.
   if (!existsSync(nodeModules) || !existsSync(path.join(nodeModules, '.bin'))) {

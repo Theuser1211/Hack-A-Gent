@@ -594,7 +594,7 @@ stageStart('Auto Repair');
     const improveBudgetMs = Math.min(12 * 60 * 1000, Math.max(30_000, 600_000 - remainingMs));
     const ITER_BUDGET_MS = 3 * 60 * 1000;
     const MAX_ITERATIONS = 2;
-    let initialJudgeScore = finalReport.judgeScorePrediction;
+    const initialJudgeScore = finalReport.judgeScorePrediction;
     let currentScore = initialJudgeScore;
     let improvedAction: ImprovementAction | null = null;
     const iterationScores: number[] = [];
