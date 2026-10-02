@@ -64,7 +64,7 @@ Other providers remain supported and unchanged: Anthropic, OpenAI, Gemini, OpenR
 - `cli/` — command interface and output formatting
 - `benchmarks/` — generation engine, orchestrator, parser, templates
 - `kernel/` — LLM router, prompts, qualification, repair, validation, evaluation, learning
-- `tests/` — 163 tests (unit + integration), run with `npm test`
+- `tests/` — 169 unit tests across 20 files, run with `npm test`
 
 ## Development
 
