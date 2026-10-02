@@ -7,7 +7,7 @@ Heyy, so Hack-A-Gent(HAG) is an AI agent specialized in only one thing, that is 
 ```bash
 npm install -g hackagent
 hag setup
-hag run <hackathon URL?
+hag run <hackathon-url>
 ```
 
 Or without an LLM:
@@ -31,7 +31,7 @@ Requires Node.js 20+.
 
 Main commands: `run`, `setup`, `doctor`, `config`, `status`, `memory`, `benchmark`, `replay`, `explain`, `resume`, `deploy`, `test`, `analyze`. Use `--seed 42` for deterministic runs.
 
-Configuration is done via `hag config --provider <name> --api-key <key>`. `.env` variables: `HACKAGENT_PROVIDER`, `HACKAGENT_API_KEY`, `HACKAGENT_BASE_URL`, `HACKAGENT_MODEL`.
+Configuration is done via `hag config --provider <name> --api-key <key>`. `.env` variables: `HACKAGENT_PROVIDER`, `HACKAGENT_API_KEY`, `HACKAGENT_BASE_URL`, `HACKAGENT_MODEL`. See `.env.example` for the full variable list and provider auto-detection precedence (native keys like `NEBIUS_API_KEY` / `GEMINI_API_KEY` are auto-detected).
 
 Supported providers: Nebius Token Factory (`nebius`, serves NVIDIA Nemotron open-weight models), NVIDIA NIMs (`nvidia`), OpenAI (`openai`), Anthropic (`anthropic`), Gemini (`gemini`), OpenRouter (`openrouter`), custom endpoint (`custom`). Set `NEBIUS_API_KEY` in `.env` to auto-select Nebius.
 
@@ -50,7 +50,7 @@ Pipeline completed in 4m 9s (20 tasks)
 - `cli/` — command interface and output formatting
 - `benchmarks/` — generation engine, orchestrator, parser, templates
 - `kernel/` — LLM router, prompts, qualification, repair, validation, evaluation, learning
-- `tests/` — 1200+ tests across unit, integration, and determinism
+- `tests/` — 163 tests (unit + integration), run with `npm test`
 
 ## Development
 
