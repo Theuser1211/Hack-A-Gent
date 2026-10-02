@@ -29,9 +29,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // In a real app, we'd decode the refresh token to get user ID
-    // For demo, we'll use the first user
-    const user = await db.findUserByEmail('alice@example.com');
+    // Resolve the account the refresh token was issued to. Defaulting to a
+    // fixed demo user here would hand every caller the same account.
+    const user = await db.findUserByRefreshToken(refreshToken);
     if (!user) {
       return NextResponse.json(
         { error: { message: 'User not found', code: 'USER_NOT_FOUND' } },
@@ -42,10 +42,10 @@ export async function POST(request: NextRequest) {
     const { password: _, ...userWithoutPassword } = user;
     const newToken = `mock-jwt-token-${user.id}-${Date.now()}`;
 
-    // Rotate refresh token
+    // Rotate refresh token, keeping it bound to the same account so the
+    // rotated token can still be resolved on its own refresh.
     await db.removeRefreshToken(refreshToken);
-    const newRefreshToken = `refresh-token-${Date.now()}`;
-    await db.addRefreshToken(newRefreshToken);
+    const newRefreshToken = db.issueRefreshToken(user.id);
 
     return NextResponse.json(
       { data: { user: userWithoutPassword, token: newToken, refreshToken: newRefreshToken } },

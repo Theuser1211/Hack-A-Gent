@@ -107,7 +107,7 @@ export function generateBenchmarkSummaryMarkdown(results: BenchmarkRunResult[]):
     '|-----------|----------|---------|-------|-------------|----------|--------|',
     ...results.map(
       (r) =>
-        `| ${r.benchmark_name} | ${r.category} | ${r.overall_success ? 'Ã¢Å“â€¦' : 'Ã¢ÂÅ’'} | ${r.build_success ? 'Ã¢Å“â€¦' : 'Ã¢ÂÅ’'} | ${r.judge_score !== null ? `${r.judge_score}/100` : 'N/A'} | ${(r.total_duration_ms / 1000).toFixed(1)}s | ${r.total_tokens.toLocaleString()} |`,
+        `| ${r.benchmark_name} | ${r.category} | ${r.overall_success ? '✅' : '❌'} | ${r.build_success ? '✅' : '❌'} | ${r.judge_score !== null ? `${r.judge_score}/100` : 'N/A'} | ${(r.total_duration_ms / 1000).toFixed(1)}s | ${r.total_tokens.toLocaleString()} |`,
     ),
     '',
     '## Phase Success Rates',
@@ -175,7 +175,7 @@ export function generateMutationEvolutionReportMarkdown(report: MutationEvolutio
   if (report.extinctionEvents.length > 0) {
     lines.push('### Mutation Extinction Events', '');
     for (const extinctId of report.extinctionEvents) {
-      lines.push(`- ${extinctId} Ã¢â‚¬â€ removed from population`);
+      lines.push(`- ${extinctId} — removed from population`);
     }
     lines.push('');
   }

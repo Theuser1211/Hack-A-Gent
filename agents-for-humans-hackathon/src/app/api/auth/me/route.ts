@@ -22,10 +22,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const userId = token.replace('mock-jwt-token-', '');
-    // For demo, we'll return alice's data regardless of ID
+    // Tokens are minted as `mock-jwt-token-<userId>-<issuedAt>`. User ids contain
+    // dashes themselves, so strip the trailing numeric timestamp rather than
+    // splitting on '-'.
+    const userId = token.replace('mock-jwt-token-', '').replace(/-\d+$/, '');
     const { db } = await import('@/lib/db');
-    const user = await db.findUserByEmail('alice@example.com');
+    // Resolve the account the token actually names. Returning a fixed demo
+    // user here would let any validly-shaped token read someone else's account.
+    const user = await db.user.findUnique({ id: userId });
     if (!user) {
       return NextResponse.json(
         { error: { message: 'User not found', code: 'USER_NOT_FOUND' } },

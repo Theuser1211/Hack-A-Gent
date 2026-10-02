@@ -45,7 +45,7 @@ export const WINNING_STRATEGIES: StrategyTemplate[] = [
     riskLevel: 0.2,
     predictedScoreBonus: 12,
     guardrails: [
-      'Never show raw mock data Ã¢â‚¬â€ simulate realism',
+      'Never show raw mock data — simulate realism',
       'At least one interactive element must work end-to-end',
       'Loading states must look intentional, not broken',
     ],
@@ -75,8 +75,8 @@ export const WINNING_STRATEGIES: StrategyTemplate[] = [
     riskLevel: 0.15,
     predictedScoreBonus: 8,
     guardrails: [
-      'Only one button path Ã¢â‚¬â€ no side navigation',
-      'Every screen leads to the next Ã¢â‚¬â€ no dead ends',
+      'Only one button path — no side navigation',
+      'Every screen leads to the next — no dead ends',
       'Error state must redirect back to flow start',
     ],
     antiPatterns: [
@@ -137,11 +137,11 @@ export const WINNING_STRATEGIES: StrategyTemplate[] = [
     guardrails: [
       'Simulated AI must produce plausible outputs',
       'Response time must include artificial delay for realism',
-      'Never claim real AI if using mock Ã¢â‚¬â€ let judge infer',
+      'Never claim real AI if using mock — let judge infer',
     ],
     antiPatterns: [
       'Obvious if-else responses that feel robotic',
-      'No loading state Ã¢â‚¬â€ instant reply breaks illusion',
+      'No loading state — instant reply breaks illusion',
       'Claiming GPT integration without demo evidence',
     ],
   },
@@ -152,7 +152,7 @@ export const WINNING_STRATEGIES: StrategyTemplate[] = [
     name: 'Narrative Driven Build',
     category: 'narrative_driven',
     description:
-      'Problem Ã¢â€ â€™ Pain Ã¢â€ â€™ Solution Ã¢â€ â€™ Wow Moment. Enforce storytelling in every UI screen.',
+      'Problem → Pain → Solution → Wow Moment. Enforce storytelling in every UI screen.',
     executionSteps: [
       'Build problem screen (why this exists)',
       'Build pain screen (what users struggle with)',

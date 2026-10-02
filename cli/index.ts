@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { getConfig } from './config-manager.js';
+import { getConfig, loadEnvFile, PROVIDER_NATIVE_KEYS, type HackAgentConfig } from './config-manager.js';
 import { createContext } from './context.js';
 import { formatError, printError } from './errors.js';
 import { success as logSuccess, error as logError, info, warn, dim, showVersion, setVerbose, isTTY } from './output.js';
@@ -245,12 +245,40 @@ function showDetailedHelp(): void {
   `);
 }
 
+/**
+ * Whether a usable LLM credential exists for this machine.
+ *
+ * `config.llm.apiKey` is only populated from the generic HACKAGENT_API_KEY /
+ * LLM_API_KEY variables. A provider-native key (GEMINI_API_KEY,
+ * ANTHROPIC_API_KEY, ...) selects the provider instead and is read at request
+ * time by ApiKeyManager, which leaves `apiKey` unset. Checking only `apiKey`
+ * therefore reported "no AI provider configured" — and for `hag run` announced
+ * template fallback — even though the configured provider worked.
+ */
+function hasUsableCredential(config: HackAgentConfig | null): boolean {
+  const llm = config?.llm;
+  if (!llm) return false;
+  if (llm.apiKey) return true;
+
+  const envVars = { ...loadEnvFile(), ...process.env };
+  const nativeKeys = PROVIDER_NATIVE_KEYS.find((entry) => entry.provider === llm.provider);
+  if (nativeKeys?.envVars.some((key) => envVars[key])) return true;
+
+  // A custom endpoint carries its own credential alongside its base URL.
+  if (llm.provider.startsWith('custom:')) {
+    const name = llm.provider.slice('custom:'.length);
+    const custom = llm.customProviders?.find((entry) => entry.name === name);
+    if (custom?.apiKey) return true;
+  }
+  return false;
+}
+
 async function ensureConfig(command: CommandName): Promise<boolean> {
   const needsLLM: CommandName[] = ['run', 'simulate', 'chat', 'explain', 'deploy', 'test', 'models'];
   if (!needsLLM.includes(command)) return true;
 
   const config = getConfig();
-  if (config?.llm.apiKey) return true;
+  if (hasUsableCredential(config)) return true;
 
   if (command === 'run') {
     console.log();

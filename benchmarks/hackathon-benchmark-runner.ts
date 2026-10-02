@@ -254,7 +254,7 @@ export class HackathonBenchmarkRunner {
         await this.saveArtifact(artifactsDir, 'mutated-repository.json', JSON.stringify(repository, null, 2));
 
         const mutationDesc = mutationLog.map((m) => `[${m.severity}] ${m.description}`).join('; ');
-        console.log(`  Adversarial: applied ${mutationLog.length} mutation(s) Ã¢â‚¬â€  ${mutationDesc}`);
+        console.log(`  Adversarial: applied ${mutationLog.length} mutation(s) →  ${mutationDesc}`);
         return {
           success: true,
           tokens: 0,
@@ -264,7 +264,7 @@ export class HackathonBenchmarkRunner {
       phases.push(mutationPhase.phase);
     }
 
-    // Repair loop: verify Ã¢â€ â€™ repair Ã¢â€ â€™ re-verify until pass or attempts exhausted
+    // Repair loop: verify → ’ repair → ’ re-verify until pass or attempts exhausted
     const repairLimit = this.config.repairLimit ?? 2;
 
     const loopResult = await this.runVerificationLoop(
@@ -603,7 +603,7 @@ export class HackathonBenchmarkRunner {
       const { fileErrors, moduleLevelErrors } = this.separateFileFromModuleErrors(moduleErrors);
 
       if (moduleLevelErrors.length > 0) {
-        // Module-level corruption Ã¢â‚¬â€  regenerate full module
+        // Module-level corruption →  regenerate full module
         const genModule: GeneratedModule = await this.generateModuleForType(type, blueprint);
         const newModule: Module = genModule;
         const oldModule = repo.modules.find((m) => m.type === type);
@@ -641,7 +641,7 @@ patches.push({ type, module: newModule });
     }
 
     if (patches.length === 0 && patchedModules.length === 0) {
-      // No patches Ã¢â‚¬â€  fall back to full regeneration of all failed types
+      // No patches →  fall back to full regeneration of all failed types
       overallStrategy = 'full rollback';
       for (const type of failedTypes) {
         const genModule: GeneratedModule = await this.generateModuleForType(type, blueprint);
@@ -821,14 +821,14 @@ patches.push({ type, module: newModule });
           const diffLog = repaired.diffs
             .map(
               (d) =>
-                `${d.type}: ${d.oldFileCount}Ã¢â€ â€™${d.newFileCount} files, ${d.oldLineCount}Ã¢â€ â€™${d.newLineCount} lines (added: ${d.addedFiles.length}, removed: ${d.removedFiles.length}, changed: ${d.changedFiles.length})`,
+                `${d.type}: ${d.oldFileCount}→ ’${d.newFileCount} files, ${d.oldLineCount}→ ’${d.newLineCount} lines (added: ${d.addedFiles.length}, removed: ${d.removedFiles.length}, changed: ${d.changedFiles.length})`,
             )
             .join('; ');
           const strategyLabel =
             repaired.strategy === 'file-level patch'
               ? `file-patch [${record.files_repaired.join(', ')}]`
               : `regenerated [${record.modules_regenerated.join(', ')}]`;
-          console.log(`  Repair attempt ${attempt + 1}: ${strategyLabel} Ã¢â‚¬â€  ${diffLog}`);
+          console.log(`  Repair attempt ${attempt + 1}: ${strategyLabel} →  ${diffLog}`);
 
           const materializer = new DefaultRepositoryMaterializer();
           const workspacePath = path.join(artifactsDir, 'workspace');

@@ -33,6 +33,69 @@ export interface ToolLogEntry {
   timestamp: string;
 }
 
+/**
+ * Resolve a tool-supplied path inside the workspace root.
+ *
+ * `path.resolve` happily accepts `..` segments and absolute paths, so a
+ * model-supplied path such as `../../.ssh/authorized_keys` would otherwise be
+ * written outside the directory the run was scoped to. Returns null when the
+ * resolved path escapes the root.
+ */
+export function resolveInWorkspace(workspaceRoot: string, relativePath: string): string | null {
+  const root = path.resolve(workspaceRoot);
+  const resolved = path.resolve(root, relativePath);
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) return null;
+  return resolved;
+}
+
+const ALLOWED_SHELL_COMMANDS = [
+  'npm',
+  'git',
+  'node',
+  'npx',
+  'ls',
+  'cat',
+  'echo',
+  'pwd',
+  'mkdir',
+  'cp',
+  'mv',
+  'rm',
+  'touch',
+  'dir',
+  'type',
+];
+
+/**
+ * Check a shell command against the allowlist.
+ *
+ * The allowlist is only meaningful if it covers the *whole* command: execSync
+ * runs the string through a shell, so validating just the first token let
+ * `echo hi && node -e "..."` run an arbitrary command behind an allowed
+ * prefix. Every segment of a chained/compound command is therefore checked,
+ * and command substitution is refused outright because it embeds a whole
+ * command inside another command's arguments.
+ *
+ * Returns the rejected command name, or null when the command is allowed.
+ */
+export function findDisallowedShellCommand(command: string): string | null {
+  const trimmed = (command ?? '').trim();
+  if (!trimmed) return '';
+
+  // `$(...)`, backticks, and `${...}` all expand to command output, so a
+  // segment like `echo $(node -e ...)` smuggles a command past the segment scan.
+  if (/\$\(|`|\$\{/.test(trimmed)) return 'command substitution';
+
+  const segments = trimmed.split(/&&|\|\||[|;\n\r]/);
+  for (const segment of segments) {
+    const tokens = segment.trim().split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) continue;
+    const cmdName = tokens[0]!;
+    if (!ALLOWED_SHELL_COMMANDS.includes(cmdName)) return cmdName;
+  }
+  return null;
+}
+
 export class ToolExecutor {
   private log: ToolLogEntry[] = [];
   private readonly seed: number;
@@ -112,7 +175,17 @@ export class ToolExecutor {
     const action = call.action as string;
     const filePath = call.params.path as string;
     const content = call.params.content as string | undefined;
-    const fullPath = path.resolve(this.workspaceRoot, filePath);
+    const fullPath = resolveInWorkspace(this.workspaceRoot, filePath);
+    if (fullPath === null) {
+      return {
+        callId: call.id,
+        success: false,
+        output: null,
+        error: `Path escapes the workspace: ${filePath}`,
+        durationMs: 0,
+        artifacts: [],
+      };
+    }
 
     switch (action) {
       case 'write': {
@@ -261,7 +334,17 @@ export class ToolExecutor {
   private async handleScaffold(call: ToolCall): Promise<ToolResult> {
     const template = call.params.template as string;
     const projectDir = call.params.projectDir as string;
-    const fullProjectDir = path.resolve(this.workspaceRoot, projectDir);
+    const fullProjectDir = resolveInWorkspace(this.workspaceRoot, projectDir);
+    if (fullProjectDir === null) {
+      return {
+        callId: call.id,
+        success: false,
+        output: null,
+        error: `Path escapes the workspace: ${projectDir}`,
+        durationMs: 0,
+        artifacts: [],
+      };
+    }
 
     if (existsSync(fullProjectDir)) {
       return {
@@ -492,7 +575,17 @@ export class ToolExecutor {
   private async handleDeploy(call: ToolCall): Promise<ToolResult> {
     const target = call.params.target as string;
     const projectDir = call.params.projectDir as string;
-    const fullPath = path.resolve(this.workspaceRoot, projectDir);
+    const fullPath = resolveInWorkspace(this.workspaceRoot, projectDir);
+    if (fullPath === null) {
+      return {
+        callId: call.id,
+        success: false,
+        output: null,
+        error: `Path escapes the workspace: ${projectDir}`,
+        durationMs: 0,
+        artifacts: [],
+      };
+    }
 
     if (!existsSync(fullPath)) {
       return {
@@ -552,16 +645,25 @@ export class ToolExecutor {
 
   private async handleShell(call: ToolCall): Promise<ToolResult> {
     const command = call.params.command as string;
-    const cwd = path.resolve(this.workspaceRoot, (call.params.cwd as string) ?? '.');
-
-    const allowedCommands = ['npm', 'git', 'node', 'npx', 'ls', 'cat', 'echo', 'pwd', 'mkdir', 'cp', 'mv', 'rm', 'touch', 'dir', 'type'];
-    const cmdName = (command ?? '').trim().split(/\s+/)[0];
-    if (!cmdName || !allowedCommands.includes(cmdName)) {
+    const cwd = resolveInWorkspace(this.workspaceRoot, (call.params.cwd as string) ?? '.');
+    if (cwd === null) {
       return {
         callId: call.id,
         success: false,
         output: null,
-        error: `Command not allowed: ${cmdName}`,
+        error: `Working directory escapes the workspace: ${call.params.cwd}`,
+        durationMs: 0,
+        artifacts: [],
+      };
+    }
+
+    const rejected = findDisallowedShellCommand(command);
+    if (rejected !== null) {
+      return {
+        callId: call.id,
+        success: false,
+        output: null,
+        error: `Command not allowed: ${rejected}`,
         durationMs: 0,
         artifacts: [],
       };
@@ -579,7 +681,17 @@ export class ToolExecutor {
   private async handlePackage(call: ToolCall): Promise<ToolResult> {
     const action = call.params.action as string;
     const pkg = call.params.package as string;
-    const cwd = path.resolve(this.workspaceRoot, (call.params.cwd as string) ?? '.');
+    const cwd = resolveInWorkspace(this.workspaceRoot, (call.params.cwd as string) ?? '.');
+    if (cwd === null) {
+      return {
+        callId: call.id,
+        success: false,
+        output: null,
+        error: `Working directory escapes the workspace: ${call.params.cwd}`,
+        durationMs: 0,
+        artifacts: [],
+      };
+    }
 
     if (!existsSync(path.join(cwd, 'package.json'))) {
       return {

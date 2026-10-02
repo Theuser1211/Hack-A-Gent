@@ -167,7 +167,7 @@ export class ExecutionPolicyOptimizer {
     this.decisionLogger.log(
       'strategy',
       'update_policy',
-      `Policy change: ${field} â†’ ${change.newValue} (${direction})`,
+      `Policy change: ${field} → ${change.newValue} (${direction})`,
       0.7,
       [],
       { metric, field, previousValue: change.previousValue, newValue: change.newValue },

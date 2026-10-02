@@ -92,7 +92,7 @@ export class BenchmarkTester {
       passed: true,
       message: hasExternalImports
         ? 'External imports detected (expected)'
-        : 'No external imports â€” code uses only relative paths',
+        : 'No external imports — code uses only relative paths',
     });
   }
 
@@ -235,7 +235,7 @@ export class BenchmarkTester {
       message:
         missing.length === 0 ? 'All standard config files present' : `Missing config files: ${missing.join(', ')}`,
       details:
-        missing.length > 0 ? `${missing.length} config file(s) missing â€” project may need manual setup` : undefined,
+        missing.length > 0 ? `${missing.length} config file(s) missing — project may need manual setup` : undefined,
     });
 
     const packageJson = configFiles.find((f) => f.path.endsWith('package.json'));

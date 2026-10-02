@@ -63,7 +63,7 @@ export interface RoutingEntry {
  * account") and models that have been retired (410 Gone).
  *
  * Measured against the live account:
- *   - meta/llama-3.1-70b-instruct     410 Gone  (retired â€” the old chain's head)
+ *   - meta/llama-3.1-70b-instruct     410 Gone  (retired — the old chain's head)
  *   - meta/llama-3.1-8b-instruct      410 Gone  (retired)
  *   - openai/gpt-oss-120b             410 Gone  (retired)
  *   - nvidia/llama-3.1-nemotron-70b   404 not provisioned for this account
@@ -77,7 +77,7 @@ export interface RoutingEntry {
  */
 export const STATIC_CODING_CHAIN: string[] = ['nvidia/nemotron-3-super-120b-a12b'];
 
-// â”€â”€ Capability profiles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Capability profiles ──────────────────────────────────────────────
 // Only models confirmed present in the live NVIDIA catalog appear here. The
 // ceilings below gate dispatch so an oversized request never reaches a model
 // that would time out or return empty output.
@@ -340,7 +340,7 @@ export class RouterEngine {
     const triedModels = new Set<string>();
     let lastError: Error | null = null;
 
-    // Tier 0 â€” success cache: reuse the last model that completed this task type.
+    // Tier 0 — success cache: reuse the last model that completed this task type.
     const cached = await this.trySuccessCache(taskType, request, requiredCaps);
     if (cached) return cached;
 
@@ -410,7 +410,7 @@ export class RouterEngine {
         // this check handles permanently failing models across run restarts.
         const hist = pt?.getRecord(providerId, modelId);
         if (hist && hist.successes === 0 && hist.timeouts >= 3) {
-          this.chainLog(`${icons.skip} ${shortModel(modelId)} â€” skipped (0/${hist.attempts} success, ${hist.timeouts} timeouts)`);
+          this.chainLog(`${icons.skip} ${shortModel(modelId)} — skipped (0/${hist.attempts} success, ${hist.timeouts} timeouts)`);
           triedModels.add(modelKey);
           continue;
         }
@@ -421,11 +421,11 @@ export class RouterEngine {
         if (!model) continue;
 
         // Capability-aware skip: don't send requests that exceed a model's
-        // proven prompt size limit. This avoids wasting 120â€“300s on models
+        // proven prompt size limit. This avoids wasting 120–300s on models
         // that produce empty output or timeout on oversized prompts. The skip
         // counts as intelligent filtering, NOT a failure.
         //
-        // The gate is prompt size â€” the root cause of Step/MiniMax failures.
+        // The gate is prompt size — the root cause of Step/MiniMax failures.
         // Probe evidence: Step produces empty output for prompts > ~1000 tokens
         // even with max_tokens=2K. MiniMax times out for prompts > ~1200 tokens.
         // Small prompts work for any task type, so task category is not gated.
@@ -434,7 +434,7 @@ export class RouterEngine {
           const promptTokens = estimateRequestTokens(request);
 
           if (promptTokens > profile.maxPromptTokens) {
-            this.chainLog(`${icons.skip} ${shortModel(modelId)} â€” skipped (prompt ${promptTokens}t > ${profile.maxPromptTokens}t limit)`);
+            this.chainLog(`${icons.skip} ${shortModel(modelId)} — skipped (prompt ${promptTokens}t > ${profile.maxPromptTokens}t limit)`);
             continue;
           }
         } else if (providerId.startsWith('custom:')) {
@@ -445,7 +445,7 @@ export class RouterEngine {
           const promptTokens = estimateRequestTokens(request);
           const maxPrompt = customPromptCeiling(model);
           if (promptTokens > maxPrompt) {
-            this.chainLog(`${icons.skip} ${providerId} / ${modelId} â€” skipped (prompt ${promptTokens}t > ${maxPrompt}t limit)`);
+            this.chainLog(`${icons.skip} ${providerId} / ${modelId} — skipped (prompt ${promptTokens}t > ${maxPrompt}t limit)`);
             continue;
           }
         }
@@ -454,7 +454,7 @@ export class RouterEngine {
         const thisShort = shortModel(modelId);
 
         if (lastFail) {
-          this.chainLog(`${icons.warning} ${lastFail.short} â€” ${lastFail.reason} ${icons.arrow} Trying ${thisShort}...`);
+          this.chainLog(`${icons.warning} ${lastFail.short} — ${lastFail.reason} ${icons.arrow} Trying ${thisShort}...`);
           lastFail = null;
         } else {
           this.chainLog(`${icons.arrow} Trying ${thisShort}...`);
@@ -489,7 +489,7 @@ export class RouterEngine {
             const retryAfter = (err as { retryAfter?: string }).retryAfter;
             const waitMs = process.env.VITEST ? 10 : (retryAfter ? Math.min(parseInt(retryAfter) * 1000, 120000) : 60000);
             this.chainLog(
-              `${icons.warning} ${thisShort} â€” rate limited (429), waiting ${Math.round(waitMs / 1000)}s then retrying once...`,
+              `${icons.warning} ${thisShort} — rate limited (429), waiting ${Math.round(waitMs / 1000)}s then retrying once...`,
             );
             await sleep(waitMs);
             try {
@@ -530,7 +530,7 @@ export class RouterEngine {
               const retryAfter = (err as { retryAfter?: string }).retryAfter;
               const waitMs = process.env.VITEST ? 10 : (retryAfter ? Math.min(parseInt(retryAfter) * 1000, 120000) : 60000);
               this.chainLog(
-                `${icons.warning} ${thisShort} â€” server error (${status}), waiting ${Math.round(waitMs / 1000)}s then retrying once for bounded NVIDIA retry...`,
+                `${icons.warning} ${thisShort} — server error (${status}), waiting ${Math.round(waitMs / 1000)}s then retrying once for bounded NVIDIA retry...`,
               );
               await sleep(waitMs);
               try {
@@ -606,7 +606,7 @@ export class RouterEngine {
       }
 
       if (lastFail) {
-        this.chainLog(`${icons.warning} ${lastFail.short} â€” ${lastFail.reason}`);
+        this.chainLog(`${icons.warning} ${lastFail.short} — ${lastFail.reason}`);
       }
     }
 
@@ -654,12 +654,12 @@ export class RouterEngine {
 
   private isProviderUnavailable(err: unknown, providerId?: string): boolean {
     const status = this.getErrorStatus(err);
-    // 429 (rate limit) is RECOVERABLE â€” a transient throttle, not a provider
+    // 429 (rate limit) is RECOVERABLE — a transient throttle, not a provider
     // outage. It must go through the Retry-After cooldown mechanism, never
     // fuse into a permanent `failedProviders` blacklist that would keep the
     // provider from being used by every later phase in the run.
     if (status === 429) return false;
-    // For custom providers, don't treat 401/403 as provider-unavailable â€”
+    // For custom providers, don't treat 401/403 as provider-unavailable —
     // a model-specific auth failure doesn't mean the whole provider is down.
     if (providerId?.startsWith('custom:')) {
       if (status === 401 || status === 403) return false;
@@ -669,7 +669,7 @@ export class RouterEngine {
     // NOTE: transient failures (fetch failed / ECONNRESET / ENOTFOUND) and
     // rate-limit signals are deliberately NOT provider-unavailable here. A
     // single blip (connection reset, dropped keep-alive socket) or throttle
-    // burst does not mean the provider is down â€” permanently blacklisting it on
+    // burst does not mean the provider is down — permanently blacklisting it on
     // the first blip killed every remaining generation phase in one pipeline
     // run. Genuine outages surface through the consecutive-failure health
     // counter (degraded_threshold), which blacklists the provider only after
@@ -811,7 +811,7 @@ export class RouterEngine {
     // Fast-fail on cached model reuse: skip if historically dead
     const hist = this.config.perfTracker?.getRecord(providerId, modelId);
     if (hist && hist.successes === 0 && hist.timeouts >= 3) {
-      this.chainLog(`${icons.skip} ${thisShort} â€” cached model skipped (0/${hist.attempts} success, ${hist.timeouts} timeouts)`);
+      this.chainLog(`${icons.skip} ${thisShort} — cached model skipped (0/${hist.attempts} success, ${hist.timeouts} timeouts)`);
       this.successCache.delete(taskType);
       return null;
     }
@@ -996,7 +996,7 @@ this.responseCache.set(cacheKey, response);
   }
 }
 
-/** "stepfun-ai/step-3.7-flash" â†’ "Step 3.7 Flash" for concise chain logs. */
+/** "stepfun-ai/step-3.7-flash" → "Step 3.7 Flash" for concise chain logs. */
 function shortModel(modelId: string): string {
   const seg = modelId.split('/').pop() ?? modelId;
   return seg.replace(/[-_]+/g, ' ').replace(/\b[a-z]/g, (c) => c.toUpperCase());

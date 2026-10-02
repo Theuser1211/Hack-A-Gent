@@ -189,7 +189,7 @@ export class PublicationValidator {
       passed: allPassed,
       checks,
       summary: allPassed
-        ? `All ${checks.length} publication validation checks passed Ã¢â‚¬â€ experiment is publication-ready`
+        ? `All ${checks.length} publication validation checks passed — experiment is publication-ready`
         : `${failedChecks.length}/${checks.length} validation check(s) failed: ${failedChecks.map((c) => c.name).join(', ')}`,
     };
   }

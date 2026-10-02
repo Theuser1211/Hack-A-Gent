@@ -130,7 +130,7 @@ function detectNativeProvider(envVars: Record<string, string>): LLMConfig['provi
   return undefined;
 }
 
-function loadEnvFile(): Record<string, string> {
+export function loadEnvFile(): Record<string, string> {
   const envPath = getEnvFilePath();
   if (!existsSync(envPath)) return {};
   try {

@@ -171,7 +171,7 @@ export class BenchmarkJudge {
 
     const allDetails = details.map(
       (d) =>
-        `${d.aspect}: ${d.score}/${d.max} (${d.percentage}%) Ã¢â‚¬â€ ${d.verdict}. ${d.reasoning}${d.issues.length > 0 ? ` Issues: ${d.issues.join('; ')}` : ''}`,
+        `${d.aspect}: ${d.score}/${d.max} (${d.percentage}%) — ${d.verdict}. ${d.reasoning}${d.issues.length > 0 ? ` Issues: ${d.issues.join('; ')}` : ''}`,
     );
 
     let robustnessScore: RobustnessScore | undefined;
@@ -246,7 +246,7 @@ export class BenchmarkJudge {
         issues: [],
       });
     } else {
-      // No repair needed Ã¢â‚¬â€ perfect score
+      // No repair needed — perfect score
       repairQualityScore = 100;
     }
 

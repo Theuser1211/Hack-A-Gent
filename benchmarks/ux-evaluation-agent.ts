@@ -354,13 +354,13 @@ export class UXEvaluationAgent {
   classifyFailure(type: UIFailureType): string {
     switch (type) {
       case 'visual_break':
-        return 'CSS/HTML rendering issue ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â page structure incomplete';
+        return 'CSS/HTML rendering issue — page structure incomplete';
       case 'interaction_failure':
         return 'User interaction elements (forms, buttons) missing or broken';
       case 'api_break':
         return 'API endpoint returning errors or not responding';
       case 'flow_break':
-        return 'User flow interrupted ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â expected navigation path broken';
+        return 'User flow interrupted — expected navigation path broken';
       case 'performance_issue':
         return 'Page or API response time exceeds acceptable threshold';
     }

@@ -143,8 +143,8 @@ export class StrategicPlanner {
 
   private identifyPitfalls(constraints: string[], stack: string[]): string[] {
     const pitfalls: string[] = [];
-    if (constraints.length === 0) pitfalls.push('No explicit constraints Ã¢â‚¬â€ risk of scope creep');
-    if (stack.length === 0) pitfalls.push('No tech stack specified Ã¢â‚¬â€ analysis paralysis risk');
+    if (constraints.length === 0) pitfalls.push('No explicit constraints — risk of scope creep');
+    if (stack.length === 0) pitfalls.push('No tech stack specified — analysis paralysis risk');
     pitfalls.push('Over-engineering features judges will not see');
     pitfalls.push('Neglecting deployment until the last minute');
     pitfalls.push('Building without testing until demo day');

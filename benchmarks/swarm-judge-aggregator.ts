@@ -63,7 +63,7 @@ export class SwarmJudgeAggregator {
       if (agent.strategy.riskLevel > 0.4 && originalScore > mean + stdDev) {
         biasFlags.push('high_risk_high_score_flag');
         biasWarnings.push(
-          `${agent.id}: high-risk strategy (${agent.strategy.name}) scored above average Ã¢â‚¬â€ flagging for review`,
+          `${agent.id}: high-risk strategy (${agent.strategy.name}) scored above average — flagging for review`,
         );
       }
 
@@ -74,7 +74,7 @@ export class SwarmJudgeAggregator {
       if (agent.failureCount && agent.failureCount > 3 && originalScore > mean) {
         biasFlags.push('failure_count_mismatch');
         biasWarnings.push(
-          `${agent.id}: ${agent.failureCount} failures but score ${originalScore} Ã¢â‚¬â€ possible bias amplification`,
+          `${agent.id}: ${agent.failureCount} failures but score ${originalScore} — possible bias amplification`,
         );
       }
 

@@ -146,7 +146,7 @@ export class ExecutionBudgetManager {
       return { allowed: true, degraded: false };
     }
 
-    // Budget exceeded Ã¢â‚¬â€ check if we can degrade instead of block
+    // Budget exceeded — check if we can degrade instead of block
     const extraAllowance = action === 'steps' ? 10 : action === 'repairCycles' ? 1 : 0;
 
     if (extraAllowance > 0 && current < limit + extraAllowance) {

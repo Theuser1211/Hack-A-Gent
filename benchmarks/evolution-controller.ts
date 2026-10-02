@@ -46,7 +46,7 @@ export class EvolutionController {
         difficultyAdjustments[mt] = 1.2;
         hardClusterTargets.push(mt);
         reasoningParts.push(
-          `${mt}: hard cluster Ã¢â‚¬â€ top agents strong (${(topAgentPerf * 100).toFixed(0)}%) but weak agents struggle (${(weakAgentPerf * 100).toFixed(0)}%)`,
+          `${mt}: hard cluster — top agents strong (${(topAgentPerf * 100).toFixed(0)}%) but weak agents struggle (${(weakAgentPerf * 100).toFixed(0)}%)`,
         );
       } else if (topAgentPerf < 0.4) {
         difficultyAdjustments[mt] = 0.7;
@@ -69,7 +69,7 @@ export class EvolutionController {
     const reasoning =
       reasoningParts.length > 0
         ? reasoningParts.join('; ')
-        : 'No significant evolutionary pressure detected Ã¢â‚¬â€ all mutation types in balanced range';
+        : 'No significant evolutionary pressure detected — all mutation types in balanced range';
 
     return { targetMutationTypes, difficultyAdjustments, hardClusterTargets, reasoning };
   }

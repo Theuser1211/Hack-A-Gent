@@ -115,7 +115,7 @@ export class FailureContainmentLayer {
    * Rule: failure in one zone does NOT contaminate others.
    */
   isIsolated(zone: ContainmentZone): boolean {
-    // Isolation is ALWAYS true Ã¢â‚¬â€ each zone has its own state
+    // Isolation is ALWAYS true — each zone has its own state
     return true;
   }
 
@@ -159,7 +159,7 @@ export class FailureContainmentLayer {
   // ---- 3. Zone Cleanup ----
 
   /**
-   * Clean a zone after failure Ã¢â‚¬â€ reset for clean rebuild.
+   * Clean a zone after failure — reset for clean rebuild.
    */
   cleanupZone(zone: ContainmentZone): void {
     const z = this.zones.get(zone);
@@ -179,7 +179,7 @@ export class FailureContainmentLayer {
   }
 
   /**
-   * Clean ALL zones Ã¢â‚¬â€ full reset.
+   * Clean ALL zones — full reset.
    */
   cleanupAll(): void {
     for (const zone of ['build', 'deploy', 'browser_test'] as ContainmentZone[]) {

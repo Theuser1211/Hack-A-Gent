@@ -134,7 +134,7 @@ export class ExecutionStabilityGuard {
       action = 'stabilize';
       this.events.push({
         rule: 'loop_detection',
-        message: `Task "${taskName}" repeated ${repeatCount} times Ã¢â‚¬â€ stabilizing`,
+        message: `Task "${taskName}" repeated ${repeatCount} times — stabilizing`,
         severity: 'warning',
         timestamp: deterministicNow(this.seed),
         action: 'stabilized',
@@ -195,7 +195,7 @@ export class ExecutionStabilityGuard {
       action = 'blocked';
       this.events.push({
         rule: 'deploy_protection',
-        message: `Deploy ${this.deployCount}/${this.maxDeploys} Ã¢â‚¬â€ blocked`,
+        message: `Deploy ${this.deployCount}/${this.maxDeploys} — blocked`,
         severity: 'critical',
         timestamp: deterministicNow(this.seed),
         action: 'blocked',
@@ -205,7 +205,7 @@ export class ExecutionStabilityGuard {
       action = 'conditional';
       this.events.push({
         rule: 'deploy_protection',
-        message: `Deploy ${this.deployCount}/${this.maxDeploys} Ã¢â‚¬â€ score did not improve (delta=${scoreDelta}). Conditional.`,
+        message: `Deploy ${this.deployCount}/${this.maxDeploys} — score did not improve (delta=${scoreDelta}). Conditional.`,
         severity: 'warning',
         timestamp: deterministicNow(this.seed),
         action: 'degraded',
@@ -233,7 +233,7 @@ export class ExecutionStabilityGuard {
       action = 'abort';
       this.events.push({
         rule: 'drift_detection',
-        message: `Drift ${driftPercent.toFixed(1)}% exceeds threshold Ã¢â‚¬â€ aborting`,
+        message: `Drift ${driftPercent.toFixed(1)}% exceeds threshold — aborting`,
         severity: 'critical',
         timestamp: deterministicNow(this.seed),
         action: 'blocked',
@@ -242,7 +242,7 @@ export class ExecutionStabilityGuard {
       action = 'reduce_complexity';
       this.events.push({
         rule: 'drift_detection',
-        message: `Drift ${driftPercent.toFixed(1)}% Ã¢â‚¬â€ reducing complexity`,
+        message: `Drift ${driftPercent.toFixed(1)}% — reducing complexity`,
         severity: 'warning',
         timestamp: deterministicNow(this.seed),
         action: 'degraded',

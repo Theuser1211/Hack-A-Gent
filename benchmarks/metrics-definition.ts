@@ -98,19 +98,19 @@ export const METRICS_REGISTRY: Record<string, MetricDefinition> = {
     id: 'mutation_differentiation_index',
     name: 'Mutation Differentiation Index',
     description: 'How well mutations separate strong vs weak agents',
-    formula: '|ÃŽÂ¼_weak_detection - ÃŽÂ¼_strong_detection|',
+    formula: '|μ_weak_detection - μ_strong_detection|',
     formulaDescription:
       'Absolute difference in detection rates between weak agents (bottom quartile) and strong agents (top quartile). Higher values indicate better differentiation.',
     range: [0, 1],
     higherIsBetter: true,
     inputDependencies: [
       {
-        variable: 'ÃŽÂ¼_weak_detection',
+        variable: 'μ_weak_detection',
         source: 'agent_analysis',
         description: 'Mean detection rate of bottom-quartile agents',
       },
       {
-        variable: 'ÃŽÂ¼_strong_detection',
+        variable: 'μ_strong_detection',
         source: 'agent_analysis',
         description: 'Mean detection rate of top-quartile agents',
       },
@@ -122,7 +122,7 @@ export const METRICS_REGISTRY: Record<string, MetricDefinition> = {
     id: 'agent_specialization_index',
     name: 'Agent Specialization Index',
     description: 'Degree to which agents develop specialized robustness profiles',
-    formula: 'ÃÆ’(per_mutation_type_performance) / ÃŽÂ¼(per_mutation_type_performance)',
+    formula: 'σ(per_mutation_type_performance) / μ(per_mutation_type_performance)',
     formulaDescription:
       'Coefficient of variation of agent performance across mutation types. Higher values indicate more specialized agents.',
     range: [0, 1],
@@ -141,7 +141,7 @@ export const METRICS_REGISTRY: Record<string, MetricDefinition> = {
     id: 'mutation_evolution_velocity',
     name: 'Mutation Evolution Velocity',
     description: 'Rate at which the mutation population evolves and discovers new variants',
-    formula: '(N_new_mutations + N_crossover_offspring) / N_total_mutations * ÃŽâ€generations',
+    formula: '(N_new_mutations + N_crossover_offspring) / N_total_mutations * Δgenerations',
     formulaDescription:
       'Combined rate of new mutation discovery through crossover and variant spawning, normalized by total population size and generation count.',
     range: [0, 1],
@@ -154,7 +154,7 @@ export const METRICS_REGISTRY: Record<string, MetricDefinition> = {
       },
       { variable: 'N_crossover_offspring', source: 'mutation_genome', description: 'Number of crossover offspring' },
       { variable: 'N_total_mutations', source: 'mutation_genome', description: 'Total mutation population size' },
-      { variable: 'ÃŽâ€generations', source: 'mutation_genome', description: 'Number of generations elapsed' },
+      { variable: 'Δgenerations', source: 'mutation_genome', description: 'Number of generations elapsed' },
     ],
     normalizationRule: 'min_max',
   },
@@ -163,7 +163,7 @@ export const METRICS_REGISTRY: Record<string, MetricDefinition> = {
     id: 'leaderboard_stability_index',
     name: 'Leaderboard Stability Index',
     description: 'Stability of agent rankings across consecutive evaluation rounds',
-    formula: '1 - (ÃŽÂ£|rank_t - rank_{ t-1 }|) / (N_agents * max_rank_shift)',
+    formula: '1 - (Σ|rank_t - rank_{ t-1 }|) / (N_agents * max_rank_shift)',
     formulaDescription:
       'Inverse of the average rank displacement across consecutive rounds. 1 = perfectly stable rankings, 0 = completely shuffled.',
     range: [0, 1],
@@ -200,7 +200,7 @@ export const METRICS_REGISTRY: Record<string, MetricDefinition> = {
     id: 'failure_consistency_score',
     name: 'Failure Consistency Score',
     description: 'How consistently mutations cause failures across different agents',
-    formula: '1 - ÃÆ’(failure_rates)',
+    formula: '1 - σ(failure_rates)',
     formulaDescription:
       'One minus the standard deviation of failure rates across agents. Higher values mean mutations consistently fail all agents (or succeed for all).',
     range: [0, 1],

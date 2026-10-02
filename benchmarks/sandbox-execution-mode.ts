@@ -100,7 +100,7 @@ export class SandboxExecutionMode {
     const recommendations: string[] = [];
     if (deployFailureProb > 0.4) recommendations.push('Add CI/CD configuration checking before deployment');
     if (browserPassRate < 0.7) recommendations.push('Increase UI test coverage for core flows');
-    if (expectedUXScore < 0.6) recommendations.push('Focus on UX polish Ã¢â‚¬â€ consider polish-ux strategy');
+    if (expectedUXScore < 0.6) recommendations.push('Focus on UX polish — consider polish-ux strategy');
     if (plan.risks.length > 2) recommendations.push(`Address top ${plan.risks.length} risks before execution`);
     recommendations.push('Run sandbox execution before real deployment');
 

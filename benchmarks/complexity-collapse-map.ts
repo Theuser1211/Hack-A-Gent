@@ -55,7 +55,7 @@ export interface ReductionStep {
 // ---- System Catalog ----
 
 const ALL_SYSTEMS: SystemNode[] = [
-  // Core ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â always required
+  // Core — always required
   { name: 'UnifiedRuntimeOS', dependencies: [], criticality: 'core', canDisable: false },
   { name: 'TaskGraph', dependencies: [], criticality: 'core', canDisable: false },
   { name: 'ToolExecutionGateway', dependencies: ['TaskGraph'], criticality: 'core', canDisable: false },
@@ -64,7 +64,7 @@ const ALL_SYSTEMS: SystemNode[] = [
   { name: 'DevpostIngestionLayer', dependencies: [], criticality: 'core', canDisable: false },
   { name: 'InterruptProtocol', dependencies: [], criticality: 'core', canDisable: false },
 
-  // Important ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â used frequently
+  // Important — used frequently
   { name: 'GlobalMemoryIndex', dependencies: [], criticality: 'important', canDisable: true },
   {
     name: 'DeploymentRepairController',
@@ -81,7 +81,7 @@ const ALL_SYSTEMS: SystemNode[] = [
     canDisable: true,
   },
 
-  // Optional ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â can skip
+  // Optional — can skip
   { name: 'Phase11Orchestrator', dependencies: ['StrategicPlanner'], criticality: 'optional', canDisable: true },
   { name: 'Phase12Orchestrator', dependencies: ['StrategicPlanner'], criticality: 'optional', canDisable: true },
   {
@@ -100,7 +100,7 @@ const ALL_SYSTEMS: SystemNode[] = [
     canDisable: true,
   },
 
-  // Phase 13.5 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â mostly redundant now
+  // Phase 13.5 — mostly redundant now
   {
     name: 'GlobalGoalMonitor',
     dependencies: [],
@@ -113,7 +113,7 @@ const ALL_SYSTEMS: SystemNode[] = [
     dependencies: ['TaskGraph'],
     criticality: 'redundant',
     canDisable: true,
-    replacement: 'DemoSurfaceCompiler.winScore ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¥ 80 check',
+    replacement: 'DemoSurfaceCompiler.winScore ≥ 80 check',
   },
   {
     name: 'FailureResilienceLayer',
@@ -138,10 +138,10 @@ const ALL_SYSTEMS: SystemNode[] = [
     replacement: 'HackathonSimulationEngine phase 2',
   },
 
-  // Taste & Simplicity Governor ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â keep
+  // Taste & Simplicity Governor — keep
   { name: 'TasteGovernor', dependencies: [], criticality: 'core', canDisable: false },
 
-  // Demo Surface Compiler ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â new core
+  // Demo Surface Compiler — new core
   { name: 'DemoSurfaceCompiler', dependencies: [], criticality: 'core', canDisable: false },
 ];
 
@@ -232,7 +232,7 @@ export class ComplexityCollapseEngine {
         action: 'merge',
         target: m[0],
         into: m[1],
-        reason: `Overlapping functionality ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${m[0]} can be absorbed by ${m[1]}`,
+        reason: `Overlapping functionality — ${m[0]} can be absorbed by ${m[1]}`,
       });
     }
 
@@ -242,7 +242,7 @@ export class ComplexityCollapseEngine {
         steps.push({
           action: 'replace_deterministic',
           target: name,
-          reason: `Replaced by ${found.replacement} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â same output, fewer systems`,
+          reason: `Replaced by ${found.replacement} — same output, fewer systems`,
         });
       } else {
         steps.push({ action: 'remove', target: name, reason: `Low criticality and can be disabled safely` });

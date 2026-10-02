@@ -211,7 +211,7 @@ export class DemoSurfaceCompiler {
     const types: Record<string, string> = {
       interactive_ui: 'Interactive UI feature',
       live_api: 'Live API interaction',
-      visible_automation: 'Visible automation (build Ã¢â€ â€™ deploy Ã¢â€ â€™ test loop)',
+      visible_automation: 'Visible automation (build → deploy → test loop)',
       ai_output_transform: 'AI-generated output transformation',
     };
     if (types[p.wowMoment.type]) {
@@ -259,8 +259,8 @@ export class DemoSurfaceCompiler {
       },
       winScore: Math.max(0, this.plan.winScore - (degraded ? 20 : 5)),
       fallbackBehavior: degraded
-        ? 'Sandbox fallback active Ã¢â‚¬â€ deployed static version instead of full build'
-        : 'Minor degradation Ã¢â‚¬â€ core features preserved',
+        ? 'Sandbox fallback active — deployed static version instead of full build'
+        : 'Minor degradation — core features preserved',
     };
 
     return {
@@ -299,7 +299,7 @@ export class DemoSurfaceCompiler {
   private interpretOneLiner(title: string, statement: string, techStack: string[]): string {
     const tech = techStack.length > 0 ? techStack.slice(0, 3).join(', ') : 'modern web technologies';
     const words = statement.split(/\s+/).slice(0, 30).join(' ');
-    return `${title} Ã¢â‚¬â€ built with ${tech}. ${words}`;
+    return `${title} — built with ${tech}. ${words}`;
   }
 
   private buildMinimalSteps(
@@ -377,15 +377,15 @@ export class DemoSurfaceCompiler {
       return {
         type: 'ai_output_transform',
         description: 'AI-powered transformation that converts user input into a meaningful result',
-        demoScript: 'Type or upload input Ã¢â€ â€™ see AI transform it Ã¢â€ â€™ result appears in real time',
+        demoScript: 'Type or upload input → see AI transform it → result appears in real time',
       };
     }
 
     if (/api|data|fetch|live|realtime|stream/i.test(lower) || /api|data|integration/i.test(criteriaLower)) {
       return {
         type: 'live_api',
-        description: 'Live interaction with external API Ã¢â‚¬â€ data fetched and displayed dynamically',
-        demoScript: 'Trigger API call Ã¢â€ â€™ loading state Ã¢â€ â€™ data rendered on screen',
+        description: 'Live interaction with external API — data fetched and displayed dynamically',
+        demoScript: 'Trigger API call → loading state → data rendered on screen',
       };
     }
 
@@ -396,7 +396,7 @@ export class DemoSurfaceCompiler {
       return {
         type: 'interactive_ui',
         description: 'Interactive UI component with real-time user-driven state changes',
-        demoScript: 'User clicks/types Ã¢â€ â€™ UI updates instantly Ã¢â€ â€™ smooth transitions throughout',
+        demoScript: 'User clicks/types → UI updates instantly → smooth transitions throughout',
       };
     }
 
@@ -404,7 +404,7 @@ export class DemoSurfaceCompiler {
       type: 'visible_automation',
       description: 'Full build-deploy-test cycle completes in under 60 seconds with live URL output',
       demoScript:
-        'System builds Ã¢â€ â€™ deploys Ã¢â€ â€™ tests Ã¢â€ â€™ shows live URL Ã¢â‚¬â€ all in one continuous flow',
+        'System builds → deploys → tests → shows live URL — all in one continuous flow',
     };
   }
 
@@ -419,7 +419,7 @@ export class DemoSurfaceCompiler {
     if (target === 'vercel' || target === 'netlify') {
       return `Auto-fallback to ${target} static deploy if build fails. Static site always served.`;
     }
-    return 'GitHub Pages fallback Ã¢â‚¬â€ minimal static page with project info if full build fails.';
+    return 'GitHub Pages fallback — minimal static page with project info if full build fails.';
   }
 
   private buildWhyWins(plan: DemoSurfacePlan): string {
@@ -428,10 +428,10 @@ export class DemoSurfaceCompiler {
 
     if (b.functionalE2E >= 25) parts.push('Full end-to-end system working from UI to deployment');
     if (b.visualClarity >= 15) parts.push('Clean, judge-friendly UI that communicates the idea instantly');
-    if (b.reliability >= 10) parts.push('Deployed and verified Ã¢â‚¬â€ no setup required for judging');
+    if (b.reliability >= 10) parts.push('Deployed and verified — no setup required for judging');
     if (b.novelty >= 12) parts.push(`Novel ${plan.wowMoment.type.replace(/_/g, ' ')} wow moment`);
     if (b.speed >= 8) parts.push('Fast execution and instant feedback');
-    if (b.simplicity >= 8) parts.push('Simple architecture Ã¢â‚¬â€ easy for judges to understand in <60 seconds');
+    if (b.simplicity >= 8) parts.push('Simple architecture — easy for judges to understand in <60 seconds');
 
     return parts.length > 0
       ? parts.join('; ') + '.'

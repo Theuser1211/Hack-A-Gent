@@ -75,13 +75,13 @@ export class JudgeSimulator {
     const biases: string[] = [];
 
     if (this.bias.prefersVisibleDemo && params.hasUI) {
-      biases.push('Visible demo detected â€” UX weight increased');
+      biases.push('Visible demo detected — UX weight increased');
     }
     if (this.bias.penalizesIncomplete && !params.buildSuccess) {
-      biases.push('Build failure â€” heavy penalty applied');
+      biases.push('Build failure — heavy penalty applied');
     }
     if (this.bias.rewardsWowMoment && params.hasWowMoment) {
-      biases.push('Wow moment detected â€” bonus applied');
+      biases.push('Wow moment detected — bonus applied');
     }
 
     let wowMomentBonus = 0;
@@ -176,16 +176,16 @@ export class JudgeSimulator {
   ): string[] {
     const feedback: string[] = [];
 
-    if (!params.hasUI) feedback.push('No visible UI â€” hard to judge user experience');
-    if (!params.hasWowMoment) feedback.push('Missing wow moment â€” nothing memorable for judges');
-    if (!params.buildSuccess) feedback.push('Build failed â€” critical issue');
-    if (!params.deploySuccess) feedback.push('Deployment failed â€” judges cannot access the demo');
-    if (!params.crashFree) feedback.push('Runtime crash detected â€” reliability concern');
-    if (params.testPassRate < 0.7) feedback.push('Low test pass rate â€” functionality concerns');
-    if (scores.innovation >= 20) feedback.push('Strong innovation â€” novel approach');
-    if (scores.uxPolish >= 15) feedback.push('Polished UX â€” judge-friendly interface');
-    if (total >= 70) feedback.push('Hackathon-ready score â€” demo is competitive');
-    if (total < 50) feedback.push('Score below threshold â€” significant improvements needed');
+    if (!params.hasUI) feedback.push('No visible UI — hard to judge user experience');
+    if (!params.hasWowMoment) feedback.push('Missing wow moment — nothing memorable for judges');
+    if (!params.buildSuccess) feedback.push('Build failed — critical issue');
+    if (!params.deploySuccess) feedback.push('Deployment failed — judges cannot access the demo');
+    if (!params.crashFree) feedback.push('Runtime crash detected — reliability concern');
+    if (params.testPassRate < 0.7) feedback.push('Low test pass rate — functionality concerns');
+    if (scores.innovation >= 20) feedback.push('Strong innovation — novel approach');
+    if (scores.uxPolish >= 15) feedback.push('Polished UX — judge-friendly interface');
+    if (total >= 70) feedback.push('Hackathon-ready score — demo is competitive');
+    if (total < 50) feedback.push('Score below threshold — significant improvements needed');
 
     return feedback;
   }

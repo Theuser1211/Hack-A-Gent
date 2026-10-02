@@ -297,19 +297,19 @@ export class ExperimentTracer {
 
     if (mutationEvents.length > 0 && detectionEvents.length === 0) {
       incompleteChains.push({
-        chainType: 'mutation Ã¢â€ â€™ detection',
+        chainType: 'mutation → ’ detection',
         missingLinks: [`${mutationEvents.length} mutation(s) applied but 0 detection events recorded`],
       });
     }
     if (detectionEvents.length > 0 && repairEvents.length === 0) {
       incompleteChains.push({
-        chainType: 'detection Ã¢â€ â€™ repair',
+        chainType: 'detection → ’ repair',
         missingLinks: [`${detectionEvents.length} detection(s) but 0 repair attempts recorded`],
       });
     }
     if (repairEvents.length > 0 && verificationEvents.length === 0) {
       incompleteChains.push({
-        chainType: 'repair Ã¢â€ â€™ verification',
+        chainType: 'repair → ’ verification',
         missingLinks: [`${repairEvents.length} repair(s) but 0 verification results recorded`],
       });
     }
@@ -387,7 +387,7 @@ export function collectRepairDecisionTraces(
     filesPatched: record.files_repaired,
     moduleDiffs: record.diffs.map(
       (d) =>
-        `${d.type}: ${d.oldFileCount}f Ã¢â€ â€™ ${d.newFileCount}f, ${d.oldLineCount}l Ã¢â€ â€™ ${d.newLineCount}l`,
+        `${d.type}: ${d.oldFileCount}f → ’ ${d.newFileCount}f, ${d.oldLineCount}l → ’ ${d.newLineCount}l`,
     ),
     success: record.success,
   }));

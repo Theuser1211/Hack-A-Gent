@@ -62,7 +62,7 @@ export class BuildVerifier {
     const passed = errors.length === 0;
     const summary = passed
       ? `Verification passed: ${repository.total_files} files across ${repository.modules.length} modules, ${errors.length} errors, ${warnings.length} warnings`
-      : `Verification FAILED: ${errors.length} error(s), ${warnings.length} warning(s) Ã¢â‚¬â€ ${errors.map((e) => e.message).join('; ')}`;
+      : `Verification FAILED: ${errors.length} error(s), ${warnings.length} warning(s) — ${errors.map((e) => e.message).join('; ')}`;
 
     return { passed, errors, warnings, summary };
   }
@@ -224,7 +224,7 @@ export class BuildVerifier {
       warnings.push({
         category: 'inconsistency',
         severity: 'warning',
-        message: 'Backend exists but no database module Ã¢â‚¬â€ may need data persistence',
+        message: 'Backend exists but no database module — may need data persistence',
       });
     }
 
@@ -239,7 +239,7 @@ export class BuildVerifier {
           category: 'inconsistency',
           severity: 'warning',
           message:
-            'Frontend has API service files but backend has no route/controller files Ã¢â‚¬â€ API contracts may not align',
+            'Frontend has API service files but backend has no route/controller files — API contracts may not align',
         });
       }
     }
@@ -273,7 +273,7 @@ export class BuildVerifier {
       errors.push({
         category: 'broken_module_consistency',
         severity: 'error',
-        message: `Duplicate module types detected Ã¢â‚¬â€ ${allModuleTypes.length} modules but only ${uniqueTypes.size} unique types`,
+        message: `Duplicate module types detected — ${allModuleTypes.length} modules but only ${uniqueTypes.size} unique types`,
         detectedMutationType: 'duplicate_file_entries',
         detectionConfidence: 0.8,
       });
@@ -304,7 +304,7 @@ export class BuildVerifier {
       errors.push({
         category: 'invalid_schema',
         severity: 'error',
-        message: `Module "${mod.name}" has no files array Ã¢â‚¬â€ required field is missing or corrupted`,
+        message: `Module "${mod.name}" has no files array — required field is missing or corrupted`,
         module: mod.name,
         detectedMutationType: 'drop_required_module_field',
         detectionConfidence: 0.9,
@@ -316,7 +316,7 @@ export class BuildVerifier {
       errors.push({
         category: 'invalid_schema',
         severity: 'error',
-        message: `Module "${mod.name}" has an empty files array Ã¢â‚¬â€ required field is missing data`,
+        message: `Module "${mod.name}" has an empty files array — required field is missing data`,
         module: mod.name,
         detectedMutationType: 'drop_required_module_field',
         detectionConfidence: 0.9,
@@ -412,7 +412,7 @@ export class BuildVerifier {
         warnings.push({
           category: 'content_error',
           severity: 'warning',
-          message: `File "${path}" has no exports or imports Ã¢â‚¬â€ may be unused`,
+          message: `File "${path}" has no exports or imports — may be unused`,
           module: moduleName,
           file: path,
         });
@@ -424,7 +424,7 @@ export class BuildVerifier {
         warnings.push({
           category: 'content_error',
           severity: 'warning',
-          message: `File "${path}" exports symbols but imports nothing Ã¢â‚¬â€ check dependency chain`,
+          message: `File "${path}" exports symbols but imports nothing — check dependency chain`,
           module: moduleName,
           file: path,
         });
@@ -435,7 +435,7 @@ export class BuildVerifier {
           warnings.push({
             category: 'content_error',
             severity: 'warning',
-            message: `API/service file "${path}" does not use fetch/axios/http Ã¢â‚¬â€ may not make actual requests`,
+            message: `API/service file "${path}" does not use fetch/axios/http — may not make actual requests`,
             module: moduleName,
             file: path,
           });
@@ -448,7 +448,7 @@ export class BuildVerifier {
         warnings.push({
           category: 'content_error',
           severity: 'warning',
-          message: `Stylesheet "${path}" is very short Ã¢â‚¬â€ may lack styling`,
+          message: `Stylesheet "${path}" is very short — may lack styling`,
           module: moduleName,
           file: path,
         });

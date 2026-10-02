@@ -346,7 +346,7 @@ function mutateCorruptContent(
       severity,
       moduleName: mod.name,
       filePath: targetFile.path,
-      description: `Corrupted content in "${targetFile.path}" (module "${mod.name}") Ã¢â‚¬â€ intensity ${intensity.toFixed(2)}`,
+      description: `Corrupted content in "${targetFile.path}" (module "${mod.name}") — intensity ${intensity.toFixed(2)}`,
       expectedFailureCategory: 'content_corruption',
     },
   };

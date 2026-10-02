@@ -107,7 +107,7 @@ export class MultiStrategyExecutionEngine {
       winner = strategies[0]!;
     }
 
-    const reason = `Selected "${winner.name}" (${winner.type}) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â score: ${(winner.simulationScore * 100).toFixed(1)}%, UX: ${(winner.uxScore * 100).toFixed(1)}%, Deploy prob: ${(winner.deployProbability * 100).toFixed(1)}%`;
+    const reason = `Selected "${winner.name}" (${winner.type}) — score: ${(winner.simulationScore * 100).toFixed(1)}%, UX: ${(winner.uxScore * 100).toFixed(1)}%, Deploy prob: ${(winner.deployProbability * 100).toFixed(1)}%`;
 
     this.decisionLogger.log('strategy', 'strategy_selected', reason, winner.simulationScore, [], {
       winner: winner.type,

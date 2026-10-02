@@ -90,7 +90,7 @@ export class CompanyEvolutionEngine {
     const hasDeploy = top3.filter((r) => r.deployUrl !== null).length;
     if (hasDeploy >= 2) patterns.push('deployment reliability correlates with top performance');
 
-    if (patterns.length === 0) patterns.push('no clear winning pattern yet Ã¢â‚¬â€ exploration phase');
+    if (patterns.length === 0) patterns.push('no clear winning pattern yet — exploration phase');
 
     return patterns;
   }

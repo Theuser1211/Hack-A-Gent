@@ -232,7 +232,7 @@ export class TasteGovernor {
 
     if (hasPositive && !hasNegative) return { yes: true, reason: 'Directly contributes to demo impressiveness' };
     if (hasPositive && hasNegative)
-      return { yes: false, reason: 'Mixed demo impact Ã¢â‚¬â€ negative keywords suggest hidden work' };
+      return { yes: false, reason: 'Mixed demo impact — negative keywords suggest hidden work' };
     return { yes: false, reason: 'No clear demo impact detected' };
   }
 
@@ -283,7 +283,7 @@ export class TasteGovernor {
     this.decisionLogger.log(
       'planner',
       'taste_verdict',
-      `[${approved ? 'APPROVED' : 'REJECTED'}] ${proposal.name} Ã¢â‚¬â€ score: ${score.total}/100, demo: ${demoImpact}`,
+      `[${approved ? 'APPROVED' : 'REJECTED'}] ${proposal.name} — score: ${score.total}/100, demo: ${demoImpact}`,
       score.total / 100,
       [],
       { approved, score: score.total, demoImpact, rejectionReason, antiPatterns: antiPatterns.length },
@@ -427,7 +427,7 @@ export class TasteGovernor {
     if (sandboxReport.riskScore > 0.7) {
       return {
         approved: false,
-        reason: `Deployment risk ${(sandboxReport.riskScore * 100).toFixed(0)}% exceeds threshold Ã¢â‚¬â€ high demo failure probability`,
+        reason: `Deployment risk ${(sandboxReport.riskScore * 100).toFixed(0)}% exceeds threshold — high demo failure probability`,
       };
     }
     if (sandboxReport.deployPrediction.failureProbability > 0.5) {

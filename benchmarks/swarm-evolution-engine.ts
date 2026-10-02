@@ -71,13 +71,13 @@ export class SwarmEvolutionEngine {
     const kept = new Map<string, StrategyTemplate>();
     const discarded: StrategyTemplate[] = [];
 
-    // Top 20% Ã¢â‚¬â€ kept
+    // Top 20% — kept
     for (let i = 0; i < topCount && i < scored.length; i++) {
       const cat = scored[i]!.category;
       if (!kept.has(cat)) kept.set(cat, scored[i]!.template);
     }
 
-    // Bottom 40% Ã¢â‚¬â€ discarded
+    // Bottom 40% — discarded
     for (let i = scored.length - 1; i >= 0 && discarded.length < bottomCount; i--) {
       const cat = scored[i]!.category;
       if (!kept.has(cat)) {
@@ -86,7 +86,7 @@ export class SwarmEvolutionEngine {
       }
     }
 
-    // Middle 40% Ã¢â‚¬â€ kept for mutation
+    // Middle 40% — kept for mutation
     for (const item of scored) {
       if (!kept.has(item.category) && !discarded.includes(item.template)) {
         kept.set(item.category, item.template);
@@ -146,7 +146,7 @@ export class SwarmEvolutionEngine {
     }
 
     if (patterns.length === 0) {
-      patterns.push('no dominant pattern detected Ã¢â‚¬â€ exploration phase');
+      patterns.push('no dominant pattern detected — exploration phase');
     }
 
     return patterns;

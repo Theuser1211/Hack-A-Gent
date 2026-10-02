@@ -62,26 +62,26 @@ export class HackathonCompanyOrchestrator {
     const hackathonTitle = spec.title;
     const allExecutiveDecisions: ExecutiveDecision[] = [];
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Anti-Complexity Enforcement Ã¢â‚¬â€ Hard Limits Ã¢â€â‚¬Ã¢â€â‚¬
+    // ── Anti-Complexity Enforcement — Hard Limits ──
     const maxCompanies = Math.min(7, this.config.companyCount);
     const maxRepairLoops = 3;
     const maxAgentsPerCompany = 6;
 
-    // Phase 1 Ã¢â‚¬â€ Spawn Companies (max 7)
+    // Phase 1 — Spawn Companies (max 7)
     const companies = this.spawner.spawnCompanies(spec, maxCompanies);
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Hard Rule: no recursive company spawning Ã¢â€â‚¬Ã¢â€â‚¬
+    // ── Hard Rule: no recursive company spawning ──
     if (companies.length > 7) {
       companies.length = 7;
     }
 
-    // Phase 2 Ã¢â‚¬â€ Assign projects & simulate
+    // Phase 2 — Assign projects & simulate
     const assignments = this.brain.assignProjects(spec, companies);
 
     const states: CompanyExecutionState[] = companies.map((company) => {
       const devpostSpec = assignments.get(company.id)!;
 
-      // Ã¢â€â‚¬Ã¢â€â‚¬ Hard Rule: max 6 agents per company Ã¢â€â‚¬Ã¢â€â‚¬
+      // ── Hard Rule: max 6 agents per company ──
       if (company.agents.length > maxAgentsPerCompany) {
         company.agents.length = maxAgentsPerCompany;
       }
@@ -89,7 +89,7 @@ export class HackathonCompanyOrchestrator {
       return this.brain.simulateCompany(company, devpostSpec);
     });
 
-    // Phase 3 Ã¢â‚¬â€ Build Phase + Complexity Collapse
+    // Phase 3 — Build Phase + Complexity Collapse
     for (const state of states) {
       if (state.phase === 'pruned') continue;
       this.brain.runBuildPhase(state);
@@ -113,13 +113,13 @@ export class HackathonCompanyOrchestrator {
       }
     }
 
-    // Phase 4 Ã¢â‚¬â€ Prune early failures
+    // Phase 4 — Prune early failures
     const earlyPrunes = this.brain.pruneEarlyFailure(states, 'build');
     allExecutiveDecisions.push(...earlyPrunes);
 
     const prunedCompanies = states.filter((s) => s.phase === 'pruned').map((s) => s.company.id);
 
-    // Phase 5 Ã¢â‚¬â€ Deploy Phase (max 1 per cycle unless failure)
+    // Phase 5 — Deploy Phase (max 1 per cycle unless failure)
     for (const state of states) {
       if (state.phase === 'pruned') continue;
       const hadFailure = state.totalFailures > 0;
@@ -136,7 +136,7 @@ export class HackathonCompanyOrchestrator {
       allExecutiveDecisions.push(...deployPrunes);
     }
 
-    // Phase 6 Ã¢â‚¬â€ Judge Phase
+    // Phase 6 — Judge Phase
     for (const state of states) {
       if (state.phase === 'pruned') continue;
       this.brain.runJudgePhase(state);
@@ -145,7 +145,7 @@ export class HackathonCompanyOrchestrator {
       allExecutiveDecisions.push(...judgePrunes);
     }
 
-    // Phase 7 Ã¢â‚¬â€ Repair Loop (max 3)
+    // Phase 7 — Repair Loop (max 3)
     if (!this.config.fastMode) {
       for (let cycle = 0; cycle < maxRepairLoops; cycle++) {
         let anyRepaired = false;
@@ -159,12 +159,12 @@ export class HackathonCompanyOrchestrator {
         const repairPrunes = this.brain.pruneEarlyFailure(states, 'repair');
         allExecutiveDecisions.push(...repairPrunes);
 
-        // Ã¢â€â‚¬Ã¢â€â‚¬ Hard Rule: stop repairs if no improvement Ã¢â€â‚¬Ã¢â€â‚¬
+        // ── Hard Rule: stop repairs if no improvement ──
         if (!anyRepaired) break;
       }
     }
 
-    // Phase 8 Ã¢â‚¬â€ Emit Results
+    // Phase 8 — Emit Results
     const results: CompanyResult[] = [];
     for (const state of states) {
       const result = this.brain.emitResult(state);
@@ -179,10 +179,10 @@ export class HackathonCompanyOrchestrator {
 
     const winner = results[0]!;
 
-    // Phase 9 Ã¢â‚¬â€ Evolution
+    // Phase 9 — Evolution
     const evolutionDelta = this.evolution.evolve(companies, results);
 
-    // Phase 10 Ã¢â‚¬â€ Complexity check
+    // Phase 10 — Complexity check
     const complexityReport = new ComplexityCollapseEngine(this.seed).analyzeGraph();
 
     // Final pruning
