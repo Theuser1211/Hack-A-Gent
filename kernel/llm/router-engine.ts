@@ -143,7 +143,7 @@ const CUSTOM_NON_CODING_MODEL_RE =
   /whisper|tts|speech|audio|transcrib|embed|rerank|moderation|guard|vision|image|clip|bge|stt|asr|orpheus/i;
 const CUSTOM_CODING_MODEL_HINT_RE =
   /llama|qwen|gpt|deepseek|codestral|mistral|mixtral|gemma|phi|claude|command|yi|starcoder|codellama|granite|gpt-oss|gpt-oss-20b|gpt-oss-120b|deepseek-v4-pro-0813|stepfun|step-3.7-flash|minimax-m3|llama-3.1-70b-instruct|llama-3.1-8b-instruct|llama-3.2-3b-instruct|llama-3.2-1b-instruct/i;
-const MIN_CODE_CONTEXT_WINDOW = 16000;
+export const MIN_CODE_CONTEXT_WINDOW = 16000;
 
 /** Rough token estimate: ceil(characters / 4). */
 function estimateRequestTokens(request: LLMRequest): number {

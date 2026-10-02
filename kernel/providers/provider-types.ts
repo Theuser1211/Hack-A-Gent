@@ -238,6 +238,16 @@ export class TokenUsageTracker {
 
   private getModelInputCost(modelId: string): number {
     const rates: Record<string, number> = {
+      // NVIDIA Nemotron open-weight models served by Nebius Token
+      // Factory. Prices are the per-1k values declared in the
+      // NEBIUS_MODELS catalog (kernel/providers/custom-endpoint-provider.ts)
+      // — the same open-weight family the hackathon requires. When the
+      // same model id is called through the `nvidia` provider (whose
+      // catalog declares 0/0), the Token Factory price is applied as a
+      // conservative upper bound.
+      'nvidia/nemotron-3-super-120b-a12b': 0.0003,
+      'nvidia/nemotron-3-nano-30b-a3b': 0.0001,
+      'nvidia/nemotron-3-ultra-550b-a55b': 0.001,
       'claude-sonnet-4-20250514': 0.003,
       'claude-haiku-3-5-20241022': 0.0008,
       'claude-opus-4-20250514': 0.015,
@@ -254,6 +264,10 @@ export class TokenUsageTracker {
 
   private getModelOutputCost(modelId: string): number {
     const rates: Record<string, number> = {
+      // See getModelInputCost: Nemotron per-1k prices from NEBIUS_MODELS.
+      'nvidia/nemotron-3-super-120b-a12b': 0.0009,
+      'nvidia/nemotron-3-nano-30b-a3b': 0.0003,
+      'nvidia/nemotron-3-ultra-550b-a55b': 0.003,
       'claude-sonnet-4-20250514': 0.015,
       'claude-haiku-3-5-20241022': 0.004,
       'claude-opus-4-20250514': 0.075,

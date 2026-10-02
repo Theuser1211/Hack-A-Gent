@@ -45,6 +45,20 @@ Example output (from an actual run; your results will vary):
 Pipeline completed in 4m 9s (20 tasks)
 ```
 
+## Nebius × NVIDIA Nemotron
+
+Hack-A-Gent runs on [Nebius Token Factory](https://nebius.com) as an OpenAI-compatible inference endpoint and uses NVIDIA Nemotron open-weight models — a real runtime call to the Token Factory inference API with at least one NVIDIA open-source model.
+
+- **Enable it:** set `NEBIUS_API_KEY` in `.env` (or `hag config --provider nebius --api-key <key>`). Nebius is auto-detected and auto-registered; no other setup is required.
+- **Endpoint:** `POST https://api.tokenfactory.nebius.com/v1/chat/completions` with `Authorization: Bearer $NEBIUS_API_KEY` — OpenAI-compatible request/response shape, including `response_format: json_object` support.
+- **Nemotron models served:** `nvidia/nemotron-3-super-120b-a12b` (262k context), `nvidia/nemotron-3-nano-30b-a3b` (262k), `nvidia/nemotron-3-ultra-550b-a55b` (1M). The curated catalog also lists `deepseek-ai/DeepSeek-R1-0528`.
+- **Default coding model:** `nvidia/nemotron-3-super-120b-a12b` — the validated entry of `STATIC_CODING_CHAIN` in `kernel/llm/router-engine.ts`, confirmed by real chat requests against a live account (retired or unprovisioned candidates were removed after 410/404 probes).
+- **Routing:** for coding/repair tasks the router orders the `nvidia` and `nebius` providers first and restricts them to the vetted Nemotron chain; prompts are gated against per-model capability ceilings (`MODEL_CAPABILITY_PROFILES`) so oversized prompts are skipped instead of timing out.
+- **Managed coding:** when `nebius` (or `nvidia`) is the configured provider, code-generation tasks execute only on that provider — failures surface to the caller instead of silently falling through to another provider. A 429 rate limit is recoverable (one Retry-After-bounded retry, never a permanent blacklist); a 5xx gets one bounded retry, then the error is returned.
+- **Smoke test:** `npx tsx scripts/verify-provider-env.ts` — auto-detects the provider from `.env`, checks router selection, and issues one real inference request (exits non-zero on the first failed check).
+
+Other providers remain supported and unchanged: Anthropic, OpenAI, Gemini, OpenRouter, NVIDIA NIMs (`nvidia`), and custom OpenAI-compatible endpoints (`custom`, `custom:<name>`).
+
 ## Architecture
 
 - `cli/` — command interface and output formatting
