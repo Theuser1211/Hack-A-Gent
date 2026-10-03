@@ -1,42 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { WorkItem, ApiResponse } from '@/lib/types';
-import { getWorkItems } from '@/lib/db';
+import { db } from '@/lib/db';
+import type { WorkItem, ApiResponse } from '@/lib/types';
 
-const historySchema = z.object({
-  userId: z.string().min(1, 'User ID is required'),
-  limit: z.number().min(1).max(50).optional().default(10),
-  offset: z.number().min(0).optional().default(0)
-});
-
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<WorkItem[]>>> {
   try {
-    const body = await request.json();
-    const validationResult = historySchema.safeParse(body);
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId') || 'demo-user-1';
     
-    if (!validationResult.success) {
-      const error = validationResult.error.issues[0];
+    if (!userId) {
       return NextResponse.json(
-        { error: { message: error.message, code: 'VALIDATION_ERROR' } },
+        { error: { message: 'User ID is required', code: 'VALIDATION_ERROR' } },
         { status: 400 }
       );
     }
     
-    const { userId, limit, offset } = validationResult.data;
+    const workItems = db.workItems.getAll(userId);
     
-    const items = getWorkItems(userId);
+    // Sort by creation date, newest first
+    const sortedItems = [...workItems].sort((a, b) => b.createdAt - a.createdAt);
     
-    // Sort by creation date descending (newest first)
-    const sortedItems = [...items].sort((a, b) => b.createdAt - a.createdAt);
-    
-    // Apply pagination
-    const paginatedItems = sortedItems.slice(offset, offset + limit);
-    
-    return NextResponse.json(
-      { data: { items: paginatedItems, total: items.length } },
-      { status: 200 }
-    );
-    
+    return NextResponse.json({ data: sortedItems }, { status: 200 });
   } catch (err) {
     console.error('[API /ai/history]', err);
     return NextResponse.json(

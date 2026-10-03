@@ -1,23 +1,19 @@
 /**
- * Hackathon Intelligence — Parser
+ * Hackathon Intelligence â Parser
  * ===============================
  *
  * Securely fetches and extracts structured fields from a hackathon page.
  * Designed to work WITHOUT an LLM (deterministic, heuristic parse)
  * and to fall back to caller-supplied raw HTML for tests / offline use.
  *
- * Security: the fetcher enforces an SSRF guard — denylist of internal and
+ * Security: the fetcher enforces an SSRF guard â denylist of internal and
  * known non-hackathon hosts. Only safe hosts are allowed, with a hard
  * timeout. This mirrors the guard used by the production `run` pipeline.
  */
-
 import { getSeededRandom } from '../../benchmarks/determinism-kernel.js';
 import { assertSafeHackathonUrl } from '../../cli/validation/ssrf-guard.js';
-
 import type { ParsedDevpost, SponsorAPI } from './types.js';
-
 const ALLOWED_HOSTS = ['devpost.com', 'www.devpost.com'];
-
 /** Known sponsor technologies and how they typically map to integrations. */
 export const KNOWN_SPONSORS: Array<{
   patterns: RegExp;
@@ -27,17 +23,17 @@ export const KNOWN_SPONSORS: Array<{
   strategicValue: SponsorAPI['strategicValue'];
   notes: string;
 }> = [
-  { patterns: /open\s*ai|gpt|whisper|dall-?e|chatgpt/i, name: 'OpenAI', category: 'ai', mustUse: false, strategicValue: 5, notes: 'LLMs, embeddings, vision, speech — strong differentiator for AI demos.' },
+  { patterns: /open\s*ai|gpt|whisper|dall-?e|chatgpt/i, name: 'OpenAI', category: 'ai', mustUse: false, strategicValue: 5, notes: 'LLMs, embeddings, vision, speech â strong differentiator for AI demos.' },
   { patterns: /anthropic|claude/i, name: 'Anthropic', category: 'ai', mustUse: false, strategicValue: 5, notes: 'Claude for reasoning, long-context, and agentic flows.' },
   { patterns: /gemini|google ai|palm/i, name: 'Google Gemini', category: 'ai', mustUse: false, strategicValue: 4, notes: 'Multimodal LLM + Vertex ecosystem.' },
   { patterns: /hugging ?face|transformers/i, name: 'Hugging Face', category: 'ml', mustUse: false, strategicValue: 4, notes: 'Model hub, inference endpoints, datasets.' },
-  { patterns: /twilio/i, name: 'Twilio', category: 'comms', mustUse: false, strategicValue: 4, notes: 'SMS, voice, WhatsApp, email — great for notifications/demos.' },
-  { patterns: /stripe/i, name: 'Stripe', category: 'payments', mustUse: false, strategicValue: 4, notes: 'Payments, billing, checkout — needed for any commerce angle.' },
-  { patterns: /firebase/i, name: 'Firebase', category: 'data', mustUse: false, strategicValue: 3, notes: 'Auth, Firestore, hosting, functions — fast full-stack scaffold.' },
-  { patterns: /supabase/i, name: 'Supabase', category: 'data', mustUse: false, strategicValue: 4, notes: 'Postgres, auth, storage, realtime — open-source BaaS.' },
-  { patterns: /aws|amazon web services/i, name: 'AWS', category: 'hosting', mustUse: false, strategicValue: 3, notes: 'Bedrock, Lambda, S3 — broad cloud surface.' },
+  { patterns: /twilio/i, name: 'Twilio', category: 'comms', mustUse: false, strategicValue: 4, notes: 'SMS, voice, WhatsApp, email â great for notifications/demos.' },
+  { patterns: /stripe/i, name: 'Stripe', category: 'payments', mustUse: false, strategicValue: 4, notes: 'Payments, billing, checkout â needed for any commerce angle.' },
+  { patterns: /firebase/i, name: 'Firebase', category: 'data', mustUse: false, strategicValue: 3, notes: 'Auth, Firestore, hosting, functions â fast full-stack scaffold.' },
+  { patterns: /supabase/i, name: 'Supabase', category: 'data', mustUse: false, strategicValue: 4, notes: 'Postgres, auth, storage, realtime â open-source BaaS.' },
+  { patterns: /aws|amazon web services/i, name: 'AWS', category: 'hosting', mustUse: false, strategicValue: 3, notes: 'Bedrock, Lambda, S3 â broad cloud surface.' },
   { patterns: /azure|microsoft/i, name: 'Azure', category: 'hosting', mustUse: false, strategicValue: 3, notes: 'OpenAI on Azure, cognitive services, static web apps.' },
-  { patterns: /vercel/i, name: 'Vercel', category: 'hosting', mustUse: false, strategicValue: 4, notes: 'Zero-config Next.js deploy — the default Hack-A-Gent target.' },
+  { patterns: /vercel/i, name: 'Vercel', category: 'hosting', mustUse: false, strategicValue: 4, notes: 'Zero-config Next.js deploy â the default Hack-A-Gent target.' },
   { patterns: /netlify/i, name: 'Netlify', category: 'hosting', mustUse: false, strategicValue: 3, notes: 'Edge functions + forms.' },
   { patterns: /auth0|okta|clerk/i, name: 'Auth0 / Clerk', category: 'auth', mustUse: false, strategicValue: 3, notes: 'Drop-in authentication.' },
   { patterns: /nvidia/i, name: 'NVIDIA', category: 'ai', mustUse: false, strategicValue: 4, notes: 'NIMs inference endpoints, CUDA, RAG.' },
@@ -46,12 +42,10 @@ export const KNOWN_SPONSORS: Array<{
   { patterns: /langchain|llamaindex/i, name: 'LangChain / LlamaIndex', category: 'ai', mustUse: false, strategicValue: 2, notes: 'Orchestration frameworks.' },
   { patterns: /sendgrid|resend|postmark/i, name: 'Email API', category: 'comms', mustUse: false, strategicValue: 2, notes: 'Transactional email.' },
 ];
-
 export function isAllowedDevpostHost(hostname: string): boolean {
   const h = hostname.toLowerCase().replace(/\.$/, '');
   return ALLOWED_HOSTS.includes(h) || h.endsWith('.devpost.com');
 }
-
 /** Throws on non-Devpost hosts (SSRF guard). */
 export function assertSafeDevpostUrl(url: string): URL {
   let parsed: URL;
@@ -70,7 +64,6 @@ export function assertSafeDevpostUrl(url: string): URL {
   }
   return parsed;
 }
-
 /** Fetch a hackathon page HTML with a hard timeout. Throws on network/SSRF failure. */
 export async function fetchDevpostHtml(url: string, timeoutMs = 15000): Promise<string> {
   const parsed = assertSafeHackathonUrl(url);
@@ -89,9 +82,7 @@ export async function fetchDevpostHtml(url: string, timeoutMs = 15000): Promise<
     clearTimeout(timer);
   }
 }
-
-// ── HTML extraction helpers (no external deps) ──────────────────────────
-
+// ââ HTML extraction helpers (no external deps) ââââââââââââââââââââââââââ
 function metaContent(html: string, prop: string): string {
   const re = new RegExp(`<meta[^>]+(?:property|name)=["']${prop}["'][^>]*content=["']([^"']*)["']`, 'i');
   const m = html.match(re);
@@ -100,7 +91,6 @@ function metaContent(html: string, prop: string): string {
   const m2 = html.match(re2);
   return m2 ? decodeHtmlEntities(m2[1]!) : '';
 }
-
 function decodeHtmlEntities(s: string): string {
   return s
     .replace(/&amp;/g, '&')
@@ -111,7 +101,6 @@ function decodeHtmlEntities(s: string): string {
     .replace(/&nbsp;/g, ' ')
     .replace(/&#x27;/gi, "'");
 }
-
 function stripHtml(html: string): string {
   return decodeHtmlEntities(
     html
@@ -122,7 +111,6 @@ function stripHtml(html: string): string {
       .trim(),
   );
 }
-
 /**
  * Extract text from a named section in HTML, identified by a heading.
  * Returns the text content between the heading and the next heading of the
@@ -140,7 +128,6 @@ function extractSectionText(html: string, sectionNames: string[]): string {
   const nextHeading = afterHeading.search(/<\/?h[1-6]/i);
   return nextHeading > 0 ? afterHeading.slice(0, nextHeading) : afterHeading;
 }
-
 /**
  * Extract the sponsors section from raw HTML.
  * Returns the text content of the sponsors/partners section, or empty string
@@ -150,13 +137,10 @@ function extractSectionText(html: string, sectionNames: string[]): string {
 function extractSponsorSectionText(html: string): string {
   return extractSectionText(html, ['sponsor', 'partner', 'supported by']);
 }
-
 function detectSponsors(html: string): SponsorAPI[] {
   const sectionText = extractSponsorSectionText(html);
   if (!sectionText) return [];
-
   const plainText = stripHtml(sectionText);
-
   const found: SponsorAPI[] = [];
   for (const s of KNOWN_SPONSORS) {
     if (s.patterns.test(plainText)) {
@@ -169,7 +153,6 @@ function detectSponsors(html: string): SponsorAPI[] {
       });
     }
   }
-
   // Fallback: extract sponsor names from image alt text in the sponsor section
   const altRe = /<img[^>]+alt="([^"]+)"[^>]*>/gi;
   let altM: RegExpExecArray | null;
@@ -187,7 +170,6 @@ function detectSponsors(html: string): SponsorAPI[] {
       });
     }
   }
-
   // Filter by seen set
   const seen2 = new Set<string>();
   return found.filter((s) => {
@@ -196,40 +178,35 @@ function detectSponsors(html: string): SponsorAPI[] {
     return true;
   });
 }
-
 /** Extract text content from <li> items in HTML, preferring <strong> for names. */
 function extractCriteriaFromLis(html: string): ParsedDevpost['judgingCriteria'] {
   const criteria: ParsedDevpost['judgingCriteria'] = [];
   const liRe = /<li[^>]*>([\s\S]*?)<\/li>/gi;
-  const pctRe = /([A-Za-z][\w &/+-]{2,40})\s*[:\-—]?\s*(\d{1,3})\s*%/g;
-  const ptsRe = /([A-Za-z][\w &/+-]{2,40})\s*[:\-—]?\s*(\d{1,3})\s*pts?/gi;
-
+  const pctRe = /([A-Za-z][\w &/+-]{2,40})\s*[:\-â]?\s*(\d{1,3})\s*%/g;
+  const ptsRe = /([A-Za-z][\w &/+-]{2,40})\s*[:\-â]?\s*(\d{1,3})\s*pts?/gi;
   let m: RegExpExecArray | null;
   while ((m = liRe.exec(html)) !== null) {
     const liContent = m[1]!;
-
     // Try to extract <strong> text as the criterion name
     const strongMatch = liContent.match(/<strong[^>]*>([\s\S]*?)<\/strong>/i);
     const nameRaw = strongMatch ? strongMatch[1]! : liContent;
     const nameClean = stripHtml(nameRaw).trim();
     if (!nameClean || nameClean.length < 3) continue;
-
     // Check for percentage/points in the full <li> content
     const fullText = stripHtml(liContent);
     const pctMatches = [...fullText.matchAll(pctRe)];
     const ptsMatches = [...fullText.matchAll(ptsRe)];
-
     if (pctMatches.length > 0 || ptsMatches.length > 0) {
       let added = false;
       for (const match of pctMatches) {
-        const pctName = match[1]!.replace(/[:\-—]\s*$/, '').trim() || 'Criterion';
+        const pctName = match[1]!.replace(/[:\-â]\s*$/, '').trim() || 'Criterion';
         const num = parseInt(match[2]!, 10);
         if (Number.isNaN(num)) continue;
         criteria.push({ name: titleCase(pctName), weight: num, inferred: false });
         added = true;
       }
       for (const match of ptsMatches) {
-        const ptsName = match[1]!.replace(/[:\-—]\s*$/, '').trim() || 'Criterion';
+        const ptsName = match[1]!.replace(/[:\-â]\s*$/, '').trim() || 'Criterion';
         const num = parseInt(match[2]!, 10);
         if (Number.isNaN(num)) continue;
         criteria.push({ name: titleCase(ptsName), weight: num, inferred: false });
@@ -242,17 +219,14 @@ function extractCriteriaFromLis(html: string): ParsedDevpost['judgingCriteria'] 
   }
   return criteria;
 }
-
-/** Parse a judging-criteria line like "Innovation — 40%" or "UI (25 pts)". */
+/** Parse a judging-criteria line like "Innovation â 40%" or "UI (25 pts)". */
 function parseJudgingCriteria(text: string): ParsedDevpost['judgingCriteria'] {
   const criteria: ParsedDevpost['judgingCriteria'] = [];
-  const pctRe = /([A-Za-z][\w &/+-]{2,40})\s*[:\-—]?\s*(\d{1,3})\s*%/g;
-  const ptsRe = /([A-Za-z][\w &/+-]{2,40})\s*[:\-—]?\s*(\d{1,3})\s*pts?/gi;
-
+  const pctRe = /([A-Za-z][\w &/+-]{2,40})\s*[:\-â]?\s*(\d{1,3})\s*%/g;
+  const ptsRe = /([A-Za-z][\w &/+-]{2,40})\s*[:\-â]?\s*(\d{1,3})\s*pts?/gi;
   // First pass: extract from <li> items if text contains HTML
   const liCriteria = extractCriteriaFromLis(text);
   if (liCriteria.length > 0) return normalizeWeights(liCriteria);
-
   // Fallback: split by newlines (plain-text input)
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
   for (const line of lines) {
@@ -261,19 +235,18 @@ function parseJudgingCriteria(text: string): ParsedDevpost['judgingCriteria'] {
     const pctMatches = [...line.matchAll(pctRe)];
     const ptsMatches = [...line.matchAll(ptsRe)];
     for (const m of pctMatches) {
-      const name = m[1]!.replace(/[:\-—]\s*$/, '').trim() || 'Criterion';
+      const name = m[1]!.replace(/[:\-â]\s*$/, '').trim() || 'Criterion';
       const num = parseInt(m[2]!, 10);
       if (Number.isNaN(num)) continue;
       criteria.push({ name: titleCase(name), weight: num, inferred: false });
     }
     for (const m of ptsMatches) {
-      const name = m[1]!.replace(/[:\-—]\s*$/, '').trim() || 'Criterion';
+      const name = m[1]!.replace(/[:\-â]\s*$/, '').trim() || 'Criterion';
       const num = parseInt(m[2]!, 10);
       if (Number.isNaN(num)) continue;
       criteria.push({ name: titleCase(name), weight: num, inferred: false });
     }
   }
-
   if (criteria.length === 0) {
     // Fallback: infer equal weights for generic categories seen in text.
     const generic = ['innovation', 'technical', 'design', 'impact', 'usability', 'feasibility'];
@@ -285,7 +258,71 @@ function parseJudgingCriteria(text: string): ParsedDevpost['judgingCriteria'] {
   }
   return normalizeWeights(criteria);
 }
-
+/**
+ * Extract judging criteria from plain-text lines of a hackathon description
+ * or page content, without requiring a dedicated heading heading.
+ *
+ * Handles the most common Devpost page structures where criteria appear as:
+ *   - bullet/numbered lists under a heading that the exact heading regex missed, or
+ *   - lines that explicitly describe how the hackathon will be judged.
+ *
+ * It never fabricates criteria from arbitrary marketing text: it only accepts
+ * lines whose wording signals a judging axis (innovation, technical, impact,
+ * design, usability, creativity, feasibility, completeness, presentation,
+ * originality, execution, value, team) or lines that carry a weight suffix
+ * (e.g. "40% of the score", "25 pts", "judged on ...").
+ */
+function parseCriteriaFromText(text: string, hint = ''): string[] {
+  const criteria: string[] = [];
+  const seen = new Set<string>();
+  const add = (name: string) => {
+    const cleaned = name.trim();
+    if (!cleaned || cleaned.length < 3) return;
+    const key = cleaned.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    criteria.push(cleaned);
+  };
+  // 1. Lines that explicitly describe judging criteria (list bullets).
+  const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+    const d = /(innovat|technical|impact|design|usability|creativ|feasib|complet|present|original|execut|value|team|quality|scalab|security|accessib|performance|experience|function)/.exec(lower);
+    // Only treat a line as a criterion if it also carries a weight suffix
+    // (e.g. "40%" "pts" "of the score") or is a short bare axis name.
+const hasWeight = /(\d+\s*(?:%|pts?|points?|of the score|of judging))|\d+\s*\/|judged on/i.test(line);
+    if (d && (hasWeight || /(criteria|judg|score|weight|evaluate)/i.test(lower))) {
+      const parts = line.split(/[,;]/);
+      add(parts[0] ?? '');
+    }
+  }
+  // 2. Bullet / numbered list items that look like criteria.
+  const listRe = /\-|\*|\d+\.\s*/;
+  const bullets = text.split(/\n+/).filter((l) => l.match(listRe));
+  for (const b of bullets) {
+    const cleaned = b.replace(listRe, '').trim();
+    if (!cleaned || cleaned.length < 3) continue;
+    const lower = cleaned.toLowerCase();
+    const d = /(innovat|technical|impact|design|usability|creativ|feasib|complet|present|original|execut|value|team|quality|scalab|security|accessib|performance|experience|function)/.exec(lower);
+    if (d) add(cleaned);
+  }
+  // 3. Fallback: scan the page text for known judging axes as bare words
+  // (used when the page gives no structural hint at all).
+  if (criteria.length === 0 && hint) {
+    const axes = [
+      'Innovation', 'Technical', 'Impact', 'Design', 'Usability', 'Creativity',
+      'Feasibility', 'Completeness', 'Presentation', 'Originality', 'Execution',
+      'Value', 'Quality', 'Team', 'Scalability', 'Security', 'Accessibility',
+      'Performance', 'User Experience', 'Functionality',
+    ];
+    for (const axis of axes) {
+      if (new RegExp(`\\b${axis}`, 'i').test(hint)) {
+        add(axis);
+      }
+    }
+  }
+  return criteria;
+}
 /** Normalize weights so they sum to 100 (deterministic). */
 export function normalizeWeights(
   criteria: ParsedDevpost['judgingCriteria'],
@@ -306,14 +343,12 @@ export function normalizeWeights(
   }
   return scaled;
 }
-
 function titleCase(s: string): string {
   return s
     .split(/\s+/)
     .map((w) => (w.length > 2 ? w[0]!.toUpperCase() + w.slice(1) : w))
     .join(' ');
 }
-
 function extractDeadlines(text: string): string[] {
   const out: string[] = [];
   // Match date with optional time and timezone
@@ -322,7 +357,6 @@ function extractDeadlines(text: string): string[] {
   while ((m = re.exec(text))) out.push(m[1]!.trim());
   return [...new Set(out)].slice(0, 8);
 }
-
 /** Extract themes from Devpost theme tag links in HTML. */
 function extractThemesFromTags(html: string): string[] {
   const themes: string[] = [];
@@ -338,19 +372,16 @@ function extractThemesFromTags(html: string): string[] {
   }
   return themes.filter(t => t.length > 1 && !['General', 'Public'].includes(t));
 }
-
 function extractThemes(html: string): string[] {
   // First: extract from Devpost theme tags
   const fromTags = extractThemesFromTags(html);
   if (fromTags.length > 0) return fromTags;
-
   // Fallback: keyword matching on page text
   const text = stripHtml(html);
   const themes = ['ai', 'ml', 'fintech', 'health', 'education', 'climate', 'web3', 'blockchain', 'ar', 'vr', 'gaming', 'social', 'productivity', 'sustainability', 'accessibility', 'developer tools', 'security', 'privacy', 'beginner friendly', 'machine learning/ai'];
   const found = themes.filter((t) => new RegExp(`\\b${t}\\b`, 'i').test(text));
   return found.length > 0 ? found.map(titleCase) : ['General'];
 }
-
 /**
  * Extract structured fields from raw Devpost HTML. Deterministic given the
  * same HTML + seed. Works fully offline (no LLM, no network).
@@ -358,7 +389,6 @@ function extractThemes(html: string): string[] {
 export function extractDevpostData(html: string, url: string, seed = 42): ParsedDevpost {
   const rng = getSeededRandom(seed);
   void rng; // reserved for stable tie-breaking if needed
-
   const title = metaContent(html, 'og:title') || metaContent(html, 'title') || stripHtml(html.match(/<title>([^<]*)<\/title>/i)?.[1] ?? '').slice(0, 120);
   const tagline = metaContent(html, 'og:description') || '';
   // Normalize Devpost currency spans before stripping HTML:
@@ -368,15 +398,22 @@ export function extractDevpostData(html: string, url: string, seed = 42): Parsed
   const htmlForPrizes = html.replace(/\$<span[^>]*data-currency[^>]*>([^<]*)<\/span>/gi, '$$$1');
   const rawText = stripHtml(htmlForPrizes);
   const description = (tagline || rawText.slice(0, 600)).slice(0, 800);
-
   const sponsors = detectSponsors(html);
-  const judgingSectionHtml = extractSectionText(html, ['judging', 'criteria', 'evaluation', 'scoring']);
-  const judgingCriteria = judgingSectionHtml
+const judgingSectionHtml = extractSectionText(html, ['judging', 'criteria', 'evaluation', 'scoring']);
+  let judgingCriteria = judgingSectionHtml
     ? parseJudgingCriteria(judgingSectionHtml)
     : []; // No Judging section heading — no inferred criteria
+  // If the page has a criteria section, use it. Otherwise try the heading-agnostic
+  // criteria extraction on the page text so real Devpost pages with non-standard
+  // section naming still yield judging criteria for the strategy stage.
+  if (judgingCriteria.length === 0) {
+    const textCriteria = parseCriteriaFromText(stripHtml(html), description);
+    if (textCriteria.length > 0) {
+      judgingCriteria = textCriteria.map((name) => ({ name, weight: 10, inferred: true }));
+    }
+  }
   const deadlines = extractDeadlines(rawText);
   const themes = extractThemes(html);
-
   const organizerMatch = rawText.match(/(?:[Hh]osted by|[Oo]rganized by|[Pp]resented by)\s*:?\s*([A-Z][A-Za-z0-9&.']+(?:\s+[A-Z][A-Za-z0-9&.']+){0,3})/);
   let rawOrganizer = organizerMatch?.[1]?.trim() ?? '';
   // Fallback: extract from Devpost sidebar organization link
@@ -387,8 +424,7 @@ export function extractDevpostData(html: string, url: string, seed = 42): Parsed
     }
   }
   const organizer = rawOrganizer && !rawOrganizer.includes('Devpost') ? rawOrganizer.replace(/\.+$/, '').trim() : 'Unknown';
-
-  // Cash prizes (dollar amounts) — text already has normalized currency spans
+  // Cash prizes (dollar amounts) â text already has normalized currency spans
   const prizeMatches = rawText.match(/\$[\d,]+(?:\s+(?:USD|prize|award|pool|fund|grant))?/gi) ?? [];
   let prizes = [...new Set(prizeMatches.filter(m => {
     const num = parseInt(m.replace(/[^0-9]/g, ''), 10);
@@ -423,7 +459,6 @@ export function extractDevpostData(html: string, url: string, seed = 42): Parsed
     }
   }
   rules = rules.slice(0, 6);
-
   return {
     url,
     title: title || 'Untitled Hackathon',

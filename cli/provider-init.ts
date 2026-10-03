@@ -2,6 +2,7 @@ import {
   getLLMConfig,
   getDeployConfig,
   loadEnvFileIntoProcess,
+  loadEnvFile,
   PROVIDER_NATIVE_KEYS,
   type LLMConfig,
 } from '../cli/config-manager.js';
@@ -10,6 +11,9 @@ import { RouterEngine } from '../kernel/llm/router-engine.js';
 import { ProviderFactory } from '../kernel/providers/provider-factory.js';
 import { ModelPerformanceTracker } from '../kernel/routing/model-performance-tracker.js';
 import { warn } from '../cli/output.js';
+import { existsSync, readFileSync } from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 
 export interface ProviderInitializationResult {
   router: RouterEngine;
@@ -23,6 +27,23 @@ export function initializeProviders(config?: LLMConfig): ProviderInitializationR
   loadEnvFileIntoProcess();
   const llmConfig = config ?? getLLMConfig();
   const deployConfig = getDeployConfig();
+
+  // Determine if provider was explicitly configured by user (vs auto-detected)
+  const envVars = loadEnvFile();
+  const explicitProviderEnv = envVars.HACKAGENT_PROVIDER ?? process.env.HACKAGENT_PROVIDER
+    ?? envVars.LLM_PROVIDER ?? process.env.LLM_PROVIDER;
+  const configPath = path.join(os.homedir(), '.hackagent', 'config.json');
+  const explicitProviderConfig = (() => {
+    try {
+      if (existsSync(configPath)) {
+        const content = readFileSync(configPath, 'utf-8');
+        const parsed = JSON.parse(content) as { llm?: { provider?: string } };
+        return parsed.llm?.provider;
+      }
+    } catch { }
+    return undefined;
+  })();
+  const providerExplicitlyConfigured = !!explicitProviderEnv || !!explicitProviderConfig;
 
   process.env.GITHUB_TOKEN = process.env.GITHUB_TOKEN ?? deployConfig.githubToken ?? '';
   process.env.VERCEL_TOKEN = process.env.VERCEL_TOKEN ?? deployConfig.vercelToken ?? '';
@@ -65,7 +86,8 @@ export function initializeProviders(config?: LLMConfig): ProviderInitializationR
 
   // Shipping policy: OpenRouter is only used when explicitly configured.
   // NVIDIA can still be auto-registered (when NVIDIA_API_KEY exists) as the
-  // preferred code-generation provider.
+  // preferred code-generation provider, but ONLY when no explicit provider
+  // was configured by the user. This respects explicit user choice.
   if (llmConfig.provider !== 'openrouter' && process.env.OPENROUTER_API_KEY) {
     warn(
       'OPENROUTER_API_KEY is set but OpenRouter is not active.',
@@ -112,17 +134,17 @@ export function initializeProviders(config?: LLMConfig): ProviderInitializationR
   }
   tryRegister(configuredProvider, configuredProviderConfig);
 
-  // Always register NVIDIA when key is available so router can prioritize it
-  // for code-generation tasks even when another provider is configured.
-  if (configuredProvider !== 'nvidia' && process.env.NVIDIA_API_KEY) {
-    tryRegister('nvidia');
-  }
-
-  // Always register Nebius Token Factory when a key is available: it is
-  // the hackathon's required runtime platform and serves the NVIDIA
-  // Nemotron open-weight family.
-  if (configuredProvider !== 'nebius' && process.env.NEBIUS_API_KEY) {
-    tryRegister('nebius');
+  // Auto-register NVIDIA/Nebius only when no explicit provider was configured by the user.
+  // This respects explicit user choice (via config file or HACKAGENT_PROVIDER env var)
+  // while still enabling the hackathon's required NVIDIA models when the user
+  // hasn't made a provider choice.
+  if (!providerExplicitlyConfigured) {
+    if (configuredProvider !== 'nvidia' && process.env.NVIDIA_API_KEY) {
+      tryRegister('nvidia');
+    }
+    if (configuredProvider !== 'nebius' && process.env.NEBIUS_API_KEY) {
+      tryRegister('nebius');
+    }
   }
 
   // OpenRouter is registered only when explicitly configured.

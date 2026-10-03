@@ -428,6 +428,7 @@ stageStart('Auto Repair');
     if (!validation.valid) {
       log('');
       log('  Auto-repair:');
+      const typecheckAndRepair = await import('../../benchmarks/internet-hackathon-orchestrator.js');
       const typecheckOk = await internetOrch.typecheckAndRepair(projectDir);
       if (typecheckOk) {
         const revalidation = await internetOrch.validateGeneratedProject(projectDir);
@@ -450,12 +451,35 @@ stageStart('Auto Repair');
           stageFail('Auto Repair');
         }
       } else {
-        log(`  ${color('\u2717', 'red')} Could not auto-repair`);
+        // Capture the raw tsc output that the bounded repair loop produced so the
+        // failure is actionable instead of a bare "Could not auto-repair".
+        let diagnostic = '';
+        const tsc = await import('node:child_process');
+        try {
+          const tscOutput = tsc.execSync('npx tsc --noEmit 2>&1', {
+            cwd: projectDir,
+            encoding: 'utf-8',
+            timeout: 45000,
+            windowsHide: true,
+            stdio: ['ignore', 'pipe', 'pipe'],
+          });
+          diagnostic = tscOutput.length > 0 ? `\n  Raw tsc output:\n${tscOutput.replace(/\r/g, '').split('\n').map((l) => `    ${l}`).join('\n')}` : '';
+        } catch {
+          // Expected to fail — output already captured above.
+        }
+        log(`  ${color('\u2717', 'red')} Auto-repair failed after bounded attempts`);
+        diagnostic = diagnostic || '\n  No parseable tsc errors remained and no repair path applied.';
+        log(diagnostic);
         log('');
         log('  Remaining blockers:');
         for (const err of validation.errors) {
           log(`  ${color('\u2022', 'red')} ${err}`);
         }
+        log('');
+        log('  Diagnosis:');
+        log('    - Auto-repair exhausted its bounded attempts (3).');
+        log('    - Fix the reported file(s) by hand, then re-run this stage.');
+        log('    - Run `hag doctor` to check provider/runtime state, then `hag run` again.');
         buildValid = false;
         stageFail('Auto Repair');
       }

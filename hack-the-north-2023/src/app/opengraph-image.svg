@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0a0a0f"/><stop offset="100%" stop-color="#1a1a2e"/></linearGradient></defs>
-  <rect width="1200" height="630" fill="url(#bg)"/>
-  <text x="60" y="250" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="#ffffff">E</text>
-  <text x="60" y="360" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#ffffff">Ember</text>
-  <text x="60" y="420" font-family="Arial, sans-serif" font-size="24" fill="#a1a1aa">Ember — a reverse search engine that turns a vague memory into the exact video, article, or song you</text>
-</svg>

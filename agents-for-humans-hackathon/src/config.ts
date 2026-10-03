@@ -3,23 +3,23 @@ export const config = {
   description: 'A reverse search engine that turns a vague memory into the exact video, article, or song you cannot name.',
   theme: {
     colors: {
-      primary: '#0f172a',
+      primary: '#0ea5e9',
       secondary: '#64748b',
-      accent: '#3b82f6',
       background: '#ffffff',
+      foreground: '#0f172a',
       muted: '#f1f5f9'
     }
   },
   api: {
-    aiRun: '/api/ai/run',
-    aiHistory: '/api/ai/history',
-    feedback: '/api/feedback'
+    baseUrl: process.env.NEXT_PUBLIC_API_URL || '',
+    endpoints: {
+      aiRun: '/api/ai/run',
+      aiHistory: '/api/ai/history',
+      feedback: '/api/feedback'
+    }
   },
-  features: {
-    demoMode: true,
-    seedData: true,
-    streamingResults: true
+  featureFlags: {
+    enableDemoMode: !!process.env.NEXT_PUBLIC_ENABLE_DEMO_MODE,
+    seedData: !!process.env.NEXT_PUBLIC_SEED_DATA
   }
 };
-
-export type Config = typeof config;

@@ -8,20 +8,20 @@ type OutputViewProps = {
 };
 
 export const OutputView = ({ runId }: OutputViewProps) => {
-  const [state, setState] = useState<ApiResponse<{ title: string; url: string }>>({ status: 'processing' });
+  const [state, setState] = useState<ApiResponse<{ title: string; url: string }>>({ status: 'loading' });
 
   useEffect(() => {
     // Simulate fetching result
     const timer = setTimeout(() => {
       setState({
-        status: 'completed',
+        status: 'success',
         data: { title: 'Found Song: "Imagine"', url: 'https://example.com/imagine' },
       });
     }, 1500);
     return () => clearTimeout(timer);
   }, [runId]);
 
-  if (state.status === 'processing') {
+  if (state.status === 'loading') {
     return (
       <div className="space-y-2">
         <div className="h-6 w-32 bg-gray-200 rounded animate-pulse" />
@@ -30,8 +30,8 @@ export const OutputView = ({ runId }: OutputViewProps) => {
     );
   }
 
-  if (state.status === 'failed') {
-    return <p className="text-red-600">{state.error?.message}</p>;
+  if (state.status === 'error') {
+    return <p className="text-red-600">{state.error}</p>;
   }
 
   return (

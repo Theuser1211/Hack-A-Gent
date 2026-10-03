@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     // In a real app, this would run migrations. For demo, we just verify the DB is seeded.
     const contexts = db.aiContext.findMany();
-    const items = db.workItems.findMany();
+    const items = db.workItem.findMany();
     const prefs = db.userPrefs.findUnique({ userId: 'user-1' });
     
     if (contexts.length === 0 || items.length === 0 || !prefs) {

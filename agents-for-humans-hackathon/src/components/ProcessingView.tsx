@@ -9,11 +9,11 @@ type ProcessingViewProps = {
 };
 
 export const ProcessingView = ({ runId, onComplete }: ProcessingViewProps) => {
-  const [state, setState] = useState<ApiResponse<null>>({ status: 'processing' });
+  const [state, setState] = useState<ApiResponse<null>>({ status: 'loading' });
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setState({ status: 'completed' });
+      setState({ status: 'success' });
       onComplete();
     }, 2000);
     return () => clearTimeout(timer);

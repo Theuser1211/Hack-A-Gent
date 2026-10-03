@@ -1,5 +1,4 @@
-
-import { Button } from '@/components/Button';interface EmptyStateProps {
+interface EmptyStateProps {
   title: string;
   description: string;
   actionLabel?: string;

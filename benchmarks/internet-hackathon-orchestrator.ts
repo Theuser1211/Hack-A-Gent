@@ -4071,12 +4071,14 @@ export async function POST(req: Request) {
 
     for (let attempt = 0; attempt < 3; attempt++) {
       let tscOutput = '';
+      let tscOk = true;
       try {
-        tscOutput = execSync('npx tsc --noEmit 2>&1', { cwd: projectDir, stdio: 'pipe', timeout: 60000, encoding: 'utf-8', windowsHide: true });
-        return true;
+        execSync('npx tsc --noEmit 2>&1', { cwd: projectDir, stdio: 'pipe', timeout: 60000, encoding: 'utf-8', windowsHide: true });
       } catch (err: unknown) {
         tscOutput = (err as { stdout?: string }).stdout ?? String(err);
+        tscOk = false;
       }
+      if (tscOk) return true;
       // Strip \r so regex $ anchors match on Windows CRLF output
       tscOutput = tscOutput.replace(/\r/g, '');
 

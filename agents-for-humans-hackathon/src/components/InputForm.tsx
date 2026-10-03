@@ -12,11 +12,11 @@ type InputFormProps = {
 export const InputForm = ({ onSuccess }: InputFormProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [state, setState] = useState<ApiResponse<string>>({ status: 'pending' });
+  const [state, setState] = useState<ApiResponse<string>>({ status: 'idle' });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setState({ status: 'processing' });
+    setState({ status: 'loading' });
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -25,33 +25,40 @@ export const InputForm = ({ onSuccess }: InputFormProps) => {
       });
       if (!res.ok) throw new Error('Invalid credentials');
       const data = await res.json();
-      setState({ status: 'completed', data: data.runId });
+      setState({ status: 'success', data: data.runId });
       onSuccess(data.runId);
     } catch (err: any) {
-      setState({ status: 'failed', error: err.message });
+      setState({ status: 'error', error: err.message });
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" aria-live="polite">
       <Input
+        id="email"
         label="Email address"
+        type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        error={state.status === 'failed' ? state.error?.message : undefined}
+        required
+        error={state.status === 'error' ? state.error : undefined}
       />
       <Input
+        id="password"
         label="Password"
+        type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        error={state.status === 'failed' ? state.error?.message : undefined}
+        required
+        error={state.status === 'error' ? state.error : undefined}
       />
       <Button
         type="submit"
         variant="primary"
-        isLoading={state.status === 'processing'}
+        loading={state.status === 'loading'}
+        ariaLabel="Log in"
       >
-        {state.status === 'processing' ? <Spinner size="sm" /> : 'Log in'}
+        {state.status === 'loading' ? <Spinner size="sm" /> : 'Log in'}
       </Button>
     </form>
   );

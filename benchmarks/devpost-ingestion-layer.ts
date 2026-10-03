@@ -53,7 +53,17 @@ export class DevpostIngestionLayer {
     const description = this.extractMeta(html, 'og:description') ?? this.extractMeta(html, 'description') ?? '';
 
     const techStack = this.extractTechnologies(html);
-    const judgingCriteria = this.extractSection(html, /judging/i, /<li[^>]*>([\s\S]*?)<\/li>/gi);
+    // Extract criteria from a 'Judging' section header if present.
+    // Otherwise fall back to heading-agnostic criteria extraction from the page
+    // text so real Devpost pages with non-standard section naming still yield
+    // judging criteria for the strategy stage.
+    let judgingCriteria = this.extractSection(html, /judging/i, /<li[^>]*>([\s\S]*?)<\/li>/gi);
+    if (judgingCriteria.length === 0) {
+      const textCriteria = this.parseCriteriaFromText(description, html);;
+      if (textCriteria.length > 0) {
+        judgingCriteria = textCriteria;;
+      };
+    }
     const constraintsList = this.extractSection(
       html,
       /constraint|limit|must have|requirements/i,
@@ -161,6 +171,56 @@ export class DevpostIngestionLayer {
     return tags;
   }
 
+  /**
+   * Extract judging criteria from plain-text lines of a hackathon description
+   * or page content, without requiring a dedicated heading heading.
+   *
+   * Only accepts lines whose wording signals a judging axis (innovation,
+   * technical, impact, design, usability, creativity, feasibility, completeness,
+   * presentation, originality, execution, value, team, quality, scalability,
+   * security, accessibility, performance) or lines that carry a weight suffix
+   * (e.g. "40%" "pts" "of the score" "judged on ..."). Never fabricates
+   * criteria from arbitrary marketing text.
+   */
+private parseCriteriaFromText(text: string, hint = ''): string[] {
+    const criteria: string[] = [];
+    const seen = new Set<string>();
+    const add = (name: string) => {
+      const cleaned = name.trim();
+      if (!cleaned || cleaned.length < 3) return;
+      const key = cleaned.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      criteria.push(cleaned);
+    };
+
+    // 1. Lines that explicitly describe judging criteria (list bullets).
+    const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    for (const line of lines) {
+      const lower = line.toLowerCase();
+      const d = /(innovat|technical|impact|design|usability|creativ|feasib|complet|present|original|execut|value|team|quality|scalab|security|accessib|performance|experience|function)/.exec(lower);
+      // Only treat a line as a criterion if it also carries a weight suffix
+      // (e.g. "40%" "pts" "of the score") or is a short bare axis name.
+      const hasWeight = /(\d+\s*(?:%|pts?|points?|of the score|of judging))|\d+\s*\/|judged on/i.test(line);
+      if (d && (hasWeight || /(criteria|judg|score|weight|evaluate)/i.test(lower))) {
+        const parts = line.split(/[,;]/);
+        add(parts[0] ?? '');
+      }
+    }
+
+    // 2. Bullet / numbered list items that look like criteria.
+    const listRe = /\-|\*|\d+\.\s*/;
+    const bullets = text.split(/\n+/).filter((l) => l.match(listRe));
+    for (const b of bullets) {
+      const cleaned = b.replace(listRe, '').trim();
+      if (!cleaned || cleaned.length < 3) continue;
+      const lower = cleaned.toLowerCase();
+      const d = /(innovat|technical|impact|design|usability|creativ|feasib|complet|present|original|execut|value|team|quality|scalab|security|accessib|performance|experience|function)/.exec(lower);
+      if (d) add(cleaned);
+    }
+
+    return criteria;
+  }
   private extractSection(html: string, sectionPattern: RegExp, itemPattern: RegExp): string[] {
     const matchIdx = html.search(sectionPattern);
     if (matchIdx < 0) return [];

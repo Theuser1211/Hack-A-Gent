@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { db } from '@/lib/db';
-import { RegisterRequest, User } from '@/lib/types';
+import { RegisterRequest, AuthResponse } from '@/lib/types';
+import { db, createUser, findUserByEmail } from '@/lib/db';
+import { createHash } from 'crypto';
 
 const registerSchema = z.object({
   email: z.string().email({ message: 'Invalid email format' }),
@@ -9,41 +10,53 @@ const registerSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
 });
 
+function hashPassword(password: string): string {
+  return createHash('sha256').update(password).digest('hex');
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const parseResult = registerSchema.safeParse(body);
 
-    if (!parseResult.success) {
+    const validationResult = registerSchema.safeParse(body);
+    if (!validationResult.success) {
       return NextResponse.json(
         { error: { message: 'Invalid input', code: 'VALIDATION_ERROR' } },
         { status: 400 }
       );
     }
 
-    const { email, password, name } = parseResult.data;
+    const { email, password, name } = validationResult.data;
 
-    // Check if user already exists
-    const existingUser = await db.user.findUnique({ email });
+    const existingUser = findUserByEmail(email);
     if (existingUser) {
       return NextResponse.json(
         { error: { message: 'User already exists', code: 'CONFLICT' } },
-        { status: 400 }
+        { status: 409 }
       );
     }
 
-    // Create user
-    const user = await db.user.create({ email, password, name });
+    const passwordHash = hashPassword(password);
+    const user = createUser({ email, name, passwordHash });
 
-    // Create session
-    const session = await db.session.create({ userId: user.id, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const session = db.session.create({ userId: user.id, expiresAt });
 
-    // Return response without password
-    const { password: _, ...userWithoutPassword } = user;
-    return NextResponse.json(
-      { data: { user: userWithoutPassword, session } },
-      { status: 201 }
-    );
+    const response: AuthResponse = {
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        createdAt: user.createdAt,
+      },
+      session: {
+        id: session.id,
+        userId: session.userId,
+        expiresAt: session.expiresAt,
+      },
+    };
+
+    return NextResponse.json({ data: response }, { status: 201 });
   } catch (err) {
     console.error('[API /auth/register]', err);
     return NextResponse.json(

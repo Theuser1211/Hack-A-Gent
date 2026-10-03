@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { User } from '@/lib/types';
+import { db, findUserByRefreshToken, removeRefreshToken, addRefreshToken, issueRefreshToken } from '@/lib/db';
 
 const refreshSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required')
@@ -20,8 +21,7 @@ export async function POST(request: NextRequest) {
 
     const { refreshToken } = parseResult.data;
 
-    const { db } = await import('@/lib/db');
-    const isValid = await db.validateRefreshToken(refreshToken);
+    const isValid = db.validateRefreshToken(refreshToken);
     if (!isValid) {
       return NextResponse.json(
         { error: { message: 'Invalid or expired refresh token', code: 'INVALID_TOKEN' } },
@@ -29,23 +29,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve the account the refresh token was issued to. Defaulting to a
-    // fixed demo user here would hand every caller the same account.
-    const user = await db.findUserByRefreshToken(refreshToken);
+    // Look up user by refresh token (which is bound to a specific user)
+    const user = findUserByRefreshToken(refreshToken);
     if (!user) {
       return NextResponse.json(
-        { error: { message: 'User not found', code: 'USER_NOT_FOUND' } },
+        { error: { message: 'User not found for token', code: 'USER_NOT_FOUND' } },
         { status: 404 }
       );
     }
 
-    const { password: _, ...userWithoutPassword } = user;
+    const { password: _, passwordHash: __, ...userWithoutPassword } = user;
     const newToken = `mock-jwt-token-${user.id}-${Date.now()}`;
 
-    // Rotate refresh token, keeping it bound to the same account so the
-    // rotated token can still be resolved on its own refresh.
-    await db.removeRefreshToken(refreshToken);
-    const newRefreshToken = db.issueRefreshToken(user.id);
+    // Rotate refresh token
+    removeRefreshToken(refreshToken);
+    const newRefreshToken = issueRefreshToken(user.id);
 
     return NextResponse.json(
       { data: { user: userWithoutPassword, token: newToken, refreshToken: newRefreshToken } },

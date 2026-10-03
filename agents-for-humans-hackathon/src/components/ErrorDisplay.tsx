@@ -1,5 +1,4 @@
-
-import { Button } from '@/components/Button';interface ErrorDisplayProps {
+interface ErrorDisplayProps {
   message: string;
   retryLabel?: string;
   onRetry?: () => void;

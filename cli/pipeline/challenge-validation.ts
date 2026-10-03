@@ -61,6 +61,10 @@ function stripHtml(text: string): string {
     .trim();
 }
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function countSponsorNameOccurrences(text: string, names: string[]): number {
   let count = 0;
   for (const name of names) {
@@ -128,7 +132,48 @@ export function validateJudgingCriteria(body: string, parsed: DevpostParseResult
   }
 
   const sectionText = extractSectionText(body, ['judging', 'criteria', 'evaluation', 'scoring']);
+
+  // If a section heading exists, validate against it (existing behaviour).
+  // If no heading exists but we have criteria, check whether the criteria
+  // appear as a coherent list (numbered items, bullet items, or weight prefixes)
+  // rather than arbitary page text, and validate accordingly.
   if (!sectionText) {
+    const contentCandidates = criteriaCount > 0 ? criteriaCount : 0;
+    const numericList = parsed.judgingCriteria.some(c => /^\d/.test(c));
+    const dashList = parsed.judgingCriteria.some(c => /^[-–—•]/.test(c));
+
+    if (numericList || dashList || contentCandidates >= 2) {
+      // Content has the shape of a criteria list. Validate criteria names
+      // against page text for partial confirmation.
+      const sectionPlain = stripHtml(body).toLowerCase();
+      const confirmed: string[] = [];
+      for (const c of parsed.judgingCriteria) {
+        const cLc = c.toLowerCase();
+        const compact = cLc.replace(/[^a-z0-9 ]/g, '').trim();
+        // Match criterion names that appear in the page content.
+        // Accept word-boundary substring or compact-token match.
+        if (sectionPlain.includes(cLc) || sectionPlain.includes(compact) ||
+            new RegExp(`\\b${escapeRegex(cLc.split(' ').join('\\s*\\b'))}`, 'i').test(sectionPlain)) {
+          confirmed.push(c);
+        }
+      }
+
+      if (confirmed.length === 0 && criteriaCount > 0) {
+        // Still failing, but now we classify it as an inference rather than a structural failure.
+        return {
+          valid: false,
+          message: `${criteriaCount} judging criteria found but no Judging/Criteria section heading exists. These may be inferred from general text patterns rather than an actual criteria list — review before relying on them for score weighting in the strategy stage.`,
+          found: criteriaCount,
+        };
+      }
+
+      return {
+        valid: confirmed.length > 0,
+        message: `${confirmed.length}/${criteriaCount} criteria confirmed within page content (no heading).`,
+        found: criteriaCount,
+      };
+    }
+
     return {
       valid: false,
       message: `${criteriaCount} judging criteria found but no Judging/Criteria section heading exists. These may be inferred from general text patterns rather than an actual criteria list.`,

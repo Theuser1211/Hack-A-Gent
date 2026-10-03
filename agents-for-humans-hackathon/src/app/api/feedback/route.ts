@@ -1,116 +1,114 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { WorkItem, ApiResponse } from '@/lib/types';
-import { updateWorkItem, getWorkItems } from '@/lib/db';
+import { db } from '@/lib/db';
+import type { WorkItem, ApiResponse, AiContext } from '@/lib/types';
 
 const feedbackSchema = z.object({
   workItemId: z.string().min(1, 'Work item ID is required'),
-  userId: z.string().min(1, 'User ID is required'),
   adjustment: z.object({
-    description: z.string().max(500).optional(),
+    description: z.string().min(1, 'Adjustment description is required').max(500),
     mediaType: z.enum(['video', 'article', 'song']).optional(),
     timeframe: z.string().max(100).optional(),
     keywords: z.array(z.string().max(50)).max(10).optional()
-  }).optional(),
-  rating: z.number().min(1).max(5).optional()
+  })
 });
 
-// Mock sponsor API for refined search
-async function callRefinedSearchApi(originalInputs: any, adjustments: any): Promise<{ output: string; confidence: number }> {
-  await new Promise(resolve => setTimeout(resolve, 600));
-  
-  // Simulate refined search based on adjustments
-  const refinedDesc = adjustments?.description || originalInputs.description;
-  
-  if (refinedDesc.toLowerCase().includes('volkswagen') && refinedDesc.toLowerCase().includes('whistling')) {
-    return { output: '"Budapest" by George Ezra - 2015 Volkswagen Golf commercial', confidence: 0.94 };
+// Mock sponsor API (same as in ai/run)
+class MockSponsorApi {
+  async search(context: AiContext): Promise<{ result: string; confidence: number }> {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    const desc = context.inputs.description.toLowerCase();
+    
+    if (desc.includes('never gonna give you up') || desc.includes('rickroll')) {
+      return { result: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', confidence: 0.95 };
+    }
+    
+    if (desc.includes('quantum') || desc.includes('physics')) {
+      return { result: 'https://en.wikipedia.org/wiki/Quantum_mechanics', confidence: 0.88 };
+    }
+    
+    if (desc.includes('bohemian rhapsody') || desc.includes('queen')) {
+      return { result: 'https://open.spotify.com/track/6rqhFgbbKwnb9MLmUQDhG6', confidence: 0.92 };
+    }
+    
+    return {
+      result: `https://example.com/search?q=${encodeURIComponent(context.inputs.description)}`,
+      confidence: 0.6
+    };
   }
-  
-  if (refinedDesc.toLowerCase().includes('honeybee') && refinedDesc.toLowerCase().includes('math')) {
-    return { output: 'Research: Honeybees understand zero and can do basic arithmetic', confidence: 0.89 };
-  }
-  
-  return {
-    output: `Refined search for: "${refinedDesc}" - trying alternative matches...`,
-    confidence: 0.6
-  };
 }
 
-export async function POST(request: NextRequest) {
+const sponsorApi = new MockSponsorApi();
+
+export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<WorkItem>>> {
   try {
     const body = await request.json();
     const validationResult = feedbackSchema.safeParse(body);
     
     if (!validationResult.success) {
-      const error = validationResult.error.issues[0];
+      const fieldErrors = validationResult.error.errors.map(err => err.path.join('->')).join(', ');
       return NextResponse.json(
-        { error: { message: error.message, code: 'VALIDATION_ERROR' } },
+        { error: { message: `Invalid input: ${fieldErrors}`, code: 'VALIDATION_ERROR' } },
         { status: 400 }
       );
     }
     
-    const { workItemId, userId, adjustment, rating } = validationResult.data;
+    const { workItemId, adjustment } = validationResult.data;
     
-    // Verify work item exists and belongs to user
-    const userItems = getWorkItems(userId);
-    const workItem = userItems.find(item => item.id === workItemId);
-    
-    if (!workItem) {
+    // Validate work item exists
+    const existingWorkItem = db.workItems.getById(workItemId);
+    if (!existingWorkItem) {
       return NextResponse.json(
         { error: { message: 'Work item not found', code: 'NOT_FOUND' } },
         { status: 404 }
       );
     }
     
-    // If we have adjustments, create a refined search
-    if (adjustment) {
-      // Get original context (simplified - in real app would fetch from contexts)
-      const originalInputs = {
-        description: 'that song with the whistling', // placeholder
-        mediaType: 'song',
-        timeframe: undefined,
-        keywords: []
-      };
-      
-      const { output, confidence } = await callRefinedSearchApi(originalInputs, adjustment);
-      
-      // Create new work item for refined search
-      const refinedWorkItem: WorkItem = {
-        id: `work-refined-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        type: 'refinement',
-        status: 'completed',
-        outputSnapshot: output,
-        confidenceScore: confidence,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      };
-      
-      // In a real app, we'd store this properly
-      // For demo, we'll just return it
-      return NextResponse.json(
-        { data: refinedWorkItem },
-        { status: 200 }
-      );
-    }
+    // Create new work item for refinement
+    const refinementWorkItem = db.workItems.create({
+      type: 'refinement',
+      status: 'pending',
+      outputSnapshot: null,
+      confidenceScore: null
+    });
     
-    // If just rating, update the work item
-    if (rating !== undefined) {
-      updateWorkItem(workItemId, {
-        // In a real app, we might store ratings separately
-        // For demo, we'll just acknowledge the update
+    // Update to processing
+    db.workItems.update(refinementWorkItem.id, { status: 'processing' });
+    
+    try {
+      // Create context from adjustment
+      const context: AiContext = {
+        userId: 'demo-user-1', // In real app, extract from auth/session
+        inputs: adjustment,
+        timestamp: Date.now()
+      };
+      
+      // Call sponsor API with adjusted inputs
+      const sponsorResult = await sponsorApi.search(context);
+      
+      // Complete refinement work item
+      const completedWorkItem = db.workItems.update(refinementWorkItem.id, {
+        status: 'completed',
+        outputSnapshot: sponsorResult.result,
+        confidenceScore: sponsorResult.confidence
       });
       
+      if (!completedWorkItem) {
+        throw new Error('Failed to update refinement work item');
+      }
+      
+      return NextResponse.json({ data: completedWorkItem }, { status: 200 });
+    } catch (sponsorError) {
+      // Mark refinement as failed
+      db.workItems.update(refinementWorkItem.id, { status: 'failed' });
+      
+      console.error('[API /feedback] Sponsor API error:', sponsorError);
       return NextResponse.json(
-        { data: { message: 'Feedback recorded', workItemId } },
-        { status: 200 }
+        { error: { message: 'Search service temporarily unavailable', code: 'SPONSOR_API_ERROR' } },
+        { status: 503 }
       );
     }
-    
-    return NextResponse.json(
-      { data: { message: 'Feedback processed' } },
-      { status: 200 }
-    );
-    
   } catch (err) {
     console.error('[API /feedback]', err);
     return NextResponse.json(

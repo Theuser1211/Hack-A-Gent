@@ -503,7 +503,7 @@ const userPrefsRepository = {
   },
 };
 
-const aiContextRepository = {
+export const aiContextRepository = {
   findMany: (where?: Where): AiContext[] => filterRows(aiContexts, where),
   findUnique: (where: Where): AiContext | undefined => findRow(aiContexts, where),
   create: (data: AiContext): AiContext => {
@@ -527,7 +527,7 @@ const aiContextRepository = {
   },
 };
 
-const userRepository = {
+export const userRepository = {
   findMany: (where?: Where): User[] => filterRows(users, where),
   findUnique: (where: Where): User | undefined => findRow(users, where),
   findByEmail: (email: string): User | undefined => findRow(users, { email }),
@@ -1166,7 +1166,7 @@ const userPrefsRepository = {
   },
 };
 
-const aiContextRepository = {
+export const aiContextRepository = {
   findMany: (where?: Where): AiContext[] => filterRows(aiContexts, where),
   findUnique: (where: Where): AiContext | undefined => findRow(aiContexts, where),
   create: (data: AiContext): AiContext => {
@@ -1190,7 +1190,7 @@ const aiContextRepository = {
   },
 };
 
-const userRepository = {
+export const userRepository = {
   findMany: (where?: Where): User[] => filterRows(users, where),
   findUnique: (where: Where): User | undefined => findRow(users, where),
   findByEmail: (email: string): User | undefined => findRow(users, { email }),
