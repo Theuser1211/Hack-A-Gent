@@ -1,0 +1,8 @@
+_pycache_
+todo.txt
+hackathon.json
+plan.json
+.env
+__pycache__/
+*.pyc
+projects/
