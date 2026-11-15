@@ -42,7 +42,7 @@ jobs:
 
       - name: Build executable
         run: |
-          pyinstaller --onefile --name hack-a-gent main.py
+          pyinstaller --onefile --name hack-a-gent --collect-all gpt_researcher --hidden-import tiktoken_ext.openai_public --hidden-import tiktoken_ext main.py
 
       - name: Prepare release asset
         shell: bash
