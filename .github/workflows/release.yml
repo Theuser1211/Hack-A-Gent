@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    timeout-minutes: 25
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
@@ -37,11 +37,15 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Disable Windows Defender realtime monitoring
+      - name: Exclude build folders from Windows Defender
         if: runner.os == 'Windows'
         shell: pwsh
         continue-on-error: true
-        run: Set-MpPreference -DisableRealtimeMonitoring $true
+        run: |
+          Add-MpPreference -ExclusionPath "$env:GITHUB_WORKSPACE"
+          Add-MpPreference -ExclusionPath "$env:RUNNER_TOOL_CACHE"
+          Add-MpPreference -ExclusionPath "$env:TEMP"
+          Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\pyinstaller"
 
       - name: Install dependencies
         run: |
@@ -50,7 +54,41 @@ jobs:
           pip install pyinstaller
 
       - name: Build executable
-        run: pyinstaller --onefile --name hack-a-gent --collect-all gpt_researcher --hidden-import tiktoken_ext.openai_public --hidden-import tiktoken_ext --exclude-module torch --exclude-module scipy --exclude-module matplotlib --exclude-module tkinter --exclude-module IPython --exclude-module pytest main.py
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            PY_DIR=$(dirname "$(which python)")
+            export PATH="$PY_DIR:$PY_DIR/Scripts:/c/Windows/System32:/c/Windows"
+          fi
+          pyinstaller --onefile --name hack-a-gent \
+            --collect-all gpt_researcher \
+            --hidden-import tiktoken_ext.openai_public \
+            --hidden-import tiktoken_ext \
+            --exclude-module torch \
+            --exclude-module tensorflow \
+            --exclude-module scipy \
+            --exclude-module matplotlib \
+            --exclude-module tkinter \
+            --exclude-module IPython \
+            --exclude-module pytest \
+            --exclude-module numba \
+            --exclude-module llvmlite \
+            --exclude-module spacy \
+            --exclude-module thinc \
+            --exclude-module fitz \
+            --exclude-module pymupdf \
+            --exclude-module pypdfium2 \
+            --exclude-module pypdfium2_raw \
+            --exclude-module onnxruntime \
+            --exclude-module grpc \
+            --exclude-module pyarrow \
+            --exclude-module pandas \
+            --exclude-module sqlalchemy \
+            --exclude-module boto3 \
+            --exclude-module botocore \
+            --exclude-module playwright \
+            --exclude-module selenium \
+            main.py
 
       - name: Prepare release asset
         shell: bash
