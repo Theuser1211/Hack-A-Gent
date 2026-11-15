@@ -26,6 +26,7 @@ import asyncio
 import json
 import os
 import re
+import sys
 import time
 from typing import Any, Dict
 
@@ -36,10 +37,18 @@ from dotenv import load_dotenv
 # ENVIRONMENT
 # =========================================================
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+def get_app_dir() -> str:
+    """Return the directory of the executable (frozen) or this script (unbundled)."""
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+BASE_DIR = get_app_dir()
 
 load_dotenv(
-    os.path.join(BASE_DIR, ".env")
+    os.path.join(BASE_DIR, ".env"),
+    encoding="utf-8",
 )
 
 required_environment = [

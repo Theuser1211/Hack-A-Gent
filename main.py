@@ -8,8 +8,17 @@ import requests
 import validators
 
 from scrapper import scrape_hackathon, save_hackathon
-from analyser import run_analyser
-from coder import run_coder
+
+
+# Force UTF-8 on the standard streams so Windows terminals (which default to
+# cp1252) do not crash when HAG prints emojis or other Unicode characters.
+for _stream in (sys.stdout, sys.stderr):
+    _reconfigure = getattr(_stream, "reconfigure", None)
+    if _reconfigure is not None:
+        try:
+            _reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):
+            pass
 
 
 def get_app_dir() -> Path:
@@ -84,6 +93,12 @@ def main() -> None:
 
     ensure_setup()
     load_local_env(ENV_FILE)
+
+    # Import the heavy analyser/coder modules only after setup and .env loading.
+    # analyser.py validates environment variables at import time, so importing it
+    # before first-run setup would abort the executable on a fresh machine.
+    from analyser import run_analyser
+    from coder import run_coder
 
     # Support passing the URL as a CLI argument or via interactive prompt
     cli_args = [arg for arg in sys.argv[1:] if not arg.startswith("-")]

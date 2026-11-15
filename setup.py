@@ -6,7 +6,14 @@ import sys
 from pathlib import Path
 
 
-BASE_DIR = Path(__file__).resolve().parent
+def get_app_dir() -> Path:
+    """Return the directory of the executable (frozen) or this script (unbundled)."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+BASE_DIR = get_app_dir()
 ENV_FILE = BASE_DIR / ".env"
 
 
@@ -60,6 +67,13 @@ def check_python():
 
 
 def install_python_packages():
+    if getattr(sys, "frozen", False):
+        print(
+            "[SKIP] Running as a standalone executable; "
+            "Python packages are already bundled."
+        )
+        return
+
     for package in PYTHON_PACKAGES:
 
         print(f"Installing {package}...")
@@ -283,6 +297,8 @@ def verify_gemini_cli():
         ],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         check=False
     )
 
@@ -334,7 +350,7 @@ def update_gitignore():
     print("[OK] .gitignore updated.")
 
 
-def main():
+def run_setup():
 
     print()
     print("================================")
@@ -360,4 +376,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run_setup()

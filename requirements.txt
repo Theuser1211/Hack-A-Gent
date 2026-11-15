@@ -3,3 +3,5 @@ validators
 beautifulsoup4
 python-dotenv
 gpt-researcher
+openai
+tiktoken

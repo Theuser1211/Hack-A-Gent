@@ -3,6 +3,14 @@ import os
 import re
 import shutil
 import subprocess
+import sys
+
+
+def get_app_dir() -> str:
+    """Return the directory of the executable (frozen) or this script (unbundled)."""
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return os.path.dirname(os.path.abspath(__file__))
 
 
 def sanitize_project_name(name: str) -> str:
@@ -93,9 +101,7 @@ def run_coder(plan_file: str = "plan.json"):
 
     project_name = sanitize_project_name(project_name)
 
-    base_directory = os.path.dirname(
-        os.path.abspath(__file__)
-    )
+    base_directory = get_app_dir()
 
     projects_directory = os.path.join(
         base_directory,
@@ -169,7 +175,9 @@ inside the current directory.
     result = subprocess.run(
         command,
         cwd=project_directory,
-        text=True
+        text=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
     if result.returncode != 0:
